@@ -1,4 +1,3 @@
-from re import I
 import numpy as np
 import pytest
 from scipy.special import gamma
@@ -9,6 +8,7 @@ from numpy.testing import assert_allclose
 from anisoap.utils import compute_moments_single_variable
 from anisoap.utils import compute_moments_inefficient_implementation
 from anisoap.utils import compute_moments_diagonal_inefficient_implementation
+from anisoap.utils import assert_close
 
 class TestMomentsUnivariateGaussian():
     """
@@ -118,13 +118,6 @@ def get_exact_moments(A, a, maxdeg=3):
     moments_exact[1,1,1] = a[0]*a[1]*a[2] + a[0]*cov[1,2] + a[1]*cov[0,2] + a[2]*cov[0,1]
     if maxdeg == 3:
         return global_factor * moments_exact
-
-# Helper function that is the single variable version of
-# numpy.testing.assert_allclose
-def assert_close(a,b, rtol=1e-10, atol=5e-16):
-    a_array = np.array([a])
-    b_array = np.array([b])
-    assert_allclose(a_array, b_array, rtol=rtol, atol=atol)
 
 
 class TestMomentsTrivariateGaussian():

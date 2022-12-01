@@ -3,3 +3,4 @@ from .moment_generator import compute_moments_inefficient_implementation
 from .moment_generator import compute_moments_diagonal_inefficient_implementation
 from .monomial_iterator import TrivariateMonomialIndices
 from .spherical_to_cartesian import spherical_to_cartesian
+from .shortcuts import *
