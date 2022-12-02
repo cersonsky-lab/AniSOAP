@@ -4,10 +4,6 @@ import pytest
 from numpy.testing import assert_allclose
 
 # Import the different versions of the moment generators
-from anisoap.utils import compute_moments_single_variable
-from anisoap.utils import compute_moments_inefficient_implementation
-from anisoap.utils import compute_moments_diagonal_inefficient_implementation
-from anisoap.utils import assert_close
 from anisoap.utils import quaternion_to_rotation_matrix
 
 class TestQuaternionToRotationMatrix:

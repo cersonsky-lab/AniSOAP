@@ -1,10 +1,14 @@
+from anisoap.utils.spherical_to_cartesian import spherical_to_cartesian
 import numpy as np
 try:
     from tqdm import tqdm
 except ImportError:
     tqdm = (lambda i, **kwargs: i)
 
-from ..utils.moment_generator import compute_moments_inefficient_implementation
+from ..utils import compute_moments_diagonal_inefficient_implementation
+from ..utils import quaternion_to_rotation_matrix
+from .radial_basis import RadialBasis
+from ..utils import compute_moments_inefficient_implementation
 
 class DensityProjectionCalculator:
     """
@@ -27,19 +31,35 @@ class DensityProjectionCalculator:
     """
     def __init__(self,
                  max_angular,
-                 radial_basis,
+                 radial_basis_name,
                  compute_gradients=False,
-                 subtract_center_contribution=False):
+                 subtract_center_contribution=False,
+                 radial_gaussian_width = None,
+                 ):
 
         # Store the input variables
         self.max_angular = max_angular
-        self.radial_basis = radial_basis.lower()
         self.compute_gradients = compute_gradients
         self.subtract_center_contribution = subtract_center_contribution
+        self.radial_basis_name = radial_basis_name
 
-        if self.radial_basis not in ["monomial", "gto", "gto_primitive", "gto_analytical"]:
+        # Precompute the spherical to Cartesian transformation
+        # coefficients.
+        num_ns = []
+        for l in range(max_angular+1):
+            num_ns.append(max_angular + 1 - l)
+        self.sph_to_cart = spherical_to_cartesian(max_angular)
+
+        # Initialize the radial basis class
+        if radial_basis_name not in ["monomial", "gto"]:
             raise ValueError(f"{self.radial_basis} is not an implemented basis"
-                              ". Try 'monomial', 'GTO' or GTO_primitive.")
+                              ". Try 'monomial' or 'gto'")
+        if radial_gaussian_width != None and radial_basis_name != 'gto':
+            raise ValueError('Gaussian width can only be provided with GTO basis')
+        radial_hypers = {}
+        radial_hypers['radial_basis'] = radial_basis_name.lower() # lower case
+        radial_hypers['radial_gaussian_width'] = radial_gaussian_width
+        self.radial_basis = RadialBasis(**radial_hypers) 
 
     def transform(self, frames, show_progress=False):
         """
@@ -110,18 +130,45 @@ class DensityProjectionCalculator:
         for i, symbol in enumerate(frame.get_chemical_symbols()):
             iterator_species[i] = self.species_dict[symbol]
         
-        # TODO:
+        # Get the arrays with all
+        # TODO: update with correct expressions
+        positions = np.zeros((num_atoms, 3))
+        quaternions = np.zeros((num_atoms, 4))
+        ellipsoid_lengths = np.zeros((num_atoms, 3))
+
+        # Convert quaternions to rotation matrices
+        rotation_matrices = np.zeros((num_atoms,3,3))
+        for i, quat in enumerate(quaternions):
+            rotation_matrices[i] = quaternion_to_rotation_matrix(quat)
+
+        # Generate neighbor list
+        # TODO: change this to proper neighbor list
+        neighbors = []
+        for i in range(num_atoms):
+            # for now, just treat every atom as a neighbor
+            # of itself + the first two atoms in the structure
+            neighbors.append([0,1,i])
+
         # Compute the features for a single frame
-        features = 0.
-        '''
+        features = []
+        for l in range(lmax+1): 
+            features.append(np.zeros((3,3)))
+        
         for i in range(num_atoms):
             pos_i = positions[i]
-            for j in neighbors(i):
-                pos_j = positions[j]
-                R, principal_components = get_orientation(j)
-                moments = compute_moments(...)
-                for n,l,m:
-                    feat[n,l,m] += ... 
-        '''
+            for j in neighbors[i]:
+                # Obtain the position and orientation defining 
+                # the neighbor particle j
+                r_ij = pos_i - positions[j]
+                rot = rotation_matrices[j]
+                lengths = ellipsoid_lengths[j]
+
+                # Compute the moments
+                # The moments have shape ((maxdeg+1, maxdeg+1, maxdeg+1)) 
+                precision, center = self.radial_basis.compute_gaussian_parameters(r_ij, lengths, rot)
+                moments = compute_moments_inefficient_implementation(precision, center, maxdeg=lmax)
+                
+                for l in range(lmax+1):
+                    features[l] = np.einsum("mnpqr, pqr->mn", self.sph_to_cart[l], moments)
 
         return features
