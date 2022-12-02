@@ -15,6 +15,7 @@ downloads/
 eggs/
 .eggs/
 parts/
+playground/
 sdist/
 var/
 wheels/

@@ -4,3 +4,4 @@ from .moment_generator import compute_moments_diagonal_inefficient_implementatio
 from .monomial_iterator import TrivariateMonomialIndices
 from .spherical_to_cartesian import spherical_to_cartesian
 from .shortcuts import *
+from .quaternion_to_rotation_matrix import quaternion_to_rotation_matrix
