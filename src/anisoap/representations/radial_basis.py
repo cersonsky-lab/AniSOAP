@@ -1,0 +1,52 @@
+import numpy as np
+
+class RadialBasis:
+    """
+    Class for precomputing and storing all results related to the radial basis.
+    This helps to keep a cleaner main code by avoiding if-else clauses
+    related to the radial basis.
+
+    TODO: In the long run, this class would precompute quantities like
+    the normalization factors or orthonormalization matrix for the
+    radial basis.
+    """
+    def __init__(self, radial_basis, **hypers):
+        # Store all inputs into internal variables
+        self.radial_basis = radial_basis
+        self.hypers = hypers
+        if self.radial_basis not in ["monomial", "gto"]:
+            raise ValueError(f"{self.radial_basis} is not an implemented basis.")
+
+    # For each particle pair (i,j), we are provided with the three quantities
+    # that completely define the Gaussian distribution, namely
+    # the pair distance r_ij, the rotation matrix specifying the orientation
+    # of particle j's ellipsoid, as well the the three lengths of the
+    # principal axes.
+    # Combined with the choice of radial basis, these completely specify
+    # the mathematical problem, namely the integral that needs to be
+    # computed, which will be of the form
+    # integral gaussian(x,y,z) * polynomial(x,y,z) dx dy dz
+    # This function deals with the Gaussian part, which is specified
+    # by a precision matrix (inverse of covariance) and its center.
+    # The current function computes the covariance matrix and the center
+    # for the provided parameters as well as choice of radial basis.
+    def compute_gaussian_parameters(self, r_ij, lengths, rotation_matrix):
+        # Initialization
+        center = np.zeros((3,))
+        precision = np.zeros((3,3))
+        diag = np.diag(1/lengths**2)
+
+        # Compute both depending on the choice of radial basis
+        # Naive monomial basis with no normalization
+        if self.radial_basis == 'monomial':
+            precision = rotation_matrix @ diag @ rotation_matrix.T
+            center = r_ij
+
+        # GTO basis with uniform Gaussian width in the basis functions
+        elif self.radial_basis == 'gto':
+            sigma = self.hypers['radial_gaussian_width']
+            precision = rotation_matrix @ diag @ rotation_matrix.T
+            precision += np.eye(3) / sigma**2
+            center = r_ij - 1/sigma**2 * np.linalg.solve(precision, r_ij)
+
+        return precision, center 
