@@ -10,12 +10,24 @@ class RadialBasis:
     the normalization factors or orthonormalization matrix for the
     radial basis.
     """
-    def __init__(self, radial_basis, **hypers):
+    def __init__(self, radial_basis, max_angular, **hypers):
         # Store all inputs into internal variables
         self.radial_basis = radial_basis
+        self.max_angular = max_angular
         self.hypers = hypers
         if self.radial_basis not in ["monomial", "gto"]:
             raise ValueError(f"{self.radial_basis} is not an implemented basis.")
+
+        # As part of the initialization, compute the number of radial basis
+        # functions, nmax, for each angular frequency l.
+        self.num_radial_functions = []
+        for l in range(max_angular+1):
+            num_n = (max_angular - l) // 2 + 1
+            self.num_radial_functions.append(num_n)
+
+    # Get number of radial functions
+    def get_num_radial_functions(self):
+        return self.num_radial_functions
 
     # For each particle pair (i,j), we are provided with the three quantities
     # that completely define the Gaussian distribution, namely

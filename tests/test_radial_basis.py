@@ -6,6 +6,32 @@ from numpy.testing import assert_allclose
 from anisoap.representations import RadialBasis, radial_basis
 from anisoap.utils import quaternion_to_rotation_matrix
 
+class TestNumberOfRadialFunctions:
+    """
+    Test that the number of radial basis functions is correct.
+    """
+    def test_radial_functions_n5(self):
+        basis_gto = RadialBasis(radial_basis='monomial', max_angular=5)
+        num_ns = basis_gto.get_num_radial_functions()
+
+        # Compare against exact results
+        num_ns_exact = [3,3,2,2,1,1]
+        assert len(num_ns) == len(num_ns_exact)
+        for l, num in enumerate(num_ns):
+            assert num == num_ns_exact[l]
+
+    def test_radial_functions_n6(self):
+        basis_gto = RadialBasis(radial_basis='monomial', max_angular=6)
+        num_ns = basis_gto.get_num_radial_functions()
+
+        # Compare against exact results
+        num_ns_exact = [4,3,3,2,2,1,1]
+        assert len(num_ns) == len(num_ns_exact)
+        for l, num in enumerate(num_ns):
+            assert num == num_ns_exact[l]
+
+
+
 class TestGaussianParameters:
     """
     Test that the two quantities determining a Gaussian distribution, namely
@@ -32,8 +58,8 @@ class TestGaussianParameters:
     @pytest.mark.parametrize('rotation_matrix', rotation_matrices)
     def test_limit_large_sigma(self, sigma, r_ij, lengths, rotation_matrix):
         # Initialize the classes
-        basis_mon = RadialBasis(radial_basis='monomial')
-        basis_gto = RadialBasis(radial_basis='gto', radial_gaussian_width=sigma)
+        basis_mon = RadialBasis(radial_basis='monomial', max_angular=2)
+        basis_gto = RadialBasis(radial_basis='gto', radial_gaussian_width=sigma, max_angular=2)
 
         # Get the center and precision matrix
         hypers = {}
@@ -56,7 +82,7 @@ class TestGaussianParameters:
     @pytest.mark.parametrize('rotation_matrix', rotation_matrices)
     def test_limit_small_sigma(self, sigma, r_ij, lengths, rotation_matrix):
         # Initialize the class
-        basis_gto = RadialBasis(radial_basis='gto', radial_gaussian_width=sigma)
+        basis_gto = RadialBasis(radial_basis='gto', radial_gaussian_width=sigma, max_angular=2)
 
         # Get the center and precision matrix
         hypers = {}

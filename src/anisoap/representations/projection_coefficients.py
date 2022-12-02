@@ -32,6 +32,7 @@ class DensityProjectionCalculator:
     def __init__(self,
                  max_angular,
                  radial_basis_name,
+                 cutoff_radius,
                  compute_gradients=False,
                  subtract_center_contribution=False,
                  radial_gaussian_width = None,
@@ -39,9 +40,14 @@ class DensityProjectionCalculator:
 
         # Store the input variables
         self.max_angular = max_angular
+        self.cutoff_radius = cutoff_radius
         self.compute_gradients = compute_gradients
         self.subtract_center_contribution = subtract_center_contribution
         self.radial_basis_name = radial_basis_name
+
+        # Currently, gradients are not supported
+        if compute_gradients:
+            raise NotImplementedError("Sorry! Gradients have not yet been implemented")
 
         # Precompute the spherical to Cartesian transformation
         # coefficients.
@@ -59,7 +65,9 @@ class DensityProjectionCalculator:
         radial_hypers = {}
         radial_hypers['radial_basis'] = radial_basis_name.lower() # lower case
         radial_hypers['radial_gaussian_width'] = radial_gaussian_width
-        self.radial_basis = RadialBasis(**radial_hypers) 
+        radial_hypers['max_angular'] = max_angular
+        self.radial_basis = RadialBasis(**radial_hypers)
+        self.num_ns = self.radial_basis.get_num_radial_functions() 
 
     def transform(self, frames, show_progress=False):
         """
