@@ -109,7 +109,7 @@ def pairwise_aniso_expansion(lmax,
 
 
                 for l in range(lmax+1):
-                    print(l, np.asarray(values_ldict[l]).shape, len(nl_block.samples))
+#                    print(l, np.asarray(values_ldict[l]).shape, len(nl_block.samples))
                     block = TensorBlock(values = np.asarray(values_ldict[l]), 
                                         samples = nl_block.samples, #as many rows as samples
                                         components = [Labels(['spherical_component_m'], np.asarray([list(range(-l,l+1))],
