@@ -21,6 +21,7 @@ following packages installed:
 * numpy (1.13 or higher)
 * scipy (1.4.0 or higher)
 * ASE (3.18 or higher)
+* math
 * Equistore
 * Rascaline 
 
