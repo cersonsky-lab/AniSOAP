@@ -21,7 +21,8 @@ following packages installed:
 * numpy (1.13 or higher)
 * scipy (1.4.0 or higher)
 * ASE (3.18 or higher)
-
+* Equistore
+* Rascaline 
 
 ## For developers:
 Please run pytest and check that all tests pass before pushing new changes to the main branch with
