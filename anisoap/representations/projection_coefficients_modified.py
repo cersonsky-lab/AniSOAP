@@ -1,5 +1,6 @@
-from anisoap.utils.spherical_to_cartesian import spherical_to_cartesian
 import numpy as np
+
+from anisoap.utils.spherical_to_cartesian import spherical_to_cartesian
 
 try:
     from tqdm import tqdm
@@ -11,16 +12,20 @@ except ImportError:
 # from .radial_basis import RadialBasis
 # from ..utils import compute_moments_inefficient_implementation
 
-from anisoap.utils.moment_generator import *
-from anisoap.utils.quaternion_to_rotation_matrix import quaternion_to_rotation_matrix
+from itertools import product
+
+from equistore import (
+    Labels,
+    TensorBlock,
+    TensorMap,
+)
+from rascaline import NeighborList
+
+import anisoap.representations.radial_basis as radial_basis
 from anisoap.representations.radial_basis import RadialBasis
 from anisoap.utils import compute_moments_inefficient_implementation
-
-from itertools import product
-import anisoap.representations.radial_basis as radial_basis
-
-from rascaline import NeighborList
-from equistore import TensorBlock, TensorMap, Labels
+from anisoap.utils.moment_generator import *
+from anisoap.utils.quaternion_to_rotation_matrix import quaternion_to_rotation_matrix
 
 
 def pairwise_aniso_expansion(

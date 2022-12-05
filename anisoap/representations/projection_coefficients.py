@@ -1,15 +1,18 @@
-from anisoap.utils.spherical_to_cartesian import spherical_to_cartesian
 import numpy as np
+
+from anisoap.utils.spherical_to_cartesian import spherical_to_cartesian
 
 try:
     from tqdm import tqdm
 except ImportError:
     tqdm = lambda i, **kwargs: i
 
-from ..utils import compute_moments_diagonal_inefficient_implementation
-from ..utils import quaternion_to_rotation_matrix
+from ..utils import (
+    compute_moments_diagonal_inefficient_implementation,
+    compute_moments_inefficient_implementation,
+    quaternion_to_rotation_matrix,
+)
 from .radial_basis import RadialBasis
-from ..utils import compute_moments_inefficient_implementation
 
 
 class DensityProjectionCalculator:

@@ -1,5 +1,6 @@
 import numpy as np
 
+
 # Function to transform the quaternion representation of a rotation
 # to its matrix form.
 # The formula for the rotation matrix in terms of the four components
