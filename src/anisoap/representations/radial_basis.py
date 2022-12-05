@@ -44,21 +44,14 @@ class RadialBasis:
     # for the provided parameters as well as choice of radial basis.
     def compute_gaussian_parameters(self, r_ij, lengths, rotation_matrix):
         # Initialization
-        center = np.zeros((3,))
-        precision = np.zeros((3,3))
-        diag = np.diag(1/lengths**2)
-
-        # Compute both depending on the choice of radial basis
-        # Naive monomial basis with no normalization
-        if self.radial_basis == 'monomial':
-            precision = rotation_matrix @ diag @ rotation_matrix.T
-            center = r_ij
+        center = r_ij
+        diag = np.diag(1 / lengths**2)
+        precision = rotation_matrix @ diag @ rotation_matrix.T
 
         # GTO basis with uniform Gaussian width in the basis functions
-        elif self.radial_basis == 'gto':
-            sigma = self.hypers['radial_gaussian_width']
-            precision = rotation_matrix @ diag @ rotation_matrix.T
+        if self.radial_basis == "gto":
+            sigma = self.hypers["radial_gaussian_width"]
             precision += np.eye(3) / sigma**2
-            center = r_ij - 1/sigma**2 * np.linalg.solve(precision, r_ij)
+            center -= 1 / sigma**2 * np.linalg.solve(precision, r_ij)
 
         return precision, center 

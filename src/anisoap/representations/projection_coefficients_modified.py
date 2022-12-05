@@ -367,19 +367,17 @@ class DensityProjectionCalculator:
         quaternions = np.zeros((self.num_atoms_total,4))
         ellipsoid_lengths = np.zeros((self.num_atoms_total, 3))
 
-#         for i in range(self.num_frames):
-#             for j in range(self.num_atoms_per_frame[i]):
-#                j_global = frame_to_global_atom_idx[i] +j
-#             quaternions[j_global]= frames[i].info['quaternion'][j] #[0, 0, np.sin(np.pi/4), np.cos(np.pi/4)]
-#             ellipsoid_lengths[j_global] = frames[i].info['ellipsoid'][j] #[0.5,0.3,0.4]
-        
-#          --------COMMENT OUT-------------------------------
-        for i in range(self.num_atoms_total):
-            quaternions[i]= [0, 0, np.sin(np.pi/4), np.cos(np.pi/4)]
-            ellipsoid_lengths[i] = [0.5,0.3,0.4]
-#          -----------------------------------------------------   
-        # Convert quaternions to rotation matrices
-        rotation_matrices = np.zeros((self.num_atoms_total,3,3))
+        for i in range(num_frames):
+            for j in range(self.num_atoms_per_frame[i]):
+                j_global = self.frame_to_global_atom_idx[i] + j
+                quaternions[j_global] = frames[i].arrays["quaternions"][j]
+                ellipsoid_lengths[j_global] = [
+                    frames[i].arrays["c_diameter[1]"][j],
+                    frames[i].arrays["c_diameter[2]"][j],
+                    frames[i].arrays["c_diameter[3]"][j],
+                ]
+                
+        rotation_matrices = np.zeros((self.num_atoms_total, 3, 3))
         for i, quat in enumerate(quaternions):
             rotation_matrices[i] = quaternion_to_rotation_matrix(quat)
 

@@ -8,8 +8,8 @@ import numpy as np
 # terms, see e.g.
 # https://en.wikipedia.org/wiki/Quaternions_and_spatial_rotation
 def quaternion_to_rotation_matrix(q):
-    assert abs(1-np.linalg.norm(q)) < 1e-12
-    qw  = q[0]
+    assert abs(1 - np.linalg.norm(q)) < 1e-6
+    qw = q[0]
     qx = q[1]
     qy = q[2]
     qz = q[3]

@@ -54,7 +54,7 @@ class DensityProjectionCalculator:
         num_ns = []
         for l in range(max_angular+1):
             num_ns.append(max_angular + 1 - l)
-        self.sph_to_cart = spherical_to_cartesian(max_angular)
+        self.sph_to_cart = spherical_to_cartesian(max_angular, num_ns)
 
         # Initialize the radial basis class
         if radial_basis_name not in ["monomial", "gto"]:

@@ -28,10 +28,6 @@ def compute_moments_single_variable(A, a, maxdeg):
     moments = np.zeros((maxdeg+1, ))
     moments[0] = np.sqrt(2*np.pi/A)
     moments[1] = a * moments[0]
-    
-    # If maxdeg = 1, there is nothing more to do
-    if maxdeg == 1:
-        return moments
 
     # Iteratively compute the next moments from the previous two
     for deg in range(1, maxdeg):
@@ -46,43 +42,49 @@ def compute_moments_single_variable(A, a, maxdeg):
 # To be more specific, the array "moments" allows us to access the value
 # of the moment <x^n0 * y^n1 * z^n2> simply as moments[n0,n1,n2].
 # This leads to more intuitive code, at the cost of wasting around
-# a third of the memory in the array to store zeros. 
-def compute_moments_diagonal_inefficient_implementation(principal_components, a, maxdeg):
+# a third of the memory in the array to store zeros.
+def compute_moments_diagonal_inefficient_implementation(
+    principal_components, a, maxdeg
+):
     """
     Parameters:
     - principal_components: np.ndarray of shape (3,)
         Array containing the three principal components
     - a: np.ndarray of shape (3,)
-        Contains the information about the center of the trivariate Gaussian.
+        Vectorial center of the trivariate Gaussian
     - maxdeg: int
         Maximum degree for which the moments need to be computed.
-        
+
     Returns:
-    - moments: np.ndarray of shape (maxdeg+1, maxdeg+1, maxdeg+1)
+    - moments: np.ndarray of shape (3, maxdeg+1)
         moments[n0,n1,n2] is the (n0,n1,n2)-th moment of the Gaussian defined as
-        <x^n0 * y^n1 * z^n2> = integral (x^n0 * y^n1 * z^n2) * exp(-0.5*(r-a).T@cov@(r-a)) dxdydz
+
+        .. math::
+        <x^{n_0} * y^{n_1} * z^{n_2}> = \int(x^{n_0} * y^{n_1} * z^{n_2}) * \exp(-0.5*(r-a).T@cov@(r-a)) dxdydz
+        \sum_{i=1}^{\\infty} x_{i}
+
         Note that the term "moments" in probability theory are defined for normalized Gaussian distributions.
         Here, we take the Gaussian without prefactor, meaning that all moments are scaled
-        by a global factor. 
+        by a global factor.
     """
     # Initialize the array in which to store the moments
     # moments[n0, n1, n2] will be set to <x^n0 * y^n1 * z^n2>
     # This representation is very inefficient, since only about 1/6 of the
     # array elements will actually be relevant.
     # The advantage, however, is the simplicity in later use.
-    moments = np.zeros((maxdeg+1, maxdeg+1, maxdeg+1))
-    
+    moments = np.zeros((3, maxdeg + 1))
+
     # Precompute the single variable moments in x- y- and z-directions:
     moments_x = compute_moments_single_variable(principal_components[0], a[0], maxdeg)
     moments_y = compute_moments_single_variable(principal_components[1], a[1], maxdeg)
     moments_z = compute_moments_single_variable(principal_components[2], a[2], maxdeg)
 
     # Compute values for all relevant components for which the monomial degree is <= maxdeg
-    for n0 in range(maxdeg+1):
-        for n1 in range(maxdeg+1):
-            for n2 in range(maxdeg+1):
+    for n0 in range(maxdeg + 1):
+        for n1 in range(maxdeg + 1 - n0):
+            for n2 in range(maxdeg + 1 - n0 - n1):
                 deg = n0 + n1 + n2
-                
+
                 # Make sure that the degree is not above the maximal degree,
                 # since we only need moments up to degree maxdeg.
                 # (this is where we are wasting memory)
