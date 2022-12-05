@@ -1,5 +1,6 @@
 import numpy as np
 
+
 class RadialBasis:
     """
     Class for precomputing and storing all results related to the radial basis.
@@ -10,6 +11,7 @@ class RadialBasis:
     the normalization factors or orthonormalization matrix for the
     radial basis.
     """
+
     def __init__(self, radial_basis, max_angular, **hypers):
         # Store all inputs into internal variables
         self.radial_basis = radial_basis
@@ -21,7 +23,7 @@ class RadialBasis:
         # As part of the initialization, compute the number of radial basis
         # functions, nmax, for each angular frequency l.
         self.num_radial_functions = []
-        for l in range(max_angular+1):
+        for l in range(max_angular + 1):
             num_n = (max_angular - l) // 2 + 1
             self.num_radial_functions.append(num_n)
 
@@ -54,4 +56,4 @@ class RadialBasis:
             precision += np.eye(3) / sigma**2
             center -= 1 / sigma**2 * np.linalg.solve(precision, r_ij)
 
-        return precision, center 
+        return precision, center
