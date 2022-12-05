@@ -72,7 +72,7 @@ def compute_moments_diagonal_inefficient_implementation(
     # This representation is very inefficient, since only about 1/6 of the
     # array elements will actually be relevant.
     # The advantage, however, is the simplicity in later use.
-    moments = np.zeros((3, maxdeg + 1))
+    moments = np.zeros((maxdeg + 1, maxdeg + 1, maxdeg + 1))
 
     # Precompute the single variable moments in x- y- and z-directions:
     moments_x = compute_moments_single_variable(principal_components[0], a[0], maxdeg)

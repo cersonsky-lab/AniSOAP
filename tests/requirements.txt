@@ -1,0 +1,6 @@
+coverage[toml]
+numpy
+pytest[toml]
+scipy
+git+https://github.com/Luthaf/rascaline.git
+git+https://github.com/lab-cosmo/equistore.git

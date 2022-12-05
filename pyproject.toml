@@ -1,22 +1,25 @@
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+[tool.tox]
+legacy_tox_ini = """
+[tox]
 
-[project]
-name = "anisoap"
-version = "0.0.1"
-authors = [
-  { name="RosyGang", email="author@example.com" },
-]
-description = "Anisotropic Representations for Materials Modeling"
-readme = "README.md"
-requires-python = ">=3.7"
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
+[testenv:tests]
+changedir = tests
+deps = -rtests/requirements.txt
+
+commands =
+    coverage run -m unittest discover -p "*.py"
+    coverage xml
+
+"""
+
+[tool.coverage.run]
+branch = true
+data_file = 'tests/.coverage'
+
+[tool.coverage.report]
+include = [
+    "anisoap/*"
 ]
 
-[project.urls]
-"Homepage" = "https://github.com/pypa/sampleproject"
-"Bug Tracker" = "https://github.com/pypa/sampleproject/issues"
+[tool.coverage.xml]
+output = 'tests/coverage.xml'
