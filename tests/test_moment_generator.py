@@ -1,7 +1,6 @@
 import numpy as np
 import pytest
-from scipy.special import gamma
-from math import comb
+from scipy.special import gamma, comb
 from numpy.testing import assert_allclose
 
 # Import the different versions of the moment generators

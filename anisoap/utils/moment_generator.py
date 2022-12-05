@@ -1,8 +1,9 @@
-from math import comb
-
 import numpy as np
 from numpy.testing import assert_allclose
-from scipy.special import gamma
+from scipy.special import (
+    comb,
+    gamma,
+)
 
 
 # Define function to compute all moments for a single
