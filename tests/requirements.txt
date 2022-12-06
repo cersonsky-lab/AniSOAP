@@ -1,5 +1,5 @@
 coverage[toml]
 numpy
-pytest[toml]
+pytest
 scipy
 git+https://github.com/Luthaf/rascaline.git
