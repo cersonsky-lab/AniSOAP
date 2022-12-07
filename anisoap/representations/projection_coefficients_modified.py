@@ -7,11 +7,6 @@ try:
 except ImportError:
     tqdm = lambda i, **kwargs: i
 
-# from ..utils import compute_moments_diagonal_inefficient_implementation
-# from ..utils import quaternion_to_rotation_matrix
-# from .radial_basis import RadialBasis
-# from ..utils import compute_moments_inefficient_implementation
-
 from itertools import product
 
 from equistore import (
@@ -81,13 +76,8 @@ def pairwise_aniso_expansion(
     tensorblock_list = []
     keys = np.array(neighbor_list.keys.asarray(), dtype=int)
     keys = [tuple(i) + (l,) for i in keys for l in range(lmax + 1)]
-    #  -------- UNCOMMENT -----------------------------
-    #     num_ns = radial_basis.get_num_radial_functions()
+    num_ns = radial_basis.get_num_radial_functions()
 
-    num_ns = []
-    for i in range(lmax + 1):
-        num_ns.append(1)
-    #  ----------------------------------------------
     for center_species in species:
         for neighbor_species in species:
             if (center_species, neighbor_species) in neighbor_list.keys:
@@ -115,7 +105,6 @@ def pairwise_aniso_expansion(
                     ).reshape(
                         3,
                     )
-                    #                 r_ij = pos_i - positions[j_global]
 
                     rot = rotation_matrices[j_global]
                     lengths = ellipsoid_lengths[j_global]
@@ -123,18 +112,16 @@ def pairwise_aniso_expansion(
                         r_ij, lengths, rot
                     )
 
-                    # TODO: Fix this - currently dimension MISMATCH
-                    #         --------------UNCOMMENT-------------------------------
-                    #                 moments = compute_moments_inefficient_implementation(precision, center, maxdeg=lmax)
-                    #          -------------------------------------------------
+                    moments = compute_moments_inefficient_implementation(
+                        precision, center, maxdeg=lmax
+                    )
                     for l in range(lmax + 1):
-                        moments = np.ones(sph_to_cart[l].shape[-3:])
+                        moments_l = moments[: l + 1, : l + 1, : l + 1]
                         values_ldict[l].append(
-                            np.einsum("mnpqr, pqr->mn", sph_to_cart[l], moments)
+                            np.einsum("mnpqr, pqr->mn", sph_to_cart[l], moments_l)
                         )
 
                 for l in range(lmax + 1):
-                    #                    print(l, np.asarray(values_ldict[l]).shape, len(nl_block.samples))
                     block = TensorBlock(
                         values=np.asarray(values_ldict[l]),
                         samples=nl_block.samples,  # as many rows as samples
@@ -368,15 +355,7 @@ class DensityProjectionCalculator:
         # Currently, gradients are not supported
         if compute_gradients:
             raise NotImplementedError("Sorry! Gradients have not yet been implemented")
-
-        # Precompute the spherical to Cartesian transformation
-        # coefficients.
-        num_ns = []
-        for l in range(max_angular + 1):
-            num_ns.append(1)
-        #             num_ns.append(max_angular + 1 - l)
-
-        self.sph_to_cart = spherical_to_cartesian(max_angular, num_ns)
+        #
 
         # Initialize the radial basis class
         if radial_basis_name not in ["monomial", "gto"]:
@@ -393,6 +372,7 @@ class DensityProjectionCalculator:
         self.radial_basis = RadialBasis(**radial_hypers)
 
         self.num_ns = self.radial_basis.get_num_radial_functions()
+        self.sph_to_cart = spherical_to_cartesian(self.max_angular, self.num_ns)
 
     def transform(self, frames, show_progress=False):
         """
