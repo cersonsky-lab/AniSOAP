@@ -4,6 +4,7 @@ from equistore import Labels, TensorBlock, TensorMap
 import wigners
 import re
 
+
 class ClebschGordanReal:
     def __init__(self, l_max):
         self._l_max = l_max
@@ -40,28 +41,32 @@ class ClebschGordanReal:
                     else:
                         rcg = np.imag(real_cg)
 
-                    new_cg = []                    
+                    new_cg = []
                     for M in range(2 * L + 1):
-                        cg_nonzero = np.where(np.abs(rcg[:,:,M])>1e-15)                        
-                        cg_M = np.zeros( len(cg_nonzero[0]), 
-                                        dtype=[('m1','>i4'), ('m2','>i4'), ( 'cg', '>f8')] )
+                        cg_nonzero = np.where(np.abs(rcg[:, :, M]) > 1e-15)
+                        cg_M = np.zeros(
+                            len(cg_nonzero[0]),
+                            dtype=[("m1", ">i4"), ("m2", ">i4"), ("cg", ">f8")],
+                        )
                         cg_M["m1"] = cg_nonzero[0]
                         cg_M["m2"] = cg_nonzero[1]
                         cg_M["cg"] = rcg[cg_nonzero[0], cg_nonzero[1], M]
                         new_cg.append(cg_M)
-                        
+
                     self._cg[(l1, l2, L)] = new_cg
 
     def get_cg(self):
         return self._cg
-    
+
     def combine_einsum(self, rho1, rho2, L, combination_string):
         # automatically infer l1 and l2 from the size of the coefficients vectors
         l1 = (rho1.shape[1] - 1) // 2
         l2 = (rho2.shape[1] - 1) // 2
         if L > self._l_max or l1 > self._l_max or l2 > self._l_max:
             print(self._l_max, L, l1, l2)
-            raise ValueError("Requested CG entry ", (l1, l2, L), " has not been precomputed")
+            raise ValueError(
+                "Requested CG entry ", (l1, l2, L), " has not been precomputed"
+            )
 
         n_items = rho1.shape[0]
         if rho1.shape[0] != rho2.shape[0]:
@@ -82,7 +87,7 @@ class ClebschGordanReal:
 
         return rho
 
-    
+
 def _real2complex(L):
     """
     Computes a matrix that can be used to convert from real to complex-valued
@@ -122,18 +127,20 @@ def _remove_suffix(names, new_suffix=""):
     for name in names:
         match = suffix.search(name)
         if match is None:
-            rname.append(name+new_suffix)
+            rname.append(name + new_suffix)
         else:
-            rname.append(name[:match.start()]+new_suffix)
+            rname.append(name[: match.start()] + new_suffix)
     return rname
 
 
 def standardize_keys(descriptor):
-    """ Standardize the naming scheme of density expansion coefficient blocks (nu=1) """
+    """Standardize the naming scheme of density expansion coefficient blocks (nu=1)"""
 
     key_names = descriptor.keys.names
     if not "angular_channel" in key_names:
-        raise ValueError("Descriptor missing spherical harmonics channel key `angular_channel`")
+        raise ValueError(
+            "Descriptor missing spherical harmonics channel key `angular_channel`"
+        )
     blocks = []
     keys = []
     for key, block in descriptor:
@@ -143,16 +150,26 @@ def standardize_keys(descriptor):
         keys.append(key)
         property_names = _remove_suffix(block.properties.names, "_1")
         blocks.append(
-            TensorBlock( values=block.values, samples=block.samples, components=block.components, 
-                         properties=Labels(property_names, np.asarray(block.properties.view(dtype = np.int32)).reshape(-1,len(property_names)) )
-            ) )
-    
+            TensorBlock(
+                values=block.values,
+                samples=block.samples,
+                components=block.components,
+                properties=Labels(
+                    property_names,
+                    np.asarray(block.properties.view(dtype=np.int32)).reshape(
+                        -1, len(property_names)
+                    ),
+                ),
+            )
+        )
+
     if not "order_nu" in key_names:
-        key_names = ( "order_nu",) + key_names
-    
-    return TensorMap(keys = Labels(names=key_names, values=np.asarray(keys, dtype=np.int32)),
-                     blocks = blocks
-                    )       
+        key_names = ("order_nu",) + key_names
+
+    return TensorMap(
+        keys=Labels(names=key_names, values=np.asarray(keys, dtype=np.int32)),
+        blocks=blocks,
+    )
 
 
 def cg_combine(
@@ -184,15 +201,29 @@ def cg_combine(
     if clebsch_gordan is None:
         clebsch_gordan = ClebschGordanReal(lcut)
 
-    other_keys_a = tuple(name for name in x_a.keys.names if name not in ["angular_channel", "order_nu"] )
-    other_keys_b = tuple(name for name in x_b.keys.names if name not in ["angular_channel", "order_nu"] )
+    other_keys_a = tuple(
+        name for name in x_a.keys.names if name not in ["angular_channel", "order_nu"]
+    )
+    other_keys_b = tuple(
+        name for name in x_b.keys.names if name not in ["angular_channel", "order_nu"]
+    )
 
     if other_keys_match is None:
-        OTHER_KEYS = [ k+"_a" for k in other_keys_a ] + [ k+"_b" for k in other_keys_b ]
+        OTHER_KEYS = [k + "_a" for k in other_keys_a] + [k + "_b" for k in other_keys_b]
     else:
-        OTHER_KEYS = other_keys_match + [
-            k+("_a" if k in other_keys_b else "") for k in other_keys_a if k not in other_keys_match ] + [
-            k+("_b" if k in other_keys_a else "") for k in other_keys_b if k not in other_keys_match ]
+        OTHER_KEYS = (
+            other_keys_match
+            + [
+                k + ("_a" if k in other_keys_b else "")
+                for k in other_keys_a
+                if k not in other_keys_match
+            ]
+            + [
+                k + ("_b" if k in other_keys_a else "")
+                for k in other_keys_b
+                if k not in other_keys_match
+            ]
+        )
 
     # we assume grad components are all the same
     if x_a.block(0).has_gradient("positions"):
@@ -221,7 +252,9 @@ def cg_combine(
     for index_a, block_a in x_a:
         lam_a = index_a["angular_channel"]
         order_a = index_a["order_nu"]
-        properties_a = block_a.properties  # pre-extract this block as accessing a c property has a non-zero cost
+        properties_a = (
+            block_a.properties
+        )  # pre-extract this block as accessing a c property has a non-zero cost
         samples_a = block_a.samples
 
         # and x_b
@@ -231,34 +264,45 @@ def cg_combine(
             properties_b = block_b.properties
             samples_b = block_b.samples
 
-
             if other_keys_match is None:
-                OTHERS = tuple( index_a[name] for name in other_keys_a ) + tuple( index_b[name] for name in other_keys_b )
+                OTHERS = tuple(index_a[name] for name in other_keys_a) + tuple(
+                    index_b[name] for name in other_keys_b
+                )
             else:
-                OTHERS = tuple(index_a[k] for k in other_keys_match if index_a[k]==index_b[k])
+                OTHERS = tuple(
+                    index_a[k] for k in other_keys_match if index_a[k] == index_b[k]
+                )
                 # skip combinations without matching key
-                if len(OTHERS)<len(other_keys_match):
+                if len(OTHERS) < len(other_keys_match):
                     continue
                 # adds non-matching keys to build outer product
-                OTHERS = OTHERS + tuple(index_a[k] for k in other_keys_a if k not in other_keys_match)
-                OTHERS = OTHERS + tuple(index_b[k] for k in other_keys_b if k not in other_keys_match)
+                OTHERS = OTHERS + tuple(
+                    index_a[k] for k in other_keys_a if k not in other_keys_match
+                )
+                OTHERS = OTHERS + tuple(
+                    index_b[k] for k in other_keys_b if k not in other_keys_match
+                )
 
             neighbor_slice = slice(None)
 
             # determines the properties that are in the select list
             sel_feats = []
             sel_idx = []
-            sel_feats = np.indices((len(properties_a), len(properties_b))).reshape(2,-1).T
+            sel_feats = (
+                np.indices((len(properties_a), len(properties_b))).reshape(2, -1).T
+            )
 
             prop_ids_a = []
             prop_ids_b = []
             for n_a, f_a in enumerate(properties_a):
-                prop_ids_a.append( tuple(f_a) + (lam_a,))
+                prop_ids_a.append(tuple(f_a) + (lam_a,))
             for n_b, f_b in enumerate(properties_b):
-                prop_ids_b.append( tuple(f_b) + (lam_b,))
+                prop_ids_b.append(tuple(f_b) + (lam_b,))
             prop_ids_a = np.asarray(prop_ids_a)
             prop_ids_b = np.asarray(prop_ids_b)
-            sel_idx = np.hstack([prop_ids_a[sel_feats[:,0]],prop_ids_b[sel_feats[:,1]] ])
+            sel_idx = np.hstack(
+                [prop_ids_a[sel_feats[:, 0]], prop_ids_b[sel_feats[:, 1]]]
+            )
             if len(sel_feats) == 0:
                 continue
             # loops over all permissible output blocks. note that blocks will
@@ -266,7 +310,10 @@ def cg_combine(
             for L in range(np.abs(lam_a - lam_b), 1 + min(lam_a + lam_b, lcut)):
                 # determines parity of the block
                 NU = order_a + order_b
-                KEY = (NU, L,) + OTHERS
+                KEY = (
+                    NU,
+                    L,
+                ) + OTHERS
                 if not KEY in X_idx:
                     X_idx[KEY] = []
                     X_blocks[KEY] = []
@@ -286,10 +333,12 @@ def cg_combine(
                 if grad_components is not None:
                     grad_a = block_a.gradient("positions")
                     grad_b = block_b.gradient("positions")
-                    grad_a_data = np.swapaxes(grad_a.data, 1,2)
-                    grad_b_data = np.swapaxes(grad_b.data, 1,2)
+                    grad_a_data = np.swapaxes(grad_a.data, 1, 2)
+                    grad_b_data = np.swapaxes(grad_b.data, 1, 2)
                     one_shot_grads = clebsch_gordan.combine_einsum(
-                        block_a.values[grad_a.samples["sample"]][neighbor_slice, :, sel_feats[:, 0]],
+                        block_a.values[grad_a.samples["sample"]][
+                            neighbor_slice, :, sel_feats[:, 0]
+                        ],
                         grad_b_data[..., sel_feats[:, 1]],
                         L=L,
                         combination_string="iq,iaq->iaq",
@@ -318,22 +367,32 @@ def cg_combine(
         nz_idx.append(KEY)
         block_data = np.concatenate(X_blocks[KEY], axis=-1)
         sph_components = Labels(
-                ["spherical_harmonics_m"], np.asarray(range(-L, L + 1), dtype=np.int32).reshape(-1, 1)
-            )
+            ["spherical_harmonics_m"],
+            np.asarray(range(-L, L + 1), dtype=np.int32).reshape(-1, 1),
+        )
         newblock = TensorBlock(
             # feature index must be last
             values=block_data,
             samples=X_samples[KEY],
             components=[sph_components],
-            properties=Labels(feature_names, np.asarray(np.vstack(X_idx[KEY]), dtype=np.int32)),
+            properties=Labels(
+                feature_names, np.asarray(np.vstack(X_idx[KEY]), dtype=np.int32)
+            ),
         )
         if grad_components is not None:
             grad_data = np.swapaxes(np.concatenate(X_grads[KEY], axis=-1), 2, 1)
-            newblock.add_gradient("positions", data=grad_data, samples=X_grad_samples[KEY], components=[grad_components[0], sph_components] )
+            newblock.add_gradient(
+                "positions",
+                data=grad_data,
+                samples=X_grad_samples[KEY],
+                components=[grad_components[0], sph_components],
+            )
         nz_blk.append(newblock)
     X = TensorMap(
-        Labels(["order_nu", "angular_channel"] + OTHER_KEYS, np.asarray(nz_idx, dtype=np.int32)), nz_blk
+        Labels(
+            ["order_nu", "angular_channel"] + OTHER_KEYS,
+            np.asarray(nz_idx, dtype=np.int32),
+        ),
+        nz_blk,
     )
     return X
-
-

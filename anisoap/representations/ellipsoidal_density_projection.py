@@ -23,7 +23,7 @@ from anisoap.utils.moment_generator import *
 from anisoap.utils.quaternion_to_rotation_matrix import quaternion_to_rotation_matrix
 
 
-def pairwise_aniso_expansion(
+def pairwise_ellip_expansion(
     lmax,
     neighbor_list,
     species,
@@ -140,24 +140,24 @@ def pairwise_aniso_expansion(
                     )
                     tensorblock_list.append(block)
 
-    pairwise_aniso_feat = TensorMap(
+    pairwise_ellip_feat = TensorMap(
         Labels(
             ["species_center", "species_neighbor", "angular_channel"],
             np.asarray(keys, dtype=np.int32),
         ),
         tensorblock_list,
     )
-    return pairwise_aniso_feat
+    return pairwise_ellip_feat
 
 
-def contract_pairwise_feat(pair_aniso_feat, species):
+def contract_pairwise_feat(pair_ellip_feat, species):
     """
     Function to sum over the pairwise expansion \sum_{j in a} <anlm|rho_ij> = <anlm|rho_i>
     --------------------------------------------------------
     Parameters:
 
-    pair_aniso_feat : Equistore TensorMap
-        TensorMap returned from "pairwise_aniso_expansion()" with keys (species_1, species_2,l) enumerating
+    pair_ellip_feat : Equistore TensorMap
+        TensorMap returned from "pairwise_ellip_expansion()" with keys (species_1, species_2,l) enumerating
         the possible species pairs and the angular channels.
 
     species: list of ints
@@ -170,20 +170,20 @@ def contract_pairwise_feat(pair_aniso_feat, species):
         Each block of this tensormap has as samples ("structure", "center") yielding the indices of the frames
         and atoms that correspond to "species" are present.
         block.value is a 3D array of the form (num_samples, num_components, properties) where num_components
-        take on the same values as in the pair_aniso_feat_feat.block .  block.properties now has an additional index
+        take on the same values as in the pair_ellip_feat_feat.block .  block.properties now has an additional index
         for neighbor_species that corresponds to "a" in <anlm|rho_i>
 
     """
-    aniso_keys = list(
-        set([tuple(list(x)[:1] + list(x)[2:]) for x in pair_aniso_feat.keys])
+    ellip_keys = list(
+        set([tuple(list(x)[:1] + list(x)[2:]) for x in pair_ellip_feat.keys])
     )
-    # Select the unique combinations of pair_aniso_feat.keys["species_center"] and
-    # pair_aniso_feat.keys["angular_channel"] to form the keys of the single particle centered feature
-    aniso_keys.sort()
-    aniso_blocks = []
-    property_names = pair_aniso_feat.property_names + ("neighbor_species",)
+    # Select the unique combinations of pair_ellip_feat.keys["species_center"] and
+    # pair_ellip_feat.keys["angular_channel"] to form the keys of the single particle centered feature
+    ellip_keys.sort()
+    ellip_blocks = []
+    property_names = pair_ellip_feat.property_names + ("neighbor_species",)
 
-    for key in aniso_keys:
+    for key in ellip_keys:
         contract_blocks = []
         contract_properties = []
         contract_samples = []
@@ -191,15 +191,15 @@ def contract_pairwise_feat(pair_aniso_feat, species):
         # All these lists have as many entries as len(species).
 
         for ele in species:
-            blockidx = pair_aniso_feat.blocks_matching(species_neighbor=ele)
-            # indices of the blocks in pair_aniso_feat with neighbor species = ele
+            blockidx = pair_ellip_feat.blocks_matching(species_neighbor=ele)
+            # indices of the blocks in pair_ellip_feat with neighbor species = ele
             sel_blocks = [
-                pair_aniso_feat.block(i)
+                pair_ellip_feat.block(i)
                 for i in blockidx
                 if key
                 == tuple(
-                    list(pair_aniso_feat.keys[i])[:1]
-                    + list(pair_aniso_feat.keys[i])[2:]
+                    list(pair_ellip_feat.keys[i])[:1]
+                    + list(pair_ellip_feat.keys[i])[2:]
                 )
             ]
 
@@ -303,21 +303,22 @@ def contract_pairwise_feat(pair_aniso_feat, species):
             ),
         )
 
-        aniso_blocks.append(new_block)
-    aniso = TensorMap(
+        ellip_blocks.append(new_block)
+    ellip = TensorMap(
         Labels(
             ["species_center", "angular_channel"],
-            np.asarray(aniso_keys, dtype=np.int32),
+            np.asarray(ellip_keys, dtype=np.int32),
         ),
-        aniso_blocks,
+        ellip_blocks,
     )
 
-    return aniso
+    return ellip
 
 
-class DensityProjectionCalculator:
+class EllipsoidalDensityProjection:
     """
-    Compute the spherical projection coefficients.
+    Compute the spherical projection coefficients for a system of ellipsoids 
+    assuming a multivariate Gaussian density.
     Initialize the calculator using the hyperparameters.
     ----------
     max_angular : int
@@ -446,7 +447,7 @@ class DensityProjectionCalculator:
 
         self.nl = NeighborList(self.cutoff_radius, True).compute(frame_generator)
 
-        pairwise_aniso_feat = pairwise_aniso_expansion(
+        pairwise_ellip_feat = pairwise_ellip_expansion(
             self.max_angular,
             self.nl,
             species,
@@ -457,6 +458,6 @@ class DensityProjectionCalculator:
             self.radial_basis,
         )
 
-        features = contract_pairwise_feat(pairwise_aniso_feat, species)
+        features = contract_pairwise_feat(pairwise_ellip_feat, species)
 
         return features

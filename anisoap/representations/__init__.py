@@ -1,2 +1,2 @@
-from .projection_coefficients_modified import DensityProjectionCalculator
+from .ellipsoidal_density_projection import EllipsoidalDensityProjection
 from .radial_basis import RadialBasis
