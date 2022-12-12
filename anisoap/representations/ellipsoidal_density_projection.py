@@ -113,10 +113,11 @@ def pairwise_ellip_expansion(
                     )
 
                     moments = compute_moments_inefficient_implementation(
-                        precision, center, maxdeg=lmax
+                        precision, center, maxdeg=lmax+np.max(num_ns)
                     )
                     for l in range(lmax + 1):
-                        moments_l = moments[: l + 1, : l + 1, : l + 1]
+                        deg = l+2*(num_ns[l]-1)
+                        moments_l = moments[: deg + 1, : deg + 1, : deg + 1]
                         values_ldict[l].append(
                             np.einsum("mnpqr, pqr->mn", sph_to_cart[l], moments_l)
                         )
