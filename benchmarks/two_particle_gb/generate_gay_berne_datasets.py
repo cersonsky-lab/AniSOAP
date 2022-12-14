@@ -8,7 +8,7 @@ from ase import Atoms
 # # Default Parameters and Functions
 
 a0 = c0 = 1.0
-b0 = 1.5
+b0 = 2.0
 S0 = np.diagflat([a0, b0, c0])
 
 sigma0 = min(a0, b0, c0)
@@ -145,9 +145,9 @@ for rx in np.linspace(r0_ss, 2 * r0_ss, 100):
     quaternions[:, 0] = 1
 
     frame.arrays["quaternions"] = quaternions
-    frame.arrays["c_diameter[1]"] = a0 * np.ones(len(frame))
-    frame.arrays["c_diameter[2]"] = b0 * np.ones(len(frame))
-    frame.arrays["c_diameter[3]"] = c0 * np.ones(len(frame))
+    frame.arrays["c_diameter\[1\]"] = a0 * np.ones(len(frame))
+    frame.arrays["c_diameter\[2\]"] = b0 * np.ones(len(frame))
+    frame.arrays["c_diameter\[3\]"] = c0 * np.ones(len(frame))
 
     frame.info["separation_distance"] = rx
     frame.info["energy"] = gay_berne(A0, A0, S0, S0, np.array([rx, ry, rz]), e0, sigma0)
@@ -171,9 +171,9 @@ for rx in np.linspace(r0_ff, 2 * r0_ff, 100):
     quaternions[:, 3] = np.sqrt(0.5)
 
     frame.arrays["quaternions"] = quaternions
-    frame.arrays["c_diameter[1]"] = a0 * np.ones(len(frame))
-    frame.arrays["c_diameter[2]"] = b0 * np.ones(len(frame))
-    frame.arrays["c_diameter[3]"] = c0 * np.ones(len(frame))
+    frame.arrays["c_diameter\[1\]"] = a0 * np.ones(len(frame))
+    frame.arrays["c_diameter\[2\]"] = b0 * np.ones(len(frame))
+    frame.arrays["c_diameter\[3\]"] = c0 * np.ones(len(frame))
 
     frame.info["separation_distance"] = rx
     frame.info["energy"] = gay_berne(
@@ -206,9 +206,9 @@ for rx in np.linspace(r0_fs, 2 * r0_fs, 100):
     quaternions[1, 3] = np.sqrt(0.5)
 
     frame.arrays["quaternions"] = quaternions
-    frame.arrays["c_diameter[1]"] = a0 * np.ones(len(frame))
-    frame.arrays["c_diameter[2]"] = b0 * np.ones(len(frame))
-    frame.arrays["c_diameter[3]"] = c0 * np.ones(len(frame))
+    frame.arrays["c_diameter\[1\]"] = a0 * np.ones(len(frame))
+    frame.arrays["c_diameter\[2\]"] = b0 * np.ones(len(frame))
+    frame.arrays["c_diameter\[3\]"] = c0 * np.ones(len(frame))
 
     frame.info["separation_distance"] = rx
     frame.info["energy"] = gay_berne(
@@ -248,9 +248,9 @@ for rx in np.linspace(r0_ss, 3 * r0_ss, 10):
         quaternions[:, 1:] = raw_quaternions[:, :-1]
 
         frame.arrays["quaternions"] = quaternions
-        frame.arrays["c_diameter[1]"] = a0 * np.ones(len(frame))
-        frame.arrays["c_diameter[2]"] = b0 * np.ones(len(frame))
-        frame.arrays["c_diameter[3]"] = c0 * np.ones(len(frame))
+        frame.arrays["c_diameter\[1\]"] = a0 * np.ones(len(frame))
+        frame.arrays["c_diameter\[2\]"] = b0 * np.ones(len(frame))
+        frame.arrays["c_diameter\[3\]"] = c0 * np.ones(len(frame))
         frame.info["separation_distance"] = rx
         frame.arrays["angles"] = np.array([0, angle])
 
@@ -283,9 +283,9 @@ for rx in np.linspace(r0_ss, 3 * r0_ss, 10):
         quaternions[:, 1:] = raw_quaternions[:, :-1]
 
         frame.arrays["quaternions"] = quaternions
-        frame.arrays["c_diameter[1]"] = a0 * np.ones(len(frame))
-        frame.arrays["c_diameter[2]"] = b0 * np.ones(len(frame))
-        frame.arrays["c_diameter[3]"] = c0 * np.ones(len(frame))
+        frame.arrays["c_diameter\[1\]"] = a0 * np.ones(len(frame))
+        frame.arrays["c_diameter\[2\]"] = b0 * np.ones(len(frame))
+        frame.arrays["c_diameter\[3\]"] = c0 * np.ones(len(frame))
 
         frame.info["energy"] = gay_berne(
             A0, A2, S0, S0, np.array([rx, ry, rz]), e0, sigma0
@@ -319,9 +319,9 @@ for rx in np.linspace(sigma0, 2.4, 10):
             quaternions[:, 0] = raw_quaternions[:, -1]
             quaternions[:, 1:] = raw_quaternions[:, :-1]
             frame.arrays["quaternions"] = quaternions
-            frame.arrays["c_diameter[1]"] = a0 * np.ones(len(frame))
-            frame.arrays["c_diameter[2]"] = b0 * np.ones(len(frame))
-            frame.arrays["c_diameter[3]"] = c0 * np.ones(len(frame))
+            frame.arrays["c_diameter\[1\]"] = a0 * np.ones(len(frame))
+            frame.arrays["c_diameter\[2\]"] = b0 * np.ones(len(frame))
+            frame.arrays["c_diameter\[3\]"] = c0 * np.ones(len(frame))
             frame.info["separation_distance"] = rx
             frame.arrays["angles"] = np.array([angle1, angle2])
 
@@ -355,9 +355,9 @@ for _ in range(1000):
     quaternions[:, 0] = raw_quaternions[:, -1]
     quaternions[:, 1:] = raw_quaternions[:, :-1]
     frame.arrays["quaternions"] = quaternions
-    frame.arrays["c_diameter[1]"] = a0 * np.ones(len(frame))
-    frame.arrays["c_diameter[2]"] = b0 * np.ones(len(frame))
-    frame.arrays["c_diameter[3]"] = c0 * np.ones(len(frame))
+    frame.arrays["c_diameter\[1\]"] = a0 * np.ones(len(frame))
+    frame.arrays["c_diameter\[2\]"] = b0 * np.ones(len(frame))
+    frame.arrays["c_diameter\[3\]"] = c0 * np.ones(len(frame))
 
     frame.info["energy"] = gay_berne(A1, A2, S0, S0, np.array([rx, ry, rz]), e0, sigma0)
     if frame.info["energy"] < 0.1:
