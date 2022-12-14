@@ -1,8 +1,12 @@
+import re
+
 import numpy as np
-import re
-from equistore import Labels, TensorBlock, TensorMap
 import wigners
-import re
+from equistore import (
+    Labels,
+    TensorBlock,
+    TensorMap,
+)
 
 
 class ClebschGordanReal:

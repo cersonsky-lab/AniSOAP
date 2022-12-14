@@ -113,10 +113,10 @@ def pairwise_ellip_expansion(
                     )
 
                     moments = compute_moments_inefficient_implementation(
-                        precision, center, maxdeg=lmax+np.max(num_ns)
+                        precision, center, maxdeg=lmax + np.max(num_ns)
                     )
                     for l in range(lmax + 1):
-                        deg = l+2*(num_ns[l]-1)
+                        deg = l + 2 * (num_ns[l] - 1)
                         moments_l = moments[: deg + 1, : deg + 1, : deg + 1]
                         values_ldict[l].append(
                             np.einsum("mnpqr, pqr->mn", sph_to_cart[l], moments_l)
@@ -318,7 +318,7 @@ def contract_pairwise_feat(pair_ellip_feat, species):
 
 class EllipsoidalDensityProjection:
     """
-    Compute the spherical projection coefficients for a system of ellipsoids 
+    Compute the spherical projection coefficients for a system of ellipsoids
     assuming a multivariate Gaussian density.
     Initialize the calculator using the hyperparameters.
     ----------
@@ -437,9 +437,9 @@ class EllipsoidalDensityProjection:
                 j_global = self.frame_to_global_atom_idx[i] + j
                 quaternions[j_global] = frames[i].arrays["quaternions"][j]
                 ellipsoid_lengths[j_global] = [
-                    frames[i].arrays["c_diameter[1]"][j],
-                    frames[i].arrays["c_diameter[2]"][j],
-                    frames[i].arrays["c_diameter[3]"][j],
+                    frames[i].arrays["c_diameter[1]"][j] / 2,
+                    frames[i].arrays["c_diameter[2]"][j] / 2,
+                    frames[i].arrays["c_diameter[3]"][j] / 2,
                 ]
 
         rotation_matrices = np.zeros((self.num_atoms_total, 3, 3))

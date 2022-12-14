@@ -1,3 +1,4 @@
+from .equistore_utils import *
 from .moment_generator import (
     compute_moments_diagonal_inefficient_implementation,
     compute_moments_inefficient_implementation,
