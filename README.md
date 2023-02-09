@@ -1,5 +1,5 @@
 # anisoap
-Python package to generate anisotropic representations for materials simulations.
+A Python Package for Computing the Smooth Overlap of Anisotropic Positions
 
 ## Installation
 
