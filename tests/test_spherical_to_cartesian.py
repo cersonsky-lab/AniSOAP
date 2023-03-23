@@ -8,6 +8,7 @@ from anisoap.utils import (
     spherical_to_cartesian,
 )
 
+
 # Generate the exact values of the spherical to
 # Cartesian coordinate transformations for l=0,1,2.
 # For l=0 and l=1, arbitrary degrees in n are supported,
@@ -107,6 +108,7 @@ class TestSumOfCoefficients:
 
     lmaxs = np.arange(8)
     num_ns = np.arange(1, 14)
+
     # For l=0 and arbitrary n, the sum of all coefficients
     # has to equal 3^n.
     # This follows from the fact that the solid harmonics at

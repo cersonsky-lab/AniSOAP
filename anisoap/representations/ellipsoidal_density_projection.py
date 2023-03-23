@@ -15,12 +15,12 @@ from equistore import (
     TensorMap,
 )
 from rascaline import NeighborList
+from scipy.spatial.transform import Rotation
 
 import anisoap.representations.radial_basis as radial_basis
 from anisoap.representations.radial_basis import RadialBasis
 from anisoap.utils import compute_moments_inefficient_implementation
 from anisoap.utils.moment_generator import *
-from anisoap.utils.quaternion_to_rotation_matrix import quaternion_to_rotation_matrix
 
 
 def pairwise_ellip_expansion(
@@ -346,7 +346,6 @@ class EllipsoidalDensityProjection:
         subtract_center_contribution=False,
         radial_gaussian_width=None,
     ):
-
         # Store the input variables
         self.max_angular = max_angular
         self.cutoff_radius = cutoff_radius
@@ -429,22 +428,25 @@ class EllipsoidalDensityProjection:
                 self.num_atoms_per_frame[n - 1] + self.frame_to_global_atom_idx[n - 1]
             )
 
-        quaternions = np.zeros((self.num_atoms_total, 4))
+        rotation_matrices = np.zeros((self.num_atoms_total, 3, 3))
         ellipsoid_lengths = np.zeros((self.num_atoms_total, 3))
 
         for i in range(num_frames):
             for j in range(self.num_atoms_per_frame[i]):
                 j_global = self.frame_to_global_atom_idx[i] + j
-                quaternions[j_global] = frames[i].arrays["quaternions"][j]
+                if "quaternions" in frames[i].arrays:
+                    rotation_matrices[j_global] = Rotation.from_quat(
+                        frames[i].arrays["quaternions"][j]
+                    ).as_matrix()
+                elif "rotation_matrix" in frames[i].arrays:
+                    rotation_matrices[j_global] = (
+                        frames[i].arrays["rotation_matrix"][j].reshape(3, 3)
+                    )
                 ellipsoid_lengths[j_global] = [
                     frames[i].arrays["c_diameter[1]"][j] / 2,
                     frames[i].arrays["c_diameter[2]"][j] / 2,
                     frames[i].arrays["c_diameter[3]"][j] / 2,
                 ]
-
-        rotation_matrices = np.zeros((self.num_atoms_total, 3, 3))
-        for i, quat in enumerate(quaternions):
-            rotation_matrices[i] = quaternion_to_rotation_matrix(quat)
 
         self.nl = NeighborList(self.cutoff_radius, True).compute(frame_generator)
 

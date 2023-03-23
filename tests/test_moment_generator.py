@@ -134,6 +134,7 @@ class TestMomentsTrivariateGaussian:
     maxdegs_small = [1, 2, 3]
     maxdegs_any = [3, 6, 10]
     centers = [np.array([2.3, -3.1, 6.2]), np.array([-2.1, -5.5, -0.43])]
+
     # Test the diagonal implementation against the analytical results
     # for degrees up to 3.
     @pytest.mark.parametrize("maxdeg", maxdegs_small)
