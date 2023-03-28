@@ -333,8 +333,7 @@ class EllipsoidalDensityProjection:
         Key under which rotations are stored in ase frames arrays
     rotation_type : string
         Type of rotation object being passed. Currently implemented
-        are 'quaternion' and 'matrix'\
-        
+        are 'quaternion' and 'matrix'
     Attributes
     ----------
     features : numpy.ndarray
