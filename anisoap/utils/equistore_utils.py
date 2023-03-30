@@ -2,11 +2,7 @@ import re
 
 import numpy as np
 import wigners
-from equistore import (
-    Labels,
-    TensorBlock,
-    TensorMap,
-)
+from equistore import Labels, TensorBlock, TensorMap
 
 
 class ClebschGordanReal:

@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 
 from anisoap.utils.spherical_to_cartesian import spherical_to_cartesian
@@ -9,18 +11,14 @@ except ImportError:
 
 from itertools import product
 
-from equistore import (
-    Labels,
-    TensorBlock,
-    TensorMap,
-)
+from equistore import Labels, TensorBlock, TensorMap
 from rascaline import NeighborList
+from scipy.spatial.transform import Rotation
 
 import anisoap.representations.radial_basis as radial_basis
 from anisoap.representations.radial_basis import RadialBasis
 from anisoap.utils import compute_moments_inefficient_implementation
 from anisoap.utils.moment_generator import *
-from anisoap.utils.quaternion_to_rotation_matrix import quaternion_to_rotation_matrix
 
 
 def pairwise_ellip_expansion(
@@ -331,6 +329,12 @@ class EllipsoidalDensityProjection:
         Compute gradients
     subtract_center_contribution : bool
         Subtract contribution from the central atom.
+    rotation_key : string
+        Key under which rotations are stored in ase frames arrays
+    rotation_type : string
+        Type of rotation object being passed. Currently implemented
+        are 'quaternion' and 'matrix'\
+        
     Attributes
     ----------
     features : numpy.ndarray
@@ -345,8 +349,9 @@ class EllipsoidalDensityProjection:
         compute_gradients=False,
         subtract_center_contribution=False,
         radial_gaussian_width=None,
+        rotation_key="quaternion",
+        rotation_type="quaternion",
     ):
-
         # Store the input variables
         self.max_angular = max_angular
         self.cutoff_radius = cutoff_radius
@@ -375,6 +380,20 @@ class EllipsoidalDensityProjection:
 
         self.num_ns = self.radial_basis.get_num_radial_functions()
         self.sph_to_cart = spherical_to_cartesian(self.max_angular, self.num_ns)
+
+        if rotation_type not in ["quaternion", "matrix"]:
+            raise ValueError(
+                "We have only implemented transforming quaternions (`quaternion`) and rotation matrices (`matrix`)."
+            )
+        elif rotation_type == "quaternion":
+            self.rotation_maker = lambda q: Rotation.from_quat([*q[1:], q[0]])
+            warnings.warn(
+                "In quaternion mode, quaternions are assumed to be in (w,x,y,z) format."
+            )
+        else:
+            self.rotation_maker = Rotation.from_matrix
+
+        self.rotation_key = rotation_key
 
     def transform(self, frames, show_progress=False):
         """
@@ -429,22 +448,26 @@ class EllipsoidalDensityProjection:
                 self.num_atoms_per_frame[n - 1] + self.frame_to_global_atom_idx[n - 1]
             )
 
-        quaternions = np.zeros((self.num_atoms_total, 4))
+        rotation_matrices = np.zeros((self.num_atoms_total, 3, 3))
         ellipsoid_lengths = np.zeros((self.num_atoms_total, 3))
 
         for i in range(num_frames):
             for j in range(self.num_atoms_per_frame[i]):
                 j_global = self.frame_to_global_atom_idx[i] + j
-                quaternions[j_global] = frames[i].arrays["quaternions"][j]
+                if self.rotation_key in frames[i].arrays:
+                    rotation_matrices[j_global] = self.rotation_maker(
+                        frames[i].arrays[self.rotation_key][j]
+                    ).as_matrix()
+                else:
+                    raise Warning(
+                        f"Frame {i} does not have rotations stored, this may cause errors down the line."
+                    )
+
                 ellipsoid_lengths[j_global] = [
                     frames[i].arrays["c_diameter[1]"][j] / 2,
                     frames[i].arrays["c_diameter[2]"][j] / 2,
                     frames[i].arrays["c_diameter[3]"][j] / 2,
                 ]
-
-        rotation_matrices = np.zeros((self.num_atoms_total, 3, 3))
-        for i, quat in enumerate(quaternions):
-            rotation_matrices[i] = quaternion_to_rotation_matrix(quat)
 
         self.nl = NeighborList(self.cutoff_radius, True).compute(frame_generator)
 

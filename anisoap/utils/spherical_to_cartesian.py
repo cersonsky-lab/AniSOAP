@@ -1,10 +1,6 @@
 import numpy as np
 import scipy
-from scipy.special import (
-    comb,
-    factorial,
-    factorial2,
-)
+from scipy.special import comb, factorial, factorial2
 
 from anisoap.utils import monomial_iterator
 
