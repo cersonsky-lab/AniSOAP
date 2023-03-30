@@ -4,7 +4,7 @@ from numpy.testing import assert_allclose
 
 # internal imports
 from anisoap.representations import RadialBasis, radial_basis
-from anisoap.utils import quaternion_to_rotation_matrix
+from scipy.spatial.transform import Rotation
 
 
 class TestNumberOfRadialFunctions:
@@ -47,7 +47,7 @@ class TestGaussianParameters:
     quaternions /= np.linalg.norm(quaternions, axis=0)
     rotation_matrices = np.zeros((num_random, 3, 3))
     for i, quat in enumerate(quaternions.T):
-        rotation_matrices[i] = quaternion_to_rotation_matrix(quat)
+        rotation_matrices[i] = Rotation.from_quat(quat).as_matrix()
     lengths = np.random.uniform(low=0.5, high=5.0, size=((num_random, 3)))
     r_ijs = np.random.normal(scale=5.0, size=((num_random, 3)))
 

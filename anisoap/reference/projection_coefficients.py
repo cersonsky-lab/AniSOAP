@@ -44,7 +44,6 @@ class DensityProjectionCalculator:
         subtract_center_contribution=False,
         radial_gaussian_width=None,
     ):
-
         # Store the input variables
         self.max_angular = max_angular
         self.cutoff_radius = cutoff_radius

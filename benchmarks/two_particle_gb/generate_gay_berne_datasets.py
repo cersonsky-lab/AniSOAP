@@ -24,6 +24,7 @@ L = 20
 ry = 0
 rz = 0
 
+
 # Small functions for rotating matrices
 def rot_y(A, angle):
     return A @ np.array(
