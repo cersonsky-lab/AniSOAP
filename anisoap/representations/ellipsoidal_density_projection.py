@@ -30,6 +30,7 @@ def pairwise_ellip_expansion(
     ellipsoid_lengths,
     sph_to_cart,
     radial_basis,
+    pbar_total,
 ):
     """
     Function to compute the pairwise expansion <anlm|rho_ij> by combining the moments and the spherical to Cartesian
@@ -61,6 +62,8 @@ def pairwise_ellip_expansion(
     radial_basis : Instance of the RadialBasis Class
         anisoap.representations.radial_basis.RadialBasis that has been instantiated appropriately with the
         cutoff radius, radial basis type.
+
+    pbar_total : int if we want a pbar
     -----------------------------------------------------------
     Returns:
         An Equistore TensorMap with keys (species_1, species_2, l) where ("species_1", "species_2") is key in the
@@ -76,8 +79,11 @@ def pairwise_ellip_expansion(
     keys = [tuple(i) + (l,) for i in keys for l in range(lmax + 1)]
     num_ns = radial_basis.get_num_radial_functions()
 
+    last_idx = None
+    frame_pbar = tqdm(total=pbar_total)
     for center_species in species:
         for neighbor_species in species:
+
             if (center_species, neighbor_species) in neighbor_list.keys:
                 values_ldict = {l: [] for l in range(lmax + 1)}
                 nl_block = neighbor_list.block(
@@ -85,12 +91,25 @@ def pairwise_ellip_expansion(
                     species_second_atom=neighbor_species,
                 )
 
+                if frame_pbar is not None:
+                    frame_pbar.set_description(
+                        f"Computing ({center_species}-{neighbor_species}) pairs"
+                    )
+                    frame_pbar.reset(total=pbar_total)
+
                 for isample, nl_sample in enumerate(nl_block.samples):
                     frame_idx, i, j = (
                         nl_sample["structure"],
                         nl_sample["first_atom"],
                         nl_sample["second_atom"],
                     )
+                    # print(frame_idx)
+                    if last_idx is None:
+                        last_idx = frame_idx
+                    if frame_idx != last_idx and frame_pbar is not None:
+                        frame_pbar.update(1)
+                        last_idx = frame_idx
+
                     i_global = frame_to_global_atom_idx[frame_idx] + i
                     j_global = frame_to_global_atom_idx[frame_idx] + j
 
@@ -138,7 +157,7 @@ def pairwise_ellip_expansion(
                         ),
                     )
                     tensorblock_list.append(block)
-
+    frame_pbar.update(1)
     pairwise_ellip_feat = TensorMap(
         Labels(
             ["species_center", "species_neighbor", "angular_channel"],
@@ -333,7 +352,8 @@ class EllipsoidalDensityProjection:
         Key under which rotations are stored in ase frames arrays
     rotation_type : string
         Type of rotation object being passed. Currently implemented
-        are 'quaternion' and 'matrix'
+        are 'quaternion' and 'matrix'\
+        
     Attributes
     ----------
     features : numpy.ndarray
@@ -349,7 +369,7 @@ class EllipsoidalDensityProjection:
         subtract_center_contribution=False,
         radial_gaussian_width=None,
         rotation_key="quaternion",
-        rotation_type="quaternion",
+        rotation_type="quaternion",\
     ):
         # Store the input variables
         self.max_angular = max_angular
@@ -437,9 +457,9 @@ class EllipsoidalDensityProjection:
         self.feature_gradients = 0
 
         if show_progress:
-            frame_generator = tqdm(self.frames)
+            pbar_total = len(self.frames)
         else:
-            frame_generator = self.frames
+            pbar_total = None
 
         self.frame_to_global_atom_idx = np.zeros((num_frames), int)
         for n in range(1, num_frames):
@@ -468,7 +488,10 @@ class EllipsoidalDensityProjection:
                     frames[i].arrays["c_diameter[3]"][j] / 2,
                 ]
 
-        self.nl = NeighborList(self.cutoff_radius, True).compute(frame_generator)
+        # the upper-bound for the center any ellipsoids that are neighboring is cutoff_radius + 2 sigma_max
+        # this will hinder the computational efficiency in the short-term, but potentially provide improve-
+        # ments long-term.
+        self.nl = NeighborList(self.cutoff_radius + 2*np.max(ellipsoid_lengths), True).compute(self.frames)
 
         pairwise_ellip_feat = pairwise_ellip_expansion(
             self.max_angular,
@@ -479,6 +502,7 @@ class EllipsoidalDensityProjection:
             ellipsoid_lengths,
             self.sph_to_cart,
             self.radial_basis,
+            pbar_total,
         )
 
         features = contract_pairwise_feat(pairwise_ellip_feat, species)
