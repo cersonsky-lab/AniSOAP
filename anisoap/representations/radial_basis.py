@@ -1,5 +1,6 @@
 import numpy as np
-
+from tqdm import tqdm 
+from time import sleep 
 
 class RadialBasis:
     """
@@ -23,8 +24,12 @@ class RadialBasis:
         # As part of the initialization, compute the number of radial basis
         # functions, nmax, for each angular frequency l.
         self.num_radial_functions = []
+        pbar = tqdm(total=max_angular+1)
         for l in range(max_angular + 1):
             num_n = (max_angular - l) // 2 + 1
+            pbar.set_description("Computing Radial Basis".format(l))
+            pbar.update(1)
+            sleep(2)
             self.num_radial_functions.append(num_n)
 
     # Get number of radial functions
