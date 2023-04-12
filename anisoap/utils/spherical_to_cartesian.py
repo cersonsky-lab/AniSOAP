@@ -8,6 +8,9 @@ from scipy.special import (
 
 from anisoap.utils import monomial_iterator
 
+from tqdm import tqdm
+from time import sleep 
+
 # Here we are implementing recurrence of the form R_{l}^m = prefact_minus1* z * T_{l-1} + prefact_minus2* r2 * T_{l-2}
 # where R_l^m is a solid harmonic, when expressed on a monomial basis - R_l^m = \sum_{n0+n1+n2=l} T_{l}[n0,n1,n2] x^n0 y^n1 z^n2
 # We will further define these coefficients with an additional n-dependent prefactor r^P2n}
@@ -69,10 +72,14 @@ def spherical_to_cartesian(lmax, num_ns):
     # Initialize array in which to store all
     # coefficients for each l, stored as  T_l[m,n,n0,n1,n2] where n0,n1,n2 correspond to the respective powers in x^n0 y^n1 z^n2
     T = []
+    pbar = tqdm(total=len(num_ns))
     for l, num_n in enumerate(num_ns):
         maxdeg = l + 2 * (num_n - 1)  # maxdeg = 2*l +n
         T_l = np.zeros((2 * l + 1, num_n, maxdeg + 1, maxdeg + 1, maxdeg + 1))
         T.append(T_l)
+        pbar.set_description("Computing Spherical to Cartesian Coordinates".format(l))
+        pbar.update(1)
+        sleep(2)
 
     # Initial conditions of the recurrence T[l][m=l,n=0, n0, l-n0, 0] and T[l][m=-l, n=0, n0, l-n0,0]
     T[0][0, 0, 0, 0, 0] = 1
@@ -96,6 +103,9 @@ def spherical_to_cartesian(lmax, num_ns):
     for l in range(lmax + 1):
         deg = l
         myiter = iter(monomial_iterator.TrivariateMonomialIndices(deg))
+        pbar.set_description("Computing Spherical to Cartesian Coordinates".format(l))
+        pbar.update(1)
+        sleep(2)
         for idx, n0, n1, n2 in myiter:
             a = prefact_minus1(l - 1)  # elements corresponding to m in (-l+2, ... l-2)
             b = prefact_minus2(l - 1)  # elements corresponding to m in (-l+1, .... l-1)
