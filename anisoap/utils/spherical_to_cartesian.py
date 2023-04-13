@@ -71,14 +71,10 @@ def spherical_to_cartesian(lmax, num_ns):
     # Initialize array in which to store all
     # coefficients for each l, stored as  T_l[m,n,n0,n1,n2] where n0,n1,n2 correspond to the respective powers in x^n0 y^n1 z^n2
     T = []
-    pbar = tqdm(total=len(num_ns))
-    for l, num_n in enumerate(num_ns):
+    for l, num_n in enumerate(tqdm(num_ns, desc="Computing Spherical to Cartesian Coordinates")):
         maxdeg = l + 2 * (num_n - 1)  # maxdeg = 2*l +n
         T_l = np.zeros((2 * l + 1, num_n, maxdeg + 1, maxdeg + 1, maxdeg + 1))
         T.append(T_l)
-        pbar.set_description("Computing Spherical to Cartesian Coordinates".format(l))
-        pbar.update(1)
-        sleep(2)
 
     # Initial conditions of the recurrence T[l][m=l,n=0, n0, l-n0, 0] and T[l][m=-l, n=0, n0, l-n0,0]
     T[0][0, 0, 0, 0, 0] = 1
