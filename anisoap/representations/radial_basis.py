@@ -29,7 +29,6 @@ class RadialBasis:
             num_n = (max_angular - l) // 2 + 1
             pbar.set_description("Computing Radial Basis".format(l))
             pbar.update(1)
-            sleep(2)
             self.num_radial_functions.append(num_n)
 
     # Get number of radial functions
