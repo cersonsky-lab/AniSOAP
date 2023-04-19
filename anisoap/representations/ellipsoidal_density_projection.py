@@ -463,7 +463,7 @@ class EllipsoidalDensityProjection:
                         frames[i].arrays[self.rotation_key][j]
                     ).as_matrix()
                 else:
-                    raise Warning(
+                    warnings.warn(
                         f"Frame {i} does not have rotations stored, this may cause errors down the line."
                     )
 
