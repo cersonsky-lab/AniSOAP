@@ -473,7 +473,7 @@ class EllipsoidalDensityProjection:
                     frames[i].arrays["c_diameter[3]"][j] / 2,
                 ]
 
-        self.nl = NeighborList(self.cutoff_radius, True).compute(frame_generator)
+        self.nl = NeighborList(self.cutoff_radius, True, True).compute(frame_generator)
 
         pairwise_ellip_feat = pairwise_ellip_expansion(
             self.max_angular,
