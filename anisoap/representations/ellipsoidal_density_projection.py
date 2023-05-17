@@ -11,7 +11,7 @@ except ImportError:
 
 from itertools import product
 
-from equistore import (
+from equistore.core import (
     Labels,
     TensorBlock,
     TensorMap,
