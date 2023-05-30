@@ -2,7 +2,7 @@ import re
 
 import numpy as np
 import wigners
-from equistore import (
+from equistore.core import (
     Labels,
     TensorBlock,
     TensorMap,
