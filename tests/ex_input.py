@@ -2,7 +2,6 @@ import sys
 sys.path.insert(1, '/home/ycc-rogm16/documents/code-repo/uw-research/ml-anisoap/anisoap')
 import time
 from anisoap.utils import SimpleTimer
-collect_mode = "avg"
 
 start_time = time.perf_counter()
 from ase.io import read
@@ -44,19 +43,19 @@ def single_pass(file_path: str, *, timer: SimpleTimer = None):
         frame.arrays["quaternions"] = frame.arrays['c_q']
     if timer is not None:
         timer.mark("4. constructing frames")
-
+    
     # timer works internally inside "transform"
     if timer is not None:
         internal_timer = SimpleTimer()
         rep_raw = representation.transform(frames, show_progress=False, timer=internal_timer)
         timer.mark("5. repr transform")
-        timer.collect_and_append(internal_timer, collect_mode)
+        timer.collect_and_append(internal_timer)
         timer.mark_start()
 
     else:
         rep_raw = representation.transform(frames, show_progress=False)
 
-    rep = equistore.operations.mean_over_samples(rep_raw, samples_names="center")
+    rep = equistore.operations.mean_over_samples(rep_raw, sample_names="center")
     if timer is not None:
         timer.mark("6. mean over samples")
     
@@ -68,7 +67,7 @@ def single_pass(file_path: str, *, timer: SimpleTimer = None):
     my_cg = ClebschGordanReal(l_max, timer=internal_timer)
     if timer is not None:
         timer.mark("8. constructing CGR")
-        timer.collect_and_append(internal_timer, collect_mode)
+        timer.collect_and_append(internal_timer)
         timer.mark_start()
 
     anisoap_nu2 = cg_combine(
@@ -97,7 +96,7 @@ def single_pass(file_path: str, *, timer: SimpleTimer = None):
         timer.mark("12. scaler transform")
 
 if __name__ == "__main__":
-    write_name = "time_results/" + "original_impl_sum" + ".csv"
+    write_name = "time_results/" + "rust_and_caching_impl_v1_avg" + ".csv"
     out_file = open(write_name, "w")
     out_file.write("initial import\n")
     out_file.write(str(import_duration) + "\n")

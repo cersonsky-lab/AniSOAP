@@ -11,7 +11,7 @@ except ImportError:
 
 from itertools import product
 
-from equistore import ( # ?? equistore.core seems to result in ModuleNotFoundError
+from equistore.core import (
     Labels,
     TensorBlock,
     TensorMap,
@@ -26,7 +26,8 @@ from anisoap.utils.moment_generator import *
 
 # ADDED
 from anisoap.utils import SimpleTimer
-collect_mode = "sum"
+from anisoap.lib import compute_moments
+_moment_fn_lang = "rust"
 
 def pairwise_ellip_expansion(
     lmax,
@@ -144,14 +145,32 @@ def pairwise_ellip_expansion(
                     )
                     if timer is not None:
                         internal_timer2.mark("5-8-2-7. compute gaussian params")
-
-                    internal_timer3 = SimpleTimer()
-                    moments = compute_moments_inefficient_implementation(
-                        precision, center, maxdeg=lmax + np.max(num_ns), timer=internal_timer3
-                    )
+                        internal_timer3 = SimpleTimer()
+                    
+                    if _moment_fn_lang == "rust":
+                        # NOTE: This line was replaced with Rust implementation. 
+                        moments = compute_moments(precision, center, lmax + np.max(num_ns))
+                        # Mark the timers for consistency
+                        if timer is not None:
+                            internal_timer3.mark("5-8-2-8-1. assertions")
+                            internal_timer3.mark("5-8-2-8-2. compute 3x3 inverse")
+                            internal_timer3.mark("5-8-2-8-3. compute global factor")
+                            internal_timer3.mark("5-8-2-8-4. compute deg 1 moments")
+                            internal_timer3.mark("5-8-2-8-5. compute deg 2 moments")
+                            internal_timer3.mark("5-8-2-8-6-1. compute x-iter initial")
+                            internal_timer3.mark("5-8-2-8-6-2. compute rest of x-iter")
+                            internal_timer3.mark("5-8-2-8-6-3. compute y-iter")
+                            internal_timer3.mark("5-8-2-8-6-4. compute z-iter")
+                            internal_timer3.mark("5-8-2-8-6. compute all moments")
+                            internal_timer3.mark("5-8-2-8-7. compute return value")
+                    else:
+                        moments = compute_moments_inefficient_implementation(
+                            precision, center, maxdeg=lmax + np.max(num_ns), timer=internal_timer3
+                        )
+                    
                     if timer is not None:
                         internal_timer2.mark("5-8-2-8. compute moments")
-                        internal_timer2.collect_and_append(internal_timer3, collect_mode)
+                        internal_timer2.collect_and_append(internal_timer3)
                         internal_timer2.mark_start()
 
                     for l in range(lmax + 1):
@@ -186,14 +205,14 @@ def pairwise_ellip_expansion(
                     if timer is not None:
                         internal_timer2.mark("5-8-2-11. append to tensor block list")
                 if timer is not None:
-                    internal_timer.collect_and_append(internal_timer2, collect_mode)
+                    internal_timer.collect_and_append(internal_timer2)
             else:
                 if timer is not None:
                     internal_timer.mark("5-8-2-1. ignored branch")
 
     if timer is not None:
         timer.mark("5-8-2. pairwise computation")
-        timer.collect_and_append(internal_timer, collect_mode)
+        timer.collect_and_append(internal_timer)
         timer.mark_start()
 
     pairwise_ellip_feat = TensorMap(
@@ -454,7 +473,7 @@ class EllipsoidalDensityProjection:
 
         self.rotation_key = rotation_key
 
-    def transform(self, frames, show_progress=False, *, timer: SimpleTimer = None):
+    def transform(self, frames, show_progress=False, *, timer: SimpleTimer = None): # frames: List[Atoms]
         """
         Computes the features and (if compute_gradients == True) gradients
         for all the provided frames. The features and gradients are stored in
@@ -567,7 +586,7 @@ class EllipsoidalDensityProjection:
         )
         if timer is not None:
             timer.mark("5-8. pairwise ellip expansion")
-            timer.collect_and_append(internal_timer, collect_mode)
+            timer.collect_and_append(internal_timer)
             timer.mark_start()
         
         features = contract_pairwise_feat(pairwise_ellip_feat, species)

@@ -2,13 +2,18 @@ import re
 
 import numpy as np
 import wigners
-from equistore import ( # ?? equistore.core seems to result in ModuleNotFoundError
+from equistore.core import (
     Labels,
     TensorBlock,
     TensorMap,
 )
 from .code_timer import SimpleTimer
-collect_mode = "sum"
+from .cyclic_list import CGRCacheList
+
+# Set this to None to disable caching functionality
+_cache_list = CGRCacheList(5)
+# Comment the line below to enable caching, and un-comment it to disable caching
+# _cache_list = None
 
 class ClebschGordanReal:
     def __init__(self, l_max, *, timer: SimpleTimer = None):
@@ -28,6 +33,27 @@ class ClebschGordanReal:
             c2r[L] = np.conjugate(r2c[L]).T
         if timer is not None:
             timer.mark("8-2. compute r2c and c2r")
+        
+        if _cache_list is not None:
+            if l_max in _cache_list.keys():
+                self._cg = _cache_list.get_val(l_max)
+                if timer is not None:
+                    # Mark the timers for consistency.
+                    timer.mark("8-3-1. compute complex cg matrix")
+                    timer.mark("8-3-2. compute real cg matrix")
+                    timer.mark("8-3-3. compute rcg")
+                    timer.mark("8-3-4. compute new cg")
+                    timer.mark("8-3-5. set cg at index [l1][l2][L]")
+                    timer.mark("8-3. compute cg for all indices")
+            else:
+                self._init_cg(r2c, c2r, timer=timer)
+                _cache_list.insert(l_max, self._cg)
+                print(_cache_list.keys())
+        else:
+            self._init_cg(r2c, c2r, timer=timer)
+    
+    def _init_cg(self, r2c, c2r, *, timer: SimpleTimer = None):
+        if timer is not None:
             internal_timer = SimpleTimer()
 
         for l1 in range(self._l_max + 1):
@@ -37,32 +63,26 @@ class ClebschGordanReal:
                 ):
                     if timer is not None:
                         internal_timer.mark_start()
-
                     complex_cg = _complex_clebsch_gordan_matrix(l1, l2, L)
                     if timer is not None:
                         internal_timer.mark("8-3-1. compute complex cg matrix")
-
                     real_cg = (r2c[l1].T @ complex_cg.reshape(2 * l1 + 1, -1)).reshape(
                         complex_cg.shape
                     )
-                    
                     real_cg = real_cg.swapaxes(0, 1)
                     real_cg = (r2c[l2].T @ real_cg.reshape(2 * l2 + 1, -1)).reshape(
                         real_cg.shape
                     )
                     real_cg = real_cg.swapaxes(0, 1)
-
                     real_cg = real_cg @ c2r[L].T
                     if timer is not None:
                         internal_timer.mark("8-3-2. compute real cg matrix")
-
                     if (l1 + l2 + L) % 2 == 0:
                         rcg = np.real(real_cg)
                     else:
                         rcg = np.imag(real_cg)
                     if timer is not None:
                         internal_timer.mark("8-3-3. compute rcg")
-
                     new_cg = []
                     for M in range(2 * L + 1):
                         cg_nonzero = np.where(np.abs(rcg[:, :, M]) > 1e-15)
@@ -76,13 +96,13 @@ class ClebschGordanReal:
                         new_cg.append(cg_M)
                     if timer is not None:
                         internal_timer.mark("8-3-4. compute new cg")
-
                     self._cg[(l1, l2, L)] = new_cg
                     if timer is not None:
                         internal_timer.mark("8-3-5. set cg at index [l1][l2][L]")
+        
         if timer is not None:
             timer.mark("8-3. compute cg for all indices")
-            timer.collect_and_append(internal_timer, collect_mode)
+            timer.collect_and_append(internal_timer)
 
     def get_cg(self):
         return self._cg

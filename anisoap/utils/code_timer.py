@@ -53,7 +53,13 @@ class SimpleTimer:
                 coll_dict[key] = collect_fn(val)
         return coll_dict
     
-    def collect_and_append(self, other: 'SimpleTimer', collect_mode: str | Callable[[list[float]], float]):
+    # NOTE: Change this collect_mode default argument to change all measuring across the files
+    #       except the one specified.
+    def collect_and_append(
+            self,
+            other: 'SimpleTimer',
+            collect_mode: str | Callable[[list[float]], float] = "avg"  # ! CHANGE THIS
+        ):
         """
         Takes another SimpleTimer class as argument and calls average_trials
         in "other" then appends the averaged values into the internal list of
@@ -63,6 +69,10 @@ class SimpleTimer:
             coll_dict = other.collect_trials(lambda x: sum(x) / len(x))
         elif collect_mode == "sum":
             coll_dict = other.collect_trials(lambda x: sum(x))
+        elif collect_mode == "max":
+            coll_dict = other.collect_trials(lambda x: max(x))
+        elif collect_mode == "min":
+            coll_dict = other.collect_trials(lambda x: min(x))
         else:
             coll_dict = other.collect_trials(lambda x: collect_mode(x))
         for key, val in coll_dict.items():

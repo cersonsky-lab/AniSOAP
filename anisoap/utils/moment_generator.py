@@ -5,7 +5,6 @@ from scipy.special import (
     gamma,
 )
 from .code_timer import SimpleTimer
-collect_mode = "sum"
 
 # Define function to compute all moments for a single
 # variable Gaussian.
@@ -247,7 +246,7 @@ def compute_moments_inefficient_implementation(A, a, maxdeg, *, timer: SimpleTim
                             internal_timer.mark("5-8-2-8-6-4. compute z-iter")
     if timer is not None:
         timer.mark("5-8-2-8-6. compute all moments")
-        timer.collect_and_append(internal_timer, collect_mode)
+        timer.collect_and_append(internal_timer)
         timer.mark_start()
 
     ret_val = global_factor * moments
