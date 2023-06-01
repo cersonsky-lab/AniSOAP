@@ -2,36 +2,50 @@ import re
 
 import numpy as np
 import wigners
-from equistore.core import (
+from equistore import ( # ?? equistore.core seems to result in ModuleNotFoundError
     Labels,
     TensorBlock,
     TensorMap,
 )
-
+from .code_timer import SimpleTimer
+collect_mode = "sum"
 
 class ClebschGordanReal:
-    def __init__(self, l_max):
+    def __init__(self, l_max, *, timer: SimpleTimer = None):
+        if timer is not None:
+            timer.mark_start()
         self._l_max = l_max
         self._cg = {}
 
         # real-to-complex and complex-to-real transformations as matrices
         r2c = {}
         c2r = {}
+        if timer is not None:
+            timer.mark("8-1. init vars")
+        
         for L in range(0, self._l_max + 1):
             r2c[L] = _real2complex(L)
             c2r[L] = np.conjugate(r2c[L]).T
+        if timer is not None:
+            timer.mark("8-2. compute r2c and c2r")
+            internal_timer = SimpleTimer()
 
         for l1 in range(self._l_max + 1):
             for l2 in range(self._l_max + 1):
                 for L in range(
                     max(l1, l2) - min(l1, l2), min(self._l_max, (l1 + l2)) + 1
                 ):
+                    if timer is not None:
+                        internal_timer.mark_start()
+
                     complex_cg = _complex_clebsch_gordan_matrix(l1, l2, L)
+                    if timer is not None:
+                        internal_timer.mark("8-3-1. compute complex cg matrix")
 
                     real_cg = (r2c[l1].T @ complex_cg.reshape(2 * l1 + 1, -1)).reshape(
                         complex_cg.shape
                     )
-
+                    
                     real_cg = real_cg.swapaxes(0, 1)
                     real_cg = (r2c[l2].T @ real_cg.reshape(2 * l2 + 1, -1)).reshape(
                         real_cg.shape
@@ -39,11 +53,15 @@ class ClebschGordanReal:
                     real_cg = real_cg.swapaxes(0, 1)
 
                     real_cg = real_cg @ c2r[L].T
+                    if timer is not None:
+                        internal_timer.mark("8-3-2. compute real cg matrix")
 
                     if (l1 + l2 + L) % 2 == 0:
                         rcg = np.real(real_cg)
                     else:
                         rcg = np.imag(real_cg)
+                    if timer is not None:
+                        internal_timer.mark("8-3-3. compute rcg")
 
                     new_cg = []
                     for M in range(2 * L + 1):
@@ -56,8 +74,15 @@ class ClebschGordanReal:
                         cg_M["m2"] = cg_nonzero[1]
                         cg_M["cg"] = rcg[cg_nonzero[0], cg_nonzero[1], M]
                         new_cg.append(cg_M)
+                    if timer is not None:
+                        internal_timer.mark("8-3-4. compute new cg")
 
                     self._cg[(l1, l2, L)] = new_cg
+                    if timer is not None:
+                        internal_timer.mark("8-3-5. set cg at index [l1][l2][L]")
+        if timer is not None:
+            timer.mark("8-3. compute cg for all indices")
+            timer.collect_and_append(internal_timer, collect_mode)
 
     def get_cg(self):
         return self._cg
@@ -181,7 +206,7 @@ def cg_combine(
     x_b,
     feature_names=None,
     clebsch_gordan=None,
-    lcut=None,
+    l_cut=None,
     other_keys_match=None,
 ):
     """
@@ -198,12 +223,12 @@ def cg_combine(
     # determines the cutoff in the new features
     lmax_a = max(x_a.keys["angular_channel"])
     lmax_b = max(x_b.keys["angular_channel"])
-    if lcut is None:
-        lcut = lmax_a + lmax_b
+    if l_cut is None:
+        l_cut = lmax_a + lmax_b
 
     # creates a CG object, if needed
     if clebsch_gordan is None:
-        clebsch_gordan = ClebschGordanReal(lcut)
+        clebsch_gordan = ClebschGordanReal(l_cut)
 
     other_keys_a = tuple(
         name for name in x_a.keys.names if name not in ["angular_channel", "order_nu"]
@@ -311,7 +336,7 @@ def cg_combine(
                 continue
             # loops over all permissible output blocks. note that blocks will
             # be filled from different la, lb
-            for L in range(np.abs(lam_a - lam_b), 1 + min(lam_a + lam_b, lcut)):
+            for L in range(np.abs(lam_a - lam_b), 1 + min(lam_a + lam_b, l_cut)):
                 # determines parity of the block
                 NU = order_a + order_b
                 KEY = (

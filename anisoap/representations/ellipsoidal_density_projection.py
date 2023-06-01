@@ -11,7 +11,7 @@ except ImportError:
 
 from itertools import product
 
-from equistore.core import (
+from equistore import ( # ?? equistore.core seems to result in ModuleNotFoundError
     Labels,
     TensorBlock,
     TensorMap,
@@ -24,6 +24,9 @@ from anisoap.representations.radial_basis import RadialBasis
 from anisoap.utils import compute_moments_inefficient_implementation
 from anisoap.utils.moment_generator import *
 
+# ADDED
+from anisoap.utils import SimpleTimer
+collect_mode = "sum"
 
 def pairwise_ellip_expansion(
     lmax,
@@ -34,6 +37,8 @@ def pairwise_ellip_expansion(
     ellipsoid_lengths,
     sph_to_cart,
     radial_basis,
+    *,
+    timer: SimpleTimer = None
 ):
     """
     Function to compute the pairwise expansion <anlm|rho_ij> by combining the moments and the spherical to Cartesian
@@ -75,28 +80,46 @@ def pairwise_ellip_expansion(
         the radial channel.
 
     """
+    if timer is not None:
+        timer.mark_start()
+
     tensorblock_list = []
     keys = np.array(neighbor_list.keys.asarray(), dtype=int)
     keys = [tuple(i) + (l,) for i in keys for l in range(lmax + 1)]
     num_ns = radial_basis.get_num_radial_functions()
+    if timer is not None:
+        timer.mark("5-8-1. init vars")
 
+    if timer is not None:
+        internal_timer = SimpleTimer()
+    
     for center_species in species:
         for neighbor_species in species:
+            if timer is not None:
+                internal_timer.mark_start()
             if (center_species, neighbor_species) in neighbor_list.keys:
-                values_ldict = {l: [] for l in range(lmax + 1)}
+                if timer is not None:
+                    internal_timer.mark("5-8-2-2. in neighbor_list")
+
                 nl_block = neighbor_list.block(
                     species_first_atom=center_species,
                     species_second_atom=neighbor_species,
                 )
+                if timer is not None:
+                    internal_timer.mark("5-8-2-3. compute nl_block")
+                    internal_timer2 = SimpleTimer()
 
+                values_ldict = {l: [] for l in range(lmax + 1)} # moved from original position
                 for isample, nl_sample in enumerate(nl_block.samples):
+                    if timer is not None:
+                        internal_timer2.mark_start()
                     frame_idx, i, j = (
                         nl_sample["structure"],
                         nl_sample["first_atom"],
                         nl_sample["second_atom"],
                     )
-                    i_global = frame_to_global_atom_idx[frame_idx] + i
-                    j_global = frame_to_global_atom_idx[frame_idx] + j
+                    if timer is not None:
+                        internal_timer2.mark("5-8-2-4. compute frame index")
 
                     r_ij = np.asarray(
                         [
@@ -107,23 +130,39 @@ def pairwise_ellip_expansion(
                     ).reshape(
                         3,
                     )
+                    if timer is not None:
+                        internal_timer2.mark("5-8-2-5. compute r_ij")
 
+                    i_global = frame_to_global_atom_idx[frame_idx] + i  # moved from original position
+                    j_global = frame_to_global_atom_idx[frame_idx] + j
                     rot = rotation_matrices[j_global]
                     lengths = ellipsoid_lengths[j_global]
+                    if timer is not None:
+                        internal_timer2.mark("5-8-2-6. compute helper vars")
                     precision, center = radial_basis.compute_gaussian_parameters(
                         r_ij, lengths, rot
                     )
+                    if timer is not None:
+                        internal_timer2.mark("5-8-2-7. compute gaussian params")
 
+                    internal_timer3 = SimpleTimer()
                     moments = compute_moments_inefficient_implementation(
-                        precision, center, maxdeg=lmax + np.max(num_ns)
+                        precision, center, maxdeg=lmax + np.max(num_ns), timer=internal_timer3
                     )
+                    if timer is not None:
+                        internal_timer2.mark("5-8-2-8. compute moments")
+                        internal_timer2.collect_and_append(internal_timer3, collect_mode)
+                        internal_timer2.mark_start()
+
                     for l in range(lmax + 1):
                         deg = l + 2 * (num_ns[l] - 1)
                         moments_l = moments[: deg + 1, : deg + 1, : deg + 1]
                         values_ldict[l].append(
                             np.einsum("mnpqr, pqr->mn", sph_to_cart[l], moments_l)
                         )
-
+                    if timer is not None:
+                        internal_timer2.mark("5-8-2-9. compute ldict values")
+                
                 for l in range(lmax + 1):
                     block = TensorBlock(
                         values=np.asarray(values_ldict[l]),
@@ -141,7 +180,21 @@ def pairwise_ellip_expansion(
                             np.asarray(list(range(num_ns[l])), np.int32).reshape(-1, 1),
                         ),
                     )
+                    if timer is not None:
+                        internal_timer2.mark("5-8-2-10. construct tensor block")
                     tensorblock_list.append(block)
+                    if timer is not None:
+                        internal_timer2.mark("5-8-2-11. append to tensor block list")
+                if timer is not None:
+                    internal_timer.collect_and_append(internal_timer2, collect_mode)
+            else:
+                if timer is not None:
+                    internal_timer.mark("5-8-2-1. ignored branch")
+
+    if timer is not None:
+        timer.mark("5-8-2. pairwise computation")
+        timer.collect_and_append(internal_timer, collect_mode)
+        timer.mark_start()
 
     pairwise_ellip_feat = TensorMap(
         Labels(
@@ -150,6 +203,8 @@ def pairwise_ellip_expansion(
         ),
         tensorblock_list,
     )
+    if timer is not None:
+        timer.mark("5-8-3. construct tensor map")
     return pairwise_ellip_feat
 
 
@@ -399,7 +454,7 @@ class EllipsoidalDensityProjection:
 
         self.rotation_key = rotation_key
 
-    def transform(self, frames, show_progress=False):
+    def transform(self, frames, show_progress=False, *, timer: SimpleTimer = None):
         """
         Computes the features and (if compute_gradients == True) gradients
         for all the provided frames. The features and gradients are stored in
@@ -415,7 +470,12 @@ class EllipsoidalDensityProjection:
         None, but stores the projection coefficients and (if desired)
         gradients as arrays as `features` and `features_gradients`.
         """
+        if timer is not None:
+            timer.mark_start()
+
         self.frames = frames
+        if timer is not None:
+            timer.mark("5-1. init frame")
 
         # Generate a dictionary to map atomic species to array indices
         # In general, the species are sorted according to atomic number
@@ -429,14 +489,20 @@ class EllipsoidalDensityProjection:
             self.num_atoms_per_frame[i] = len(f)
             for atom in f:
                 species.add(atom.number)
+        if timer is not None:
+            timer.mark("5-2. init atomic dict")
 
         self.num_atoms_total = sum(self.num_atoms_per_frame)
         species = sorted(species)
+        if timer is not None:
+            timer.mark("5-3. atomic dict calc")
 
         # Define variables determining size of feature vector coming from frames
         self.num_atoms_per_frame = np.array([len(frame) for frame in frames])
 
         num_particle_types = len(species)
+        if timer is not None:
+            timer.mark("5-4. calc size feature")
 
         # Initialize arrays in which to store all features
         self.feature_gradients = 0
@@ -451,6 +517,8 @@ class EllipsoidalDensityProjection:
             self.frame_to_global_atom_idx[n] = (
                 self.num_atoms_per_frame[n - 1] + self.frame_to_global_atom_idx[n - 1]
             )
+        if timer is not None:
+            timer.mark("5-5. init frame to global")
 
         rotation_matrices = np.zeros((self.num_atoms_total, 3, 3))
         ellipsoid_lengths = np.zeros((self.num_atoms_total, 3))
@@ -472,8 +540,19 @@ class EllipsoidalDensityProjection:
                     frames[i].arrays["c_diameter[2]"][j] / 2,
                     frames[i].arrays["c_diameter[3]"][j] / 2,
                 ]
+        if timer is not None:
+            timer.mark("5-6. init rotation matrix and ellip len")
+        # TypeError: NeighborList.__init__() takes 3 positional arguments but 4 were given
+        # Deleted the last "True" to resolve this error
+        # NeighborList(self.cutoff_radius, True, True) -> NeighborList(self.cutoff_radius, True)
+        self.nl = NeighborList(self.cutoff_radius, True).compute(frame_generator)
+        if timer is not None:
+            timer.mark("5-7. compute NeighborList")
 
-        self.nl = NeighborList(self.cutoff_radius, True, True).compute(frame_generator)
+        if timer is not None:
+            internal_timer = SimpleTimer()
+        else:
+            internal_timer = None
 
         pairwise_ellip_feat = pairwise_ellip_expansion(
             self.max_angular,
@@ -484,8 +563,14 @@ class EllipsoidalDensityProjection:
             ellipsoid_lengths,
             self.sph_to_cart,
             self.radial_basis,
+            timer=internal_timer
         )
-
+        if timer is not None:
+            timer.mark("5-8. pairwise ellip expansion")
+            timer.collect_and_append(internal_timer, collect_mode)
+            timer.mark_start()
+        
         features = contract_pairwise_feat(pairwise_ellip_feat, species)
-
+        if timer is not None:
+            timer.mark("5-9. pairwise contraction")
         return features
