@@ -1,6 +1,3 @@
-import numpy as np
-
-
 class TrivariateMonomialIndices:
     """
     Class for generating an iterator object over all trivariate
@@ -23,7 +20,6 @@ class TrivariateMonomialIndices:
     myiter = iter(TrivariateMonomialIndices(deg=2))
     for idx, n0, n1, n2 in myiter:
         ... # do something with exponents (n0, n1, n2)
-
     """
 
     def __init__(self, deg):
@@ -53,8 +49,6 @@ class TrivariateMonomialIndices:
 
     def find_idx(self, exponents):
         """
-
-
         Parameters
         ----------
         exponents : 3-tuple (n0, n1, n2)
@@ -63,7 +57,6 @@ class TrivariateMonomialIndices:
         Returns
         -------
         The index of the tuple in the lexicographical order
-
         """
         assert n0 + n1 + n2 == self.deg
         return self.exponent_list.index(exponents)

@@ -12,15 +12,22 @@ from rascaline import NeighborList
 from scipy.spatial.transform import Rotation
 from tqdm.auto import tqdm
 
-from anisoap.representations.radial_basis import RadialBasis
-from anisoap.utils.moment_generator import *
-from anisoap.utils.spherical_to_cartesian import spherical_to_cartesian
+from anisoap.lib import compute_moments
 
+from ..representations.radial_basis import RadialBasis
+from ..utils.moment_generator import *
+from ..utils.spherical_to_cartesian import spherical_to_cartesian
+
+try:
+    from tqdm.auto import tqdm
+except ImportError:
+    tqdm = lambda x, **_: x
+
+from anisoap.lib import compute_moments
 
 def pairwise_ellip_expansion(
     lmax,
     neighbor_list,
-    species,
     frame_to_global_atom_idx,
     rotation_matrices,
     ellipsoid_lengths,
@@ -75,83 +82,77 @@ def pairwise_ellip_expansion(
     keys = np.asarray(neighbor_list.keys, dtype=int)
     keys = [tuple(i) + (l,) for i in keys for l in range(lmax + 1)]
     num_ns = radial_basis.get_num_radial_functions()
-    maxdeg = np.max(np.arange(lmax + 1) + 2 * np.array(num_ns))
-    for center_species in species:
-        for neighbor_species in species:
-            if (center_species, neighbor_species) in neighbor_list.keys:
-                values_ldict = {l: [] for l in range(lmax + 1)}
-                nl_block = neighbor_list.block(
-                    species_first_atom=center_species,
-                    species_second_atom=neighbor_species,
+
+    for center_species, neighbor_species in neighbor_list.keys:
+        nl_block = neighbor_list.block(
+            species_first_atom=center_species,
+            species_second_atom=neighbor_species,
+        )
+        # moved from original position
+        values_ldict = {l: [] for l in range(lmax + 1)}
+        for isample, nl_sample in enumerate(
+            tqdm(
+                nl_block.samples,
+                disable=(not show_progress),
+                desc="Iterating samples for ({}, {})".format(
+                    center_species, neighbor_species
+                ),
+                leave=False,
+            )
+        ):
+            frame_idx, j = (
+                nl_sample["structure"],
+                nl_sample["second_atom"],
+            )
+
+            r_ij = np.asarray(
+                [
+                    nl_block.values[isample, 0],
+                    nl_block.values[isample, 1],
+                    nl_block.values[isample, 2],
+                ]
+            ).reshape(
+                3,
+            )
+
+            # moved from original position
+            j_global = frame_to_global_atom_idx[frame_idx] + j
+            rot = rotation_matrices[j_global]
+            lengths = ellipsoid_lengths[j_global]
+
+            precision, center = radial_basis.compute_gaussian_parameters(
+                r_ij, lengths, rot
+            )
+            moments = compute_moments(precision, center, lmax + np.max(num_ns))
+
+            for l in range(lmax + 1):
+                deg = l + 2 * (num_ns[l] - 1)
+                moments_l = moments[: deg + 1, : deg + 1, : deg + 1]
+                values_ldict[l].append(
+                    np.einsum("mnpqr, pqr->mn", sph_to_cart[l], moments_l)
                 )
 
-                for isample, nl_sample in enumerate(
-                    tqdm(
-                        nl_block.samples,
-                        disable=(not show_progress),
-                        desc="Iterating samples for ({}, {})".format(
-                            center_species, neighbor_species
-                        ),
-                        leave=False,
+        for l in tqdm(
+            range(lmax + 1),
+            disable=(not show_progress),
+            desc="Accruing lmax",
+            leave=False,
+        ):
+            block = TensorBlock(
+                values=np.asarray(values_ldict[l]),
+                samples=nl_block.samples,  # as many rows as samples
+                components=[
+                    Labels(
+                        ["spherical_component_m"],
+                        np.asarray([list(range(-l, l + 1))], np.int32).reshape(-1, 1),
                     )
-                ):
-                    frame_idx, i, j = (
-                        nl_sample["structure"],
-                        nl_sample["first_atom"],
-                        nl_sample["second_atom"],
-                    )
-                    i_global = frame_to_global_atom_idx[frame_idx] + i
-                    j_global = frame_to_global_atom_idx[frame_idx] + j
-
-                    r_ij = np.asarray(
-                        [
-                            nl_block.values[isample, 0],
-                            nl_block.values[isample, 1],
-                            nl_block.values[isample, 2],
-                        ]
-                    ).reshape(
-                        3,
-                    )
-
-                    rot = rotation_matrices[j_global]
-                    lengths = ellipsoid_lengths[j_global]
-                    precision, center = radial_basis.compute_gaussian_parameters(
-                        r_ij, lengths, rot
-                    )
-
-                    moments = compute_moments_inefficient_implementation(
-                        precision, center, maxdeg=maxdeg
-                    )
-                    for l in range(lmax + 1):
-                        deg = l + 2 * (num_ns[l] - 1)
-                        moments_l = moments[: deg + 1, : deg + 1, : deg + 1]
-                        values_ldict[l].append(
-                            np.einsum("mnpqr, pqr->mn", sph_to_cart[l], moments_l)
-                        )
-
-                for l in tqdm(
-                    range(lmax + 1),
-                    disable=(not show_progress),
-                    desc="Accruing lmax",
-                    leave=False,
-                ):
-                    block = TensorBlock(
-                        values=np.asarray(values_ldict[l]),
-                        samples=nl_block.samples,  # as many rows as samples
-                        components=[
-                            Labels(
-                                ["spherical_component_m"],
-                                np.asarray([list(range(-l, l + 1))], np.int32).reshape(
-                                    -1, 1
-                                ),
-                            )
-                        ],
-                        properties=Labels(
-                            ["n"],
-                            np.asarray(list(range(num_ns[l])), np.int32).reshape(-1, 1),
-                        ),
-                    )
-                    tensorblock_list.append(block)
+                ],
+                properties=Labels(
+                    ["n"],
+                    np.asarray(list(range(num_ns[l])), np.int32).reshape(-1, 1),
+                ),
+            )
+            tensorblock_list.append(block)
 
     pairwise_ellip_feat = TensorMap(
         Labels(
@@ -230,7 +231,6 @@ def contract_pairwise_feat(pair_ellip_feat, species, show_progress=False):
             ]
 
             if not len(sel_blocks):
-                #                 print(key, ele, "skipped") # this block is not found in the pairwise feat
                 continue
             assert len(sel_blocks) == 1
 
@@ -266,13 +266,11 @@ def contract_pairwise_feat(pair_ellip_feat, species, show_progress=False):
                 l.append(idx)
                 indexed_sample_idx[tup] = l
 
-            for isample, sample in enumerate(
-                tqdm(
-                    possible_block_samples,
-                    disable=(not show_progress),
-                    desc="Finding matching block samples",
-                    leave=False,
-                )
+            for sample in tqdm(
+                possible_block_samples,
+                disable=(not show_progress),
+                desc="Finding matching block samples",
+                leave=False,
             ):
                 if sample in indexed_sample_idx:
                     sample_idx = indexed_sample_idx[tuple(sample)]
@@ -290,7 +288,7 @@ def contract_pairwise_feat(pair_ellip_feat, species, show_progress=False):
                     # block_values has as many entries as samples satisfying (key, neighbor_species=ele).
                     # When we iterate over neighbor species, not all (structure, center) would be present
                     # Example: (0,0,1) might be present in a block with neighbor_species = 1 but no other pair block
-                    # ever has (0,0,x) present as a sample- so (0,0) doesnt show up in a block_sample for all ele
+                    # ever has (0,0,x) present as a sample- so (0,0) doesn't show up in a block_sample for all ele
                     # so in general we have a ragged list of contract_blocks
 
             contract_blocks.append(block_values)
@@ -311,11 +309,11 @@ def contract_pairwise_feat(pair_ellip_feat, species, show_progress=False):
             )
         )
         # Create storage for the final values - we need as many rows as all_block_samples,
-        # block.values.shape[1:] accounts for "components" and "properties" that are already part of the pair blocks
-        # and we dont alter these
-        # len(contract_blocks) - adds the additional dimension for the neighbor_species since we accumulated
-        # values for each of them as \sum_{j in ele} <|rho_ij>
-        #  Thus - all_block_values.shape = (num_final_samples, components_pair, properties_pair, num_species)
+        # block.values.shape[1:] accounts for "components" and "properties" that
+        # are already part of the pair blocks and we dont alter these
+        # len(contract_blocks) - adds the additional dimension for the neighbor_species
+        # since we accumulated values for each of them as \sum_{j in ele} <|rho_ij>
+        # Thus - all_block_values.shape = (num_final_samples, components_pair, properties_pair, num_species)
 
         indexed_elem_cont_samples = {}
         for i, val in enumerate(all_block_samples):
@@ -348,7 +346,6 @@ def contract_pairwise_feat(pair_ellip_feat, species, show_progress=False):
             )
 
             # identifies where the samples that this species contributes to, are present in the final samples
-            #             print(apecies[ib],key, bb, all_block_samples)
             all_block_values[nzidx, :, :, iele] = contract_blocks[iele]
 
         new_block = TensorBlock(
@@ -431,7 +428,6 @@ class EllipsoidalDensityProjection:
         # Currently, gradients are not supported
         if compute_gradients:
             raise NotImplementedError("Sorry! Gradients have not yet been implemented")
-        #
 
         # Initialize the radial basis class
         if radial_basis_name not in ["monomial", "gto"]:
@@ -485,7 +481,7 @@ class EllipsoidalDensityProjection:
         show_progress : bool
             Show progress bar for frame analysis and feature generation
         normalize: bool
-            Whether to perform Lowdin Symmetric Orthonormalization or not. Orthonormalization generally
+            Whether to perform Löwdin Symmetric Orthonormalization or not. Orthonormalization generally
             leads to better performance. Default: True.
         Returns
         -------
@@ -512,8 +508,6 @@ class EllipsoidalDensityProjection:
 
         # Define variables determining size of feature vector coming from frames
         self.num_atoms_per_frame = np.array([len(frame) for frame in frames])
-
-        num_particle_types = len(species)
 
         # Initialize arrays in which to store all features
         self.feature_gradients = 0
@@ -556,7 +550,6 @@ class EllipsoidalDensityProjection:
         pairwise_ellip_feat = pairwise_ellip_expansion(
             self.max_angular,
             self.nl,
-            species,
             self.frame_to_global_atom_idx,
             rotation_matrices,
             ellipsoid_lengths,
@@ -567,7 +560,6 @@ class EllipsoidalDensityProjection:
 
         features = contract_pairwise_feat(pairwise_ellip_feat, species, show_progress)
         if normalize:
-            normalized_features = self.radial_basis.orthonormalize_basis(features)
-            return normalized_features
+            return self.radial_basis.orthonormalize_basis(features)
         else:
             return features
