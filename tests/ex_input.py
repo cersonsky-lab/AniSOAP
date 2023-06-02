@@ -96,7 +96,7 @@ def single_pass(file_path: str, *, timer: SimpleTimer = None):
         timer.mark("12. scaler transform")
 
 if __name__ == "__main__":
-    write_name = "time_results/" + "rust_and_caching_impl_v1_avg" + ".csv"
+    write_name = "time_results/" + "rust_cache_v1_avg" + ".csv"
     out_file = open(write_name, "w")
     out_file.write("initial import\n")
     out_file.write(str(import_duration) + "\n")
