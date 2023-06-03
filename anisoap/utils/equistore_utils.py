@@ -10,13 +10,8 @@ from equistore.core import (
 from .code_timer import SimpleTimer
 from .cyclic_list import CGRCacheList
 
-# Set this to None to disable caching functionality
-_cache_list = CGRCacheList(5)
-# Comment the line below to enable caching, and un-comment it to disable caching
-# _cache_list = None
-
 class ClebschGordanReal:
-    def __init__(self, l_max, *, timer: SimpleTimer = None):
+    def __init__(self, l_max, *, timer: SimpleTimer = None, cache_list: CGRCacheList = None):
         if timer is not None:
             timer.mark_start()
         self._l_max = l_max
@@ -34,9 +29,9 @@ class ClebschGordanReal:
         if timer is not None:
             timer.mark("8-2. compute r2c and c2r")
         
-        if _cache_list is not None:
-            if l_max in _cache_list.keys():
-                self._cg = _cache_list.get_val(l_max)
+        if cache_list is not None:
+            if l_max in cache_list.keys():
+                self._cg = cache_list.get_val(l_max)
                 if timer is not None:
                     # Mark the timers for consistency.
                     timer.mark("8-3-1. compute complex cg matrix")
@@ -47,8 +42,7 @@ class ClebschGordanReal:
                     timer.mark("8-3. compute cg for all indices")
             else:
                 self._init_cg(r2c, c2r, timer=timer)
-                _cache_list.insert(l_max, self._cg)
-                print(_cache_list.keys())
+                cache_list.insert(l_max, self._cg)
         else:
             self._init_cg(r2c, c2r, timer=timer)
     

@@ -3,6 +3,8 @@ from collections import defaultdict
 from typing import Callable
 
 class SimpleTimer:
+    default_coll_mode = "avg"
+
     def __init__(self):
         self._internal_time = time.perf_counter()
         self._timer_dict = defaultdict(list)
@@ -58,13 +60,17 @@ class SimpleTimer:
     def collect_and_append(
             self,
             other: 'SimpleTimer',
-            collect_mode: str | Callable[[list[float]], float] = "avg"  # ! CHANGE THIS
+            collect_mode: str | Callable[[list[float]], float] = None
         ):
         """
         Takes another SimpleTimer class as argument and calls average_trials
         in "other" then appends the averaged values into the internal list of
         "self" dictionary
         """
+        # If None, use static variable "default_coll_mode" as collecting mode
+        if collect_mode == None:
+            collect_mode = SimpleTimer.default_coll_mode
+
         if collect_mode == "avg":
             coll_dict = other.collect_trials(lambda x: sum(x) / len(x))
         elif collect_mode == "sum":

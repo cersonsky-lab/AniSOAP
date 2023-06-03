@@ -27,7 +27,6 @@ from anisoap.utils.moment_generator import *
 # ADDED
 from anisoap.utils import SimpleTimer
 from anisoap.lib import compute_moments
-_moment_fn_lang = "rust"
 
 def pairwise_ellip_expansion(
     lmax,
@@ -39,7 +38,8 @@ def pairwise_ellip_expansion(
     sph_to_cart,
     radial_basis,
     *,
-    timer: SimpleTimer = None
+    timer: SimpleTimer = None,
+    moment_fn_lang: str = "rust"
 ):
     """
     Function to compute the pairwise expansion <anlm|rho_ij> by combining the moments and the spherical to Cartesian
@@ -147,7 +147,7 @@ def pairwise_ellip_expansion(
                         internal_timer2.mark("5-8-2-7. compute gaussian params")
                         internal_timer3 = SimpleTimer()
                     
-                    if _moment_fn_lang == "rust":
+                    if moment_fn_lang == "rust":
                         # NOTE: This line was replaced with Rust implementation. 
                         moments = compute_moments(precision, center, lmax + np.max(num_ns))
                         # Mark the timers for consistency
@@ -473,7 +473,7 @@ class EllipsoidalDensityProjection:
 
         self.rotation_key = rotation_key
 
-    def transform(self, frames, show_progress=False, *, timer: SimpleTimer = None): # frames: List[Atoms]
+    def transform(self, frames, show_progress=False, *, timer: SimpleTimer = None, moment_fn_lang: str = "rust"): # frames: List[Atoms]
         """
         Computes the features and (if compute_gradients == True) gradients
         for all the provided frames. The features and gradients are stored in
@@ -582,7 +582,8 @@ class EllipsoidalDensityProjection:
             ellipsoid_lengths,
             self.sph_to_cart,
             self.radial_basis,
-            timer=internal_timer
+            timer=internal_timer,
+            moment_fn_lang=moment_fn_lang
         )
         if timer is not None:
             timer.mark("5-8. pairwise ellip expansion")
