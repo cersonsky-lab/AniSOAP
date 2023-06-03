@@ -1,5 +1,4 @@
-import sys
-sys.path.insert(1, '/home/ycc-rogm16/documents/code-repo/uw-research/ml-anisoap/anisoap')
+import pathlib
 import time
 from anisoap.utils import SimpleTimer
 
@@ -95,8 +94,10 @@ def single_pass(file_path: str, *, timer: SimpleTimer = None):
     if timer is not None:
         timer.mark("12. scaler transform")
 
+    return x
+
 if __name__ == "__main__":
-    write_name = "time_results/" + "rust_cache_v1_avg" + ".csv"
+    write_name = str(pathlib.Path(__file__).parent.absolute()) + "/time_results/" + "ignore_this" + ".csv"
     out_file = open(write_name, "w")
     out_file.write("initial import\n")
     out_file.write(str(import_duration) + "\n")
@@ -121,7 +122,7 @@ if __name__ == "__main__":
     
     code_timer = SimpleTimer()
     for test_file, rep_num in file_names.items():
-        file_path = "../benchmarks/two_particle_gb/" + test_file + ".xyz"
+        file_path = str(pathlib.Path(__file__).parent.parent.absolute()) + "/benchmarks/two_particle_gb/" + test_file + ".xyz"
         for rep_index in range(rep_num):
             print(f"Computation for {test_file}, iteration {rep_index + 1} has started")
             single_pass(file_path, timer=code_timer)
