@@ -146,6 +146,8 @@ def pairwise_ellip_expansion(
                     if timer is not None:
                         internal_timer2.mark("5-8-2-7. compute gaussian params")
                         internal_timer3 = SimpleTimer()
+                    else:
+                        internal_timer3 = None
                     
                     if moment_fn_lang == "rust":
                         # NOTE: This line was replaced with Rust implementation. 

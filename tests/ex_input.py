@@ -56,12 +56,12 @@ _cache_list: CGRCacheList(cache_size: int)
 # ------------------------------ Configurations ------------------------------ # 
 # See above for explanations for each variables.
 _file_name = "res_cmp" 
-_write_mode = "time"
+_write_mode = "result"
 SimpleTimer.default_coll_mode = "avg"
 _coll_mode_name = None
 _moment_fn_lang = "rust"
 _test_files = {  # file name: repeat number
-        "ellipsoid_frames": 16,
+        "ellipsoid_frames": 4,
         # "both_rotating_in_z": 1, # Results in key error in frames.arrays['c_q']
         # "face_to_face": 1,
         # "random_rotations": 1,
@@ -153,11 +153,13 @@ def single_pass(file_path: str, *, timer: SimpleTimer = None):
         timer.mark("7. standardize keys")
         internal_timer.clear_time()
 
-    my_cg = ClebschGordanReal(l_max, timer=internal_timer, cache_list=_cache_list)
     if timer is not None:
+        my_cg = ClebschGordanReal(l_max, timer=internal_timer, cache_list=_cache_list)
         timer.mark("8. constructing CGR")
         timer.collect_and_append(internal_timer)
         timer.mark_start()
+    else:
+        my_cg = ClebschGordanReal(l_max, cache_list=_cache_list)
 
     anisoap_nu2 = cg_combine(
         anisoap_nu1,
@@ -212,14 +214,14 @@ if __name__ == "__main__":
                 flatten_name.append(name + ": iter" + str(iter_num + 1))
         out_file.write("stage," + ",".join(flatten_name) + "\n")
     
-    code_timer = SimpleTimer()
+    code_timer = SimpleTimer() if _write_mode == "time" else None
     for test_file, rep_num in _test_files.items():
         file_path = str(pathlib.Path(__file__).parent.parent.absolute()) + "/benchmarks/two_particle_gb/" + test_file + ".xyz"
         for rep_index in range(rep_num):
             print(f"Computation for {test_file}, iteration {rep_index + 1} has started")
             
             if _write_mode == "result":
-                out_file.write(f"{test_file}, iter {rep_index + 1}\n")
+                out_file.write(f"{test_file}: iter {rep_index + 1}\n")
             
             comp_result = single_pass(file_path, timer=code_timer)
 
