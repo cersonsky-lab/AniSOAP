@@ -56,12 +56,12 @@ _cache_list: CGRCacheList(cache_size: int)
 # ------------------------------ Configurations ------------------------------ # 
 # See above for explanations for each variables.
 _file_name = "res_cmp" 
-_write_mode = "result"
+_write_mode = "time"
 SimpleTimer.default_coll_mode = "avg"
 _coll_mode_name = None
 _moment_fn_lang = "rust"
 _test_files = {  # file name: repeat number
-        "ellipsoid_frames": 4,
+        "ellipsoid_frames": 16,
         # "both_rotating_in_z": 1, # Results in key error in frames.arrays['c_q']
         # "face_to_face": 1,
         # "random_rotations": 1,
@@ -85,6 +85,9 @@ if SimpleTimer.default_coll_mode not in ["avg", "sum", "min", "max"]:
 
 if _moment_fn_lang not in ["rust", "python"]:
     raise ValueError("_moment_fn_lang currently supports only rust or python implementations")
+
+if _write_mode == "time" and sum([v for (_, v) in _test_files.items()]) > 16:
+    raise ValueError("Maximum total iterations supported in 'time' mode is 16.")
 
 if type(_cache_list) != CGRCacheList and _cache_list is not None:
     raise TypeError("_cache_list must be CGRCacheList (to enable caching) or None (to disable caching)")
