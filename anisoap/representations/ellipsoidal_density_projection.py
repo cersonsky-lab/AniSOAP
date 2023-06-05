@@ -315,6 +315,34 @@ def contract_pairwise_feat(pair_ellip_feat, species):
 
     return ellip
 
+def normalize_basis(radial_basis: RadialBasis, features: TensorMap):
+    """
+    Multiply each value within each block of the features TensorMap by the appropriate normalization value.
+    These normalization values are given here: https://github.com/lab-cosmo/librascal/blob/a4ffbc772ad97ce6cbe9b46900660236b94d2ee2/bindings/rascal/utils/radial_basis.py#L100
+
+    TODO: I think the GTO should be of order n+2l, rather than just n.
+    
+    Parameters:
+        radial_basis: An instance of RaidalBasis
+        features: A TensorMap whose blocks' values we wish to normalize
+
+    Returns:
+        normalized_features: A copy of features with containing values multiplied by proper normalization factors
+    """
+    normalized_features = features.copy()
+    radial_basis_name = radial_basis.radial_basis
+    sigma = radial_basis.hypers["radial_gaussian_width"]
+    if radial_basis_name != "gto":
+        warnings.warn("Have not implemented normalization for non-gto basis, will return original values")
+        return features
+    for block in normalized_features.blocks():
+        for property in block.properties:
+            n = property[0]
+            N = np.sqrt(2 / (sigma ** (2 * n + 3) * gamma(n + 1.5)))
+            block.values[:, :, n] *= N
+
+    return normalized_features
+
 
 class EllipsoidalDensityProjection:
     """
