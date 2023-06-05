@@ -26,14 +26,14 @@ from anisoap.utils.moment_generator import *
 
 
 def pairwise_ellip_expansion(
-        lmax,
-        neighbor_list,
-        species,
-        frame_to_global_atom_idx,
-        rotation_matrices,
-        ellipsoid_lengths,
-        sph_to_cart,
-        radial_basis,
+    lmax,
+    neighbor_list,
+    species,
+    frame_to_global_atom_idx,
+    rotation_matrices,
+    ellipsoid_lengths,
+    sph_to_cart,
+    radial_basis,
 ):
     """
     Function to compute the pairwise expansion <anlm|rho_ij> by combining the moments and the spherical to Cartesian
@@ -200,7 +200,7 @@ def contract_pairwise_feat(pair_ellip_feat, species):
                 pair_ellip_feat.block(i)
                 for i in blockidx
                 if key
-                   == tuple(
+                == tuple(
                     list(pair_ellip_feat.keys[i])[:1]
                     + list(pair_ellip_feat.keys[i])[2:]
                 )
@@ -267,9 +267,9 @@ def contract_pairwise_feat(pair_ellip_feat, species):
 
         all_block_values = np.zeros(
             (
-                    (len(all_block_samples),)
-                    + block.values.shape[1:]
-                    + (len(contract_blocks),)
+                (len(all_block_samples),)
+                + block.values.shape[1:]
+                + (len(contract_blocks),)
             )
         )
         # Create storage for the final values - we need as many rows as all_block_samples,
@@ -318,22 +318,6 @@ def contract_pairwise_feat(pair_ellip_feat, species):
     return ellip
 
 
-def normalize_basis(radial_basis: RadialBasis, features: TensorMap):
-    normalized_features = features.copy()
-    radial_basis_name = radial_basis.radial_basis
-    sigma = radial_basis.hypers["radial_gaussian_width"]
-    if radial_basis_name != "gto":
-        warnings.warn("Have not implemented normalization for non-gto basis, will return original values")
-        return features
-    for block in normalized_features.blocks():
-        for property in block.properties:
-            n = property[0]
-            N = np.sqrt(2 / (sigma ** (2 * n + 3) * gamma(n + 1.5)))
-            block.values[:, :, n] *= N
-
-    return normalized_features
-
-
 class EllipsoidalDensityProjection:
     """
     Compute the spherical projection coefficients for a system of ellipsoids
@@ -362,15 +346,15 @@ class EllipsoidalDensityProjection:
     """
 
     def __init__(
-            self,
-            max_angular,
-            radial_basis_name,
-            cutoff_radius,
-            compute_gradients=False,
-            subtract_center_contribution=False,
-            radial_gaussian_width=None,
-            rotation_key="quaternion",
-            rotation_type="quaternion",
+        self,
+        max_angular,
+        radial_basis_name,
+        cutoff_radius,
+        compute_gradients=False,
+        subtract_center_contribution=False,
+        radial_gaussian_width=None,
+        rotation_key="quaternion",
+        rotation_type="quaternion",
     ):
         # Store the input variables
         self.max_angular = max_angular
@@ -465,7 +449,7 @@ class EllipsoidalDensityProjection:
         self.frame_to_global_atom_idx = np.zeros((num_frames), int)
         for n in range(1, num_frames):
             self.frame_to_global_atom_idx[n] = (
-                    self.num_atoms_per_frame[n - 1] + self.frame_to_global_atom_idx[n - 1]
+                self.num_atoms_per_frame[n - 1] + self.frame_to_global_atom_idx[n - 1]
             )
 
         rotation_matrices = np.zeros((self.num_atoms_total, 3, 3))
@@ -502,7 +486,6 @@ class EllipsoidalDensityProjection:
             self.radial_basis,
         )
 
-        normalized_pairwise_ellip_feat = normalize_basis(self.radial_basis, pairwise_ellip_feat)
         features = contract_pairwise_feat(pairwise_ellip_feat, species)
-        normalized_features = contract_pairwise_feat(normalized_pairwise_ellip_feat, species)
-        return features, normalized_features
+
+        return features
