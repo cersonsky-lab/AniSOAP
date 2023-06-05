@@ -322,7 +322,10 @@ def normalize_basis(radial_basis: RadialBasis, features: TensorMap):
     Multiply each value within each block of the features TensorMap by the appropriate normalization value.
     These normalization values are given here: https://github.com/lab-cosmo/librascal/blob/a4ffbc772ad97ce6cbe9b46900660236b94d2ee2/bindings/rascal/utils/radial_basis.py#L100
 
-    TODO: I think the GTO should be of order n+2l, rather than just n.
+    TODO: #1 I think the GTO should be of order n+2l, rather than just n.
+
+    TODO: #2 I've normaized by max(0, 2n+l) but this is likely wrong. I need to understand how the overlap matrix
+    relates to normalizing the values.
     
     Parameters:
         radial_basis: An instance of RaidalBasis
@@ -338,10 +341,13 @@ def normalize_basis(radial_basis: RadialBasis, features: TensorMap):
         warnings.warn("Have not implemented normalization for non-gto basis, will return original values")
         return features
     for block in normalized_features.blocks():
-        for property in block.properties:
-            n = property[0]
-            N = np.sqrt(2 / (sigma ** (2 * n + 3) * gamma(n + 1.5)))
-            block.values[:, :, n] *= N
+        for j, component in enumerate(block.components[0]):
+            for k, property in enumerate(block.properties):
+                l = component[0]
+                n = property[0]
+                n_2l = max(n + 2 * l, 0)
+                N = np.sqrt(2 / (sigma ** (2 * n_2l + 3) * gamma(n_2l + 1.5)))
+                block.values[:, j, k] *= N
 
     return normalized_features
 
@@ -516,4 +522,4 @@ class EllipsoidalDensityProjection:
 
         features = contract_pairwise_feat(pairwise_ellip_feat, species)
 
-        return features
+        return features, normalize_basis(self.radial_basis, features)
