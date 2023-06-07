@@ -338,14 +338,12 @@ def normalize_basis(radial_basis: RadialBasis, features: TensorMap):
     if radial_basis_name != "gto":
         warnings.warn("Have not implemented normalization for non-gto basis, will return original values")
         return features
-    for block in normalized_features.blocks():
-        for j, component in enumerate(block.components[0]):
-            for k, property in enumerate(block.properties):
-                l = component[0]
-                n = property[0]
-                n_2l = max(n + 2 * l, 0)
-                N = np.sqrt(2 / (sigma ** (2 * n_2l + 3) * gamma(n_2l + 1.5)))
-                block.values[:, j, k] *= N
+    for l, block in enumerate(normalized_features.blocks()):
+        for k, property in enumerate(block.properties):
+            n = property[0]
+            l_2n = l + 2 * n
+            N = np.sqrt(2 / (sigma ** (2 * l_2n + 3) * gamma(l_2n + 1.5)))
+            block.values[:, :, k] *= N
 
     return normalized_features
 
