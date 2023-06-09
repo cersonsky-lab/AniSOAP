@@ -120,11 +120,8 @@ def pairwise_ellip_expansion(
                     for l in range(lmax + 1):
                         deg = l + 2 * (num_ns[l] - 1)
                         moments_l = moments[: deg + 1, : deg + 1, : deg + 1]
-
-                        # Compute normalization factor:
-                        N = normalization_prefactors(precision, deg)
                         values_ldict[l].append(
-                            N*np.einsum("mnpqr, pqr->mn", sph_to_cart[l], moments_l)
+                            np.einsum("mnpqr, pqr->mn", sph_to_cart[l], moments_l)
                         )
 
                 for l in range(lmax + 1):
@@ -320,68 +317,37 @@ def contract_pairwise_feat(pair_ellip_feat, species):
 
     return ellip
 
-
-def normalization_prefactors(precision: np.array, deg: int):
+def normalize_basis(radial_basis: RadialBasis, features: TensorMap):
     """
-    Compute the normalization factor of the radial basis function
-    The radial basis function (rbf) we are trying to normalize is either the (anisotropic) gto or monomial,
-    both of which takes the form of r^deg*e^(-r^2/2 * (1/sigmax^2 + 1/sigmay^2 + 1/sigmaz^2))
+    Multiply each value within each block of the features TensorMap by the appropriate normalization value.
+    These normalization values are given here: https://github.com/lab-cosmo/librascal/blob/a4ffbc772ad97ce6cbe9b46900660236b94d2ee2/bindings/rascal/utils/radial_basis.py#L100
 
+    TODO: #1 I think the GTO should be of order n+2l, rather than just n.
+
+    TODO: #2 I've normaized by max(0, 2n+l) but this is likely wrong. I need to understand how the overlap matrix
+    relates to normalizing the values.
+    
     Parameters:
-        precision: precision matrix containing info about gaussian widths
-        deg: the degree of our rbf
+        radial_basis: An instance of RaidalBasis
+        features: A TensorMap whose blocks' values we wish to normalize
 
     Returns:
-
+        normalized_features: A copy of features with containing values multiplied by proper normalization factors
     """
-    covariance = np.linalg.inv(precision)
-    sigmas = np.sqrt(np.diag(covariance))
-    norm_consts = np.sqrt(2 / (sigmas ** (2 * deg + 3) * gamma(deg + 1.5)))
-    return norm_consts[0] * norm_consts[1] * norm_consts[2]
+    normalized_features = features.copy()
+    radial_basis_name = radial_basis.radial_basis
+    sigma = radial_basis.hypers["radial_gaussian_width"]
+    if radial_basis_name != "gto":
+        warnings.warn("Have not implemented normalization for non-gto basis, will return original values")
+        return features
+    for l, block in enumerate(normalized_features.blocks()):
+        for k, property in enumerate(block.properties):
+            n = property[0]
+            l_2n = l + 2 * n
+            N = np.sqrt(2 / (sigma ** (2 * l_2n + 3) * gamma(l_2n + 1.5)))
+            block.values[:, :, k] *= N
 
-
-# def normalize_basis(radial_basis: RadialBasis,
-#                     features: TensorMap,
-#                     frames: list):
-#     """
-#     Multiply each value within each block of the features TensorMap by the appropriate normalization value.
-#     These normalization values are given here: https://github.com/lab-cosmo/librascal/blob/a4ffbc772ad97ce6cbe9b46900660236b94d2ee2/bindings/rascal/utils/radial_basis.py#L100
-#
-#     TODO: #1 I think the GTO should be of order n+2l, rather than just n.
-#
-#     TODO: #2 I've normaized by max(0, 2n+l) but this is likely wrong. I need to understand how the overlap matrix
-#     relates to normalizing the values.
-#
-#     Parameters:
-#         radial_basis: An instance of RaidalBasis
-#         features: A TensorMap whose blocks' values we wish to normalize
-#
-#     Returns:
-#         normalized_features: A copy of features with containing values multiplied by proper normalization factors
-#     """
-#     normalized_features = features.copy()
-#     radial_basis_name = radial_basis.radial_basis
-#     sigma = radial_basis.hypers["radial_gaussian_width"]
-#     if radial_basis_name != "gto":
-#         warnings.warn("Have not implemented normalization for non-gto basis, will return original values")
-#         return features
-#     for l, block in enumerate(normalized_features.blocks()):
-#         for sample in block.samples:
-#             idx = sample[0]    # Structure index, matches indices of frames
-#             frame = frames[idx]
-#             center_species = sample[1]
-#             # center_rotation = frame.arrays['rotation'][center_species]
-#             for k, property in enumerate(block.properties):
-#                 n = property[0]
-#                 neighbor_species = property[1]
-#                 neighbor_rotation = frame.arrays['rotation'][neighbor_species]
-#                 l_2n = l + 2 * n
-#                 N1 = np.sqrt(2 / (sigma1 ** (2 * l_2n + 3) * gamma(l_2n + 1.5)))
-#                 N2 = np.sqrt(2 / (sigma2 ** (2 * l_2n + 3) * gamma(l_2n + 1.5)))
-#                 N3 = np.sqrt(2 / (sigma3 ** (2 * l_2n + 3) * gamma(l_2n + 1.5)))
-#                 block.values[:, :, k] *= N1 * N2 * N3
-#
-#     return normalized_features
+    return normalized_features
 
 
 class EllipsoidalDensityProjection:
@@ -522,16 +488,12 @@ class EllipsoidalDensityProjection:
         ellipsoid_lengths = np.zeros((self.num_atoms_total, 3))
 
         for i in range(num_frames):
-            frames[i].arrays['rotation_matrix'] = np.zeros((self.num_atoms_per_frame[i], 3, 3))
             for j in range(self.num_atoms_per_frame[i]):
                 j_global = self.frame_to_global_atom_idx[i] + j
                 if self.rotation_key in frames[i].arrays:
                     rotation_matrices[j_global] = self.rotation_maker(
                         frames[i].arrays[self.rotation_key][j]
                     ).as_matrix()
-
-                    # Add rotation matrix to frame, useful for normalization calculations
-                    frames[i].arrays['rotation_matrix'][j] = rotation_matrices[j_global]
                 else:
                     warnings.warn(
                         f"Frame {i} does not have rotations stored, this may cause errors down the line."
@@ -558,4 +520,4 @@ class EllipsoidalDensityProjection:
 
         features = contract_pairwise_feat(pairwise_ellip_feat, species)
 
-        return features
+        return features, normalize_basis(self.radial_basis, features)
