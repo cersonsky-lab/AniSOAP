@@ -319,11 +319,9 @@ def normalize_basis(radial_basis: RadialBasis, features: TensorMap):
     """
     Multiply each value within each block of the features TensorMap by the appropriate normalization value.
     These normalization values are given here: https://github.com/lab-cosmo/librascal/blob/a4ffbc772ad97ce6cbe9b46900660236b94d2ee2/bindings/rascal/utils/radial_basis.py#L100
-
-    TODO: #1 I think the GTO should be of order n+2l, rather than just n.
-
-    TODO: #2 I've normaized by max(0, 2n+l) but this is likely wrong. I need to understand how the overlap matrix
-    relates to normalizing the values.
+    This normalization scales down the GTO portion appropriately, but I'm still unsure what the normalizationr represents.
+    i.e. I'm not sure if the normalization ensures that the integral from 0 to inf = 1, or if the integral from 0 to inf
+    of the GTO^2 = 1, or something else.
     
     Parameters:
         radial_basis: An instance of RaidalBasis
@@ -432,7 +430,7 @@ class EllipsoidalDensityProjection:
 
         self.rotation_key = rotation_key
 
-    def transform(self, frames, show_progress=False):
+    def transform(self, frames, show_progress=False, normalize=True):
         """
         Computes the features and (if compute_gradients == True) gradients
         for all the provided frames. The features and gradients are stored in
@@ -520,5 +518,8 @@ class EllipsoidalDensityProjection:
         )
 
         features = contract_pairwise_feat(pairwise_ellip_feat, species)
-
-        return features, normalize_basis(self.radial_basis, features)
+        normalized_features = normalize_basis(self.radial_basis, features)
+        if normalize:
+            return normalized_features
+        else:
+            return features
