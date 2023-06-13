@@ -24,6 +24,7 @@ from anisoap.representations.radial_basis import RadialBasis
 from anisoap.utils import compute_moments_inefficient_implementation
 from anisoap.utils.moment_generator import *
 
+from scipy.special import gamma
 
 def pairwise_ellip_expansion(
     lmax,
@@ -317,20 +318,22 @@ def contract_pairwise_feat(pair_ellip_feat, species):
 
     return ellip
 
-def normalize_basis(radial_basis: RadialBasis, features: TensorMap):
+def normalize_basis(features: TensorMap, radial_basis: RadialBasis):
     """
-    Multiply each value within each block of the features TensorMap by the appropriate normalization value.
-    These normalization values are given here: https://github.com/lab-cosmo/librascal/blob/a4ffbc772ad97ce6cbe9b46900660236b94d2ee2/bindings/rascal/utils/radial_basis.py#L100
+    In-place multiply each value within each block of the features TensorMap by the appropriate normalization value.
+    These normalization values are given in equation 10 here: https://pubs.aip.org/aip/jcp/article/154/11/114109/315400/Efficient-implementation-of-atom-density
+    and is implemented in librascal here: https://github.com/lab-cosmo/librascal/blob/a4ffbc772ad97ce6cbe9b46900660236b94d2ee2/bindings/rascal/utils/radial_basis.py#L100
     This normalization scales down the GTO portion appropriately, but I'm still unsure what the normalizationr represents.
     i.e. I'm not sure if the normalization ensures that the integral from 0 to inf = 1, or if the integral from 0 to inf
     of the GTO^2 = 1, or something else.
     
     Parameters:
-        radial_basis: An instance of RaidalBasis
-        features: A TensorMap whose blocks' values we wish to normalize
+        features: A TensorMap whose blocks' values we wish to normalize. Note that features is modified in place, so a
+        copy of features must be made before the function if you wish to retain the unnormalized values.
+        radial_basis: An instance of RadialBasis
 
     Returns:
-        normalized_features: A copy of features with containing values multiplied by proper normalization factors
+        normalized_features: features containing values multiplied by proper normalization factors.
     """
     normalized_features = features.copy()
     radial_basis_name = radial_basis.radial_basis
@@ -517,8 +520,8 @@ class EllipsoidalDensityProjection:
         )
 
         features = contract_pairwise_feat(pairwise_ellip_feat, species)
-        normalized_features = normalize_basis(self.radial_basis, features)
         if normalize:
+            normalized_features = normalize_basis(features, self.radial_basis)
             return normalized_features
         else:
             return features
