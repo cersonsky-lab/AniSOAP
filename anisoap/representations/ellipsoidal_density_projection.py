@@ -488,7 +488,7 @@ class EllipsoidalDensityProjection:
 
         features = contract_pairwise_feat(pairwise_ellip_feat, species)
         if normalize:
-            normalized_features = self.radial_basis.normalize_basis(features)
+            normalized_features = self.radial_basis.orthonormalize_basis(features)
             return normalized_features
         else:
             return features
