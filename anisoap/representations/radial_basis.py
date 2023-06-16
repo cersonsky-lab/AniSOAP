@@ -1,12 +1,6 @@
 import numpy as np
 from scipy.special import gamma
-import scipy.linalg
-from equistore.core import (
-    Labels,
-    TensorBlock,
-    TensorMap,
-)
-from ..utils.radial_basis_gto import radial_basis_functions_gto
+from equistore.core import TensorMap
 import warnings
 
 class RadialBasis:
