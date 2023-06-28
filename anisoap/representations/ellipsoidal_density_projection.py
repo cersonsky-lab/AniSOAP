@@ -14,7 +14,11 @@ import anisoap.representations.radial_basis as radial_basis
 from anisoap.representations.radial_basis import RadialBasis
 from anisoap.utils import compute_moments_inefficient_implementation
 from anisoap.utils.moment_generator import *
-from equistore.core import Labels, TensorBlock, TensorMap
+from equistore.core import (
+    Labels,
+    TensorBlock,
+    TensorMap,
+)
 from rascaline import NeighborList
 from scipy.spatial.transform import Rotation
 
