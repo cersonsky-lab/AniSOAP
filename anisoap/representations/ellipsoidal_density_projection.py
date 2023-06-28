@@ -1,7 +1,6 @@
 import warnings
 
 import numpy as np
-
 from anisoap.utils.spherical_to_cartesian import spherical_to_cartesian
 
 try:
@@ -11,18 +10,13 @@ except ImportError:
 
 from itertools import product
 
-from equistore.core import (
-    Labels,
-    TensorBlock,
-    TensorMap,
-)
-from rascaline import NeighborList
-from scipy.spatial.transform import Rotation
-
 import anisoap.representations.radial_basis as radial_basis
 from anisoap.representations.radial_basis import RadialBasis
 from anisoap.utils import compute_moments_inefficient_implementation
 from anisoap.utils.moment_generator import *
+from equistore.core import Labels, TensorBlock, TensorMap
+from rascaline import NeighborList
+from scipy.spatial.transform import Rotation
 
 
 def pairwise_ellip_expansion(
