@@ -1,7 +1,8 @@
-import numpy as np
-from scipy.special import gamma
-from equistore.core import TensorMap
 import warnings
+
+import numpy as np
+from equistore.core import TensorMap
+from scipy.special import gamma
 
 
 def inverse_matrix_sqrt(matrix: np.array):
