@@ -22,8 +22,10 @@ def inverse_matrix_sqrt(matrix: np.array):
     eva, eve = np.linalg.eigh(matrix)
 
     if (eva < 0).all():
-        raise ValueError("Matrix is not positive semidefinite. Check that a valid gram matrix is passed.")
-    return eve @ np.diag(1/np.sqrt(eva)) @ eve.T
+        raise ValueError(
+            "Matrix is not positive semidefinite. Check that a valid gram matrix is passed."
+        )
+    return eve @ np.diag(1 / np.sqrt(eva)) @ eve.T
 
 
 def gto_square_norm(n, sigma):
@@ -39,7 +41,7 @@ def gto_square_norm(n, sigma):
     Returns:
         square norm: The square norm of the GTO
     """
-    return 0.5 * sigma**(2 * n + 3) * gamma(n + 1.5)
+    return 0.5 * sigma ** (2 * n + 3) * gamma(n + 1.5)
 
 
 def gto_prefactor(n, sigma):
@@ -164,10 +166,12 @@ class RadialBasis:
         n_grid = np.arange(max_deg)
         sigma = self.hypers["radial_gaussian_width"]
         sigma_grid = np.ones(max_deg) * sigma
-        S = gto_overlap(n_grid[:, np.newaxis],
-                             n_grid[np.newaxis, :],
-                             sigma_grid[:, np.newaxis],
-                             sigma_grid[np.newaxis, :])
+        S = gto_overlap(
+            n_grid[:, np.newaxis],
+            n_grid[np.newaxis, :],
+            sigma_grid[:, np.newaxis],
+            sigma_grid[np.newaxis, :],
+        )
         return S
 
     def orthonormalize_basis(self, features: TensorMap):
@@ -186,16 +190,22 @@ class RadialBasis:
         Returns:
             normalized_features: features containing values multiplied by proper normalization factors.
         """
-        normalized_features = features.copy()    # <-- not doing it in place yet, this is just a matter of API design.
+        normalized_features = (
+            features.copy()
+        )  # <-- not doing it in place yet, this is just a matter of API design.
         radial_basis_name = self.radial_basis
         if radial_basis_name != "gto":
-            warnings.warn("Have not implemented normalization for non-gto basis, will return original values")
+            warnings.warn(
+                "Have not implemented normalization for non-gto basis, will return original values"
+            )
             return features
         for l, block in enumerate(normalized_features.blocks()):
-            n_arr = block.properties['n']
-            l_2n_arr = (l + 2 * n_arr)
+            n_arr = block.properties["n"]
+            l_2n_arr = l + 2 * n_arr
             gto_overlap_matrix_slice = self.overlap_matrix[l_2n_arr, :][:, l_2n_arr]
             orthonormalization_matrix = inverse_matrix_sqrt(gto_overlap_matrix_slice)
-            block.values[:,:,:] = np.einsum('ijk,kl->ijl', block.values, orthonormalization_matrix)
+            block.values[:, :, :] = np.einsum(
+                "ijk,kl->ijl", block.values, orthonormalization_matrix
+            )
 
         return normalized_features
