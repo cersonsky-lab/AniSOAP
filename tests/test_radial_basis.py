@@ -1,10 +1,13 @@
 import numpy as np
 import pytest
 from numpy.testing import assert_allclose
+from scipy.spatial.transform import Rotation
 
 # internal imports
-from anisoap.representations import RadialBasis, radial_basis
-from scipy.spatial.transform import Rotation
+from anisoap.representations import (
+    RadialBasis,
+    radial_basis,
+)
 
 
 class TestNumberOfRadialFunctions:
