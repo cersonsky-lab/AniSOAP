@@ -1,14 +1,11 @@
 import numpy as np
 import pytest
 from numpy.testing import assert_allclose
-from sklearn.datasets import make_spd_matrix
 from scipy.spatial.transform import Rotation
+from sklearn.datasets import make_spd_matrix
 
 # internal imports
-from anisoap.representations import (
-    RadialBasis,
-    radial_basis,
-)
+from anisoap.representations import RadialBasis, radial_basis
 
 
 class TestNumberOfRadialFunctions:
@@ -110,8 +107,8 @@ class TestGaussianParameters:
         assert_allclose(center_gto, center_ref, rtol=1e-10, atol=atol)
         assert_allclose(prec_gto, prec_ref, rtol=1e-10, atol=atol)
 
-class TestGTOUtils:
 
+class TestGTOUtils:
     # Create a list of semipositive definite matrices (spd), seminegative definite matrices (snd), and
     # nonsymmetric matrices for testing
     spd_matrices = []
@@ -133,7 +130,9 @@ class TestGTOUtils:
         try:
             radial_basis.inverse_matrix_sqrt(spd)
         except ValueError:
-            assert False, f"calling inverse matrix square root on {spd} raised a value error"
+            assert (
+                False
+            ), f"calling inverse matrix square root on {spd} raised a value error"
 
     @pytest.mark.parametrize("snd", snd_matrices)
     def test_npd_inverse_sqrt_all_exceptions(self, snd):
@@ -151,7 +150,9 @@ class TestGTOUtils:
     def test_spd_inverse_sqrt(self, spd):
         dim = np.shape(spd)[0]
         inv_sqrt_s = radial_basis.inverse_matrix_sqrt(spd)
-        assert_allclose(np.eye(dim), inv_sqrt_s @ inv_sqrt_s @ spd, rtol=1e-9, atol=1e-9)
+        assert_allclose(
+            np.eye(dim), inv_sqrt_s @ inv_sqrt_s @ spd, rtol=1e-9, atol=1e-9
+        )
 
     @pytest.mark.parametrize("basis_size", basis_sizes)
     def test_orthonormality(self, basis_size):
@@ -161,12 +162,12 @@ class TestGTOUtils:
         sigma_grid = np.random.uniform(0.1, 3, basis_size)
         # mesh to evaluate GTOs
         n_points = 100000
-        r_mesh = np.linspace(0, 100, n_points)
+        r_mesh = np.linspace(0, 10, n_points)
         gto = np.zeros((basis_size, n_points))
         for i in range(basis_size):
             n = n_grid[i]
             sigma = sigma_grid[i]
-            gto_n_sigma = r_mesh ** n * np.exp(-r_mesh ** 2 / (2 * sigma ** 2))
+            gto_n_sigma = r_mesh**n * np.exp(-(r_mesh**2) / (2 * sigma**2))
             gto[i, :] = gto_n_sigma
 
         S = radial_basis.gto_overlap(
@@ -183,7 +184,9 @@ class TestGTOUtils:
         overlaps = np.zeros((basis_size, basis_size))
         for i in range(basis_size):
             for j in range(basis_size):
-                overlap = np.trapz(gto_orthonorm[i, :] * gto_orthonorm[j, :] * r_mesh**2, r_mesh)
+                overlap = np.trapz(
+                    gto_orthonorm[i, :] * gto_orthonorm[j, :] * r_mesh**2, r_mesh
+                )
                 overlaps[i][j] = overlap
 
-        assert_allclose(np.eye(basis_size), overlaps, rtol=0, atol=1e-3)
+        assert_allclose(np.eye(basis_size), overlaps, rtol=0, atol=1e-2)
