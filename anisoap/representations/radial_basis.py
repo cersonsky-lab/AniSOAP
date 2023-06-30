@@ -3,6 +3,7 @@ import warnings
 import numpy as np
 from equistore.core import TensorMap
 from scipy.special import gamma
+import scipy.linalg
 
 
 def inverse_matrix_sqrt(matrix: np.array):
@@ -18,11 +19,11 @@ def inverse_matrix_sqrt(matrix: np.array):
         inverse_sqrt_matrix: S^{-1/2}
 
     """
-    if not np.allclose(matrix, matrix.T):
+    if not scipy.linalg.ishermitian(matrix):
         raise ValueError("Matrix is not hermitian")
     eva, eve = np.linalg.eigh(matrix)
 
-    if (eva < 0).all():
+    if (eva < 0).any():
         raise ValueError(
             "Matrix is not positive semidefinite. Check that a valid gram matrix is passed."
         )
@@ -32,22 +33,22 @@ def inverse_matrix_sqrt(matrix: np.array):
 def gto_square_norm(n, sigma):
     """
     Compute the square norm of GTOs (inner product of itself over R^3).
-    A GTO of order n is \phi_n = r^n * e^{-r^2/(2*\sigma^2)}
-    The square norm of the GTO has an analytic solution:
+    An unnormalized GTO of order n is \phi_n = r^n * e^{-r^2/(2*\sigma^2)}
+    The square norm of the unnormalized GTO has an analytic solution:
     <\phi_n | \phi_n> = \int_0^\infty dr r^2 |\phi_n|^2 = 1/2 * \sigma^{2n+3} * \Gamma(n+3/2)
     Args:
         n: order of the GTO
         sigma: width of the GTO
 
     Returns:
-        square norm: The square norm of the GTO
+        square norm: The square norm of the unnormalized GTO
     """
     return 0.5 * sigma ** (2 * n + 3) * gamma(n + 1.5)
 
 
 def gto_prefactor(n, sigma):
     """
-    Computes the normalization prefactor of a GTO.
+    Computes the normalization prefactor of an unnormalized GTO.
     This prefactor is simply 1/sqrt(square_norm_area).
     Scaling a GTO by this prefactor will ensure that the GTO has square norm equal to 1.
     Args:
@@ -63,7 +64,7 @@ def gto_prefactor(n, sigma):
 
 def gto_overlap(n, m, sigma_n, sigma_m):
     """
-    Compute overlap of two GTOs
+    Compute overlap of two *normalized* GTOs
     Note that the overlap of two GTOs can be modeled as the square norm of one GTO, with an effective
     n and sigma. All we need to do is to calculate those effective parameters, then compute the normalization.
     <\phi_n, \phi_m> = \int_0^\infty dr r^2 r^n * e^{-r^2/(2*\sigma_n^2) * r^m * e^{-r^2/(2*\sigma_m^2)
@@ -77,11 +78,13 @@ def gto_overlap(n, m, sigma_n, sigma_m):
     sigma_m: sigma parameter of the second GTO
 
     ---Returns---
-    S: overlap of the two GTOs
+    S: overlap of the two normalized GTOs
     """
+    N_n = gto_prefactor(n, sigma_n)
+    N_m = gto_prefactor(m, sigma_m)
     n_eff = (n + m) / 2
     sigma_eff = np.sqrt(2 * sigma_n**2 * sigma_m**2 / (sigma_n**2 + sigma_m**2))
-    return gto_square_norm(n_eff, sigma_eff)
+    return N_n * N_m * gto_square_norm(n_eff, sigma_eff)
 
 
 class RadialBasis:
@@ -155,15 +158,15 @@ class RadialBasis:
         The overlap has an analytic solution (see above functions).
         The overlap matrix is the first step to generating an orthonormal basis set of functions (Lodwin Symmetric
         Orthonormalization). The actual orthonormalization matrix cannot be fully precomputed because each tensor
-        block use a different set of GTOs. Hence, we precompute the full overlap matrix of dim l_max + 2n_max, and while
+        block use a different set of GTOs. Hence, we precompute the full overlap matrix of dim l_max, and while
         orthonormalizing each tensor block, we generate the respective orthonormal matrices from slices of the full
         overlap matrix.
 
         Returns:
             S: 2D array. The overlap matrix
         """
-        nmax = max(self.num_radial_functions)
-        max_deg = self.max_angular + 2 * nmax
+        # Consequence of the floor divide used to compute self.num_radial_functions
+        max_deg = self.max_angular + 1
         n_grid = np.arange(max_deg)
         sigma = self.hypers["radial_gaussian_width"]
         sigma_grid = np.ones(max_deg) * sigma
@@ -191,9 +194,8 @@ class RadialBasis:
         Returns:
             normalized_features: features containing values multiplied by proper normalization factors.
         """
-        normalized_features = (
-            features.copy()
-        )  # <-- not doing it in place yet, this is just a matter of API design.
+        # Not doing it in place yet, this is just a matter of API design.
+        normalized_features = features.copy()
         radial_basis_name = self.radial_basis
         if radial_basis_name != "gto":
             warnings.warn(
@@ -203,6 +205,11 @@ class RadialBasis:
         for l, block in enumerate(normalized_features.blocks()):
             n_arr = block.properties["n"]
             l_2n_arr = l + 2 * n_arr
+            # normalize all the GTOs by the appropriate prefactor first, since the overlap matrix is in terms of
+            # normalized GTOs
+            prefactor_arr = gto_prefactor(l_2n_arr, self.hypers["radial_gaussian_width"])
+            block.values[:, :, :] = block.values[:, :, :] * prefactor_arr
+
             gto_overlap_matrix_slice = self.overlap_matrix[l_2n_arr, :][:, l_2n_arr]
             orthonormalization_matrix = inverse_matrix_sqrt(gto_overlap_matrix_slice)
             block.values[:, :, :] = np.einsum(
