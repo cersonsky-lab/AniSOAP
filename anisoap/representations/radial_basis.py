@@ -207,7 +207,9 @@ class RadialBasis:
             l_2n_arr = l + 2 * n_arr
             # normalize all the GTOs by the appropriate prefactor first, since the overlap matrix is in terms of
             # normalized GTOs
-            prefactor_arr = gto_prefactor(l_2n_arr, self.hypers["radial_gaussian_width"])
+            prefactor_arr = gto_prefactor(
+                l_2n_arr, self.hypers["radial_gaussian_width"]
+            )
             block.values[:, :, :] = block.values[:, :, :] * prefactor_arr
 
             gto_overlap_matrix_slice = self.overlap_matrix[l_2n_arr, :][:, l_2n_arr]
