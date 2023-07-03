@@ -19,7 +19,7 @@ def inverse_matrix_sqrt(matrix: np.array):
         inverse_sqrt_matrix: S^{-1/2}
 
     """
-    if not scipy.linalg.ishermitian(matrix):
+    if not np.allclose(matrix, matrix.conjugate().T):
         raise ValueError("Matrix is not hermitian")
     eva, eve = np.linalg.eigh(matrix)
 
