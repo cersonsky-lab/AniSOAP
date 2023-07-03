@@ -27,7 +27,12 @@ TEST_QUAT_FRAME = add_default_params(
 TEST_MATRIX_FRAME = TEST_SINGLE_FRAME.copy()
 TEST_MATRIX_FRAME.arrays["matrix"] = [np.eye(3)]
 
-TEST_FRAMES = [[TEST_SINGLE_FRAME], [TEST_QUAT_FRAME], [TEST_MATRIX_FRAME], [TEST_SINGLE_FRAME, TEST_QUAT_FRAME, TEST_MATRIX_FRAME]]
+TEST_FRAMES = [
+    [TEST_SINGLE_FRAME],
+    [TEST_QUAT_FRAME],
+    [TEST_MATRIX_FRAME],
+    [TEST_SINGLE_FRAME, TEST_QUAT_FRAME, TEST_MATRIX_FRAME],
+]
 
 
 DEFAULT_HYPERS = {
@@ -49,11 +54,15 @@ class TestEllipsoidalDensityProjection:
 
     @pytest.mark.parametrize("frames", TEST_FRAMES)
     def test_frames_show_progress(self, frames):
-        EllipsoidalDensityProjection(**DEFAULT_HYPERS).transform(frames, show_progress=True)
+        EllipsoidalDensityProjection(**DEFAULT_HYPERS).transform(
+            frames, show_progress=True
+        )
 
     @pytest.mark.parametrize("frames", TEST_FRAMES)
     def test_frames_matrix_rotation(self, frames):
-        EllipsoidalDensityProjection(rotation_key="matrix", rotation_type="matrix", **DEFAULT_HYPERS).transform(frames, show_progress=True)
+        EllipsoidalDensityProjection(
+            rotation_key="matrix", rotation_type="matrix", **DEFAULT_HYPERS
+        ).transform(frames, show_progress=True)
 
 
 class TestBadInputs:
