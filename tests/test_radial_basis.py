@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+from equistore import TensorMap
 from numpy.testing import assert_allclose
 from scipy.spatial.transform import Rotation
 
@@ -11,6 +12,10 @@ class TestNumberOfRadialFunctions:
     """
     Test that the number of radial basis functions is correct.
     """
+
+    def test_notimplemented_basis(self):
+        with pytest.raises(ValueError):
+            basis = RadialBasis(radial_basis="nonsense", max_angular=5)
 
     def test_radial_functions_n5(self):
         basis_gto = RadialBasis(radial_basis="monomial", max_angular=5)
@@ -124,6 +129,15 @@ class TestGTOUtils:
 
     num_trials = 100
     basis_sizes = np.random.randint(2, 15, num_trials)
+
+    def test_nogto_warning(self):
+        with pytest.warns(UserWarning):
+            lmax = 5
+            non_gto_basis = RadialBasis("monomial", lmax)
+            # As a proxy for a tensor map, pass in a numpy array for features
+            features = np.random.random((5,5))
+            non_normalized_features = non_gto_basis.orthonormalize_basis(features)
+            assert_allclose(features, non_normalized_features)
 
     @pytest.mark.parametrize("spd", spd_matrices)
     def test_spd_inverse_sqrt_no_exceptions(self, spd):

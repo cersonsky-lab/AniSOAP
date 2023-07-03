@@ -64,6 +64,12 @@ class TestEllipsoidalDensityProjection:
             rotation_key="matrix", rotation_type="matrix", **DEFAULT_HYPERS
         ).transform(frames, show_progress=True)
 
+    @pytest.mark.parametrize("frames", TEST_FRAMES)
+    def test_frames_normalization_condition(self, frames):
+        EllipsoidalDensityProjection(
+            rotation_key="matrix", rotation_type="matrix", **DEFAULT_HYPERS
+        ).transform(frames, normalize=False)
+
 
 class TestBadInputs:
     """
