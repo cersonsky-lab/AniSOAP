@@ -135,7 +135,7 @@ class TestGTOUtils:
             lmax = 5
             non_gto_basis = RadialBasis("monomial", lmax)
             # As a proxy for a tensor map, pass in a numpy array for features
-            features = np.random.random((5,5))
+            features = np.random.random((5, 5))
             non_normalized_features = non_gto_basis.orthonormalize_basis(features)
             assert_allclose(features, non_normalized_features)
 

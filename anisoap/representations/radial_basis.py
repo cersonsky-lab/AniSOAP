@@ -199,11 +199,12 @@ class RadialBasis:
         radial_basis_name = self.radial_basis
         if radial_basis_name != "gto":
             warnings.warn(
-                "Have not implemented normalization for non-gto basis, will return original values", UserWarning
+                "Have not implemented normalization for non-gto basis, will return original values",
+                UserWarning,
             )
             return features
         for label, block in normalized_features.items():
-            l = label['angular_channel']
+            l = label["angular_channel"]
             n_arr = block.properties["n"].values.flatten()
             l_2n_arr = l + 2 * n_arr
             # normalize all the GTOs by the appropriate prefactor first, since the overlap matrix is in terms of

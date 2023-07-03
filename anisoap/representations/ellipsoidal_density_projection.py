@@ -3,9 +3,6 @@ import warnings
 from itertools import product
 
 import numpy as np
-from tqdm import tqdm
-
-from anisoap.utils.spherical_to_cartesian import spherical_to_cartesian
 from equistore.core import (
     Labels,
     TensorBlock,
@@ -13,9 +10,11 @@ from equistore.core import (
 )
 from rascaline import NeighborList
 from scipy.spatial.transform import Rotation
+from tqdm import tqdm
 
 from anisoap.representations.radial_basis import RadialBasis
 from anisoap.utils.moment_generator import *
+from anisoap.utils.spherical_to_cartesian import spherical_to_cartesian
 
 
 def pairwise_ellip_expansion(
