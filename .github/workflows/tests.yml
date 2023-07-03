@@ -30,3 +30,6 @@ jobs:
       - uses: codecov/codecov-action@v3
         with:
           file: ./tests/coverage.xml
+        env:
+          name: CODECOV_TOKEN
+          value: ${{ secrets.CODECOV_TOKEN }}
