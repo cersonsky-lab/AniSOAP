@@ -409,6 +409,9 @@ class EllipsoidalDensityProjection:
             List containing all ase.Atoms structures
         show_progress : bool
             Show progress bar for frame analysis
+        normalize: bool
+            Whether to perform Lowdin Symmetric Orthonormalization or not. Orthonormalization generally
+            leads to better performance. Default: True.
         Returns
         -------
         None, but stores the projection coefficients and (if desired)
