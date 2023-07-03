@@ -34,3 +34,4 @@ jobs:
       - name: Check imports
         run: |
           isort anisoap/*/*py -m 3 --tc --fgw --up -e -l 88 --check
+          isort anisoap/*py -m 3 --tc --fgw --up -e -l 88 --check
