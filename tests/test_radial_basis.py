@@ -163,12 +163,12 @@ class TestGTOUtils:
     #     sigma_grid = np.random.uniform(0.1, 3, basis_size)
     #     # mesh to evaluate GTOs
     #     n_points = 100000
-    #     r_mesh = np.linspace(0, 10, n_points)
+    #     r_mesh = np.linspace(1e-10, 10, n_points)
     #     gto = np.zeros((basis_size, n_points))
     #     for i in range(basis_size):
     #         n = n_grid[i]
     #         sigma = sigma_grid[i]
-    #         gto_n_sigma = r_mesh**n * np.exp(-(r_mesh**2) / (2 * sigma**2))
+    #         gto_n_sigma = radial_basis.gto_prefactor(n, sigma) * r_mesh**n * np.exp(-(r_mesh**2) / (2 * sigma**2))
     #         gto[i, :] = gto_n_sigma
     #
     #     S = radial_basis.gto_overlap(
