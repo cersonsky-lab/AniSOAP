@@ -70,7 +70,7 @@ def pairwise_ellip_expansion(
 
     """
     tensorblock_list = []
-    keys = np.array(neighbor_list.keys.asarray(), dtype=int)
+    keys = np.asarray(neighbor_list.keys, dtype=int)
     keys = [tuple(i) + (l,) for i in keys for l in range(lmax + 1)]
     num_ns = radial_basis.get_num_radial_functions()
 
@@ -178,7 +178,9 @@ def contract_pairwise_feat(pair_ellip_feat, species):
     # pair_ellip_feat.keys["angular_channel"] to form the keys of the single particle centered feature
     ellip_keys.sort()
     ellip_blocks = []
-    property_names = pair_ellip_feat.property_names + ("neighbor_species",)
+    property_names = pair_ellip_feat.property_names + [
+        "neighbor_species",
+    ]
 
     for key in ellip_keys:
         contract_blocks = []
@@ -188,7 +190,8 @@ def contract_pairwise_feat(pair_ellip_feat, species):
         # All these lists have as many entries as len(species).
 
         for ele in species:
-            blockidx = pair_ellip_feat.blocks_matching(species_neighbor=ele)
+            selection = Labels(names=["species_neighbor"], values=np.array([[ele]]))
+            blockidx = pair_ellip_feat.blocks_matching(selection=selection)
             # indices of the blocks in pair_ellip_feat with neighbor species = ele
             sel_blocks = [
                 pair_ellip_feat.block(i)
@@ -212,6 +215,7 @@ def contract_pairwise_feat(pair_ellip_feat, species):
             pair_block_sample = list(
                 zip(block.samples["structure"], block.samples["first_atom"])
             )
+
             # Takes the structure and first atom index from the current pair_block sample. There might be repeated
             # entries here because for example (0,0,1) (0,0,2) might be samples of the pair block (the index of the
             # neighbor atom is changing but for both of these we are keeping (0,0) corresponding to the structure and
@@ -231,7 +235,7 @@ def contract_pairwise_feat(pair_ellip_feat, species):
                 sample_idx = [
                     idx
                     for idx, tup in enumerate(pair_block_sample)
-                    if tup[0] == sample[0] and tup[1] == sample[1]
+                    if tup[0].values[0] == sample[0] and tup[1].values[0] == sample[1]
                 ]
                 # all samples of the pair block that match the current sample
                 # in the example above, for sample = (0,0) we would identify sample_idx = [(0,0,1), (0,0,2)]
