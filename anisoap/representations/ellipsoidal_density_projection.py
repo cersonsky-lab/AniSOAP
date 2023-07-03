@@ -1,16 +1,8 @@
+import sys
 import warnings
-
-import numpy as np
-
-from anisoap.utils.spherical_to_cartesian import spherical_to_cartesian
-
-try:
-    from tqdm import tqdm
-except ImportError:
-    tqdm = lambda i, **kwargs: i
-
 from itertools import product
 
+import numpy as np
 from equistore.core import (
     Labels,
     TensorBlock,
@@ -18,11 +10,13 @@ from equistore.core import (
 )
 from rascaline import NeighborList
 from scipy.spatial.transform import Rotation
+from tqdm import tqdm
 
 import anisoap.representations.radial_basis as radial_basis
 from anisoap.representations.radial_basis import RadialBasis
 from anisoap.utils import compute_moments_inefficient_implementation
 from anisoap.utils.moment_generator import *
+from anisoap.utils.spherical_to_cartesian import spherical_to_cartesian
 
 
 def pairwise_ellip_expansion(
@@ -370,12 +364,15 @@ class EllipsoidalDensityProjection:
 
         # Initialize the radial basis class
         if radial_basis_name not in ["monomial", "gto"]:
-            raise ValueError(
-                f"{self.radial_basis} is not an implemented basis"
+            raise NotImplementedError(
+                f"{self.radial_basis_name} is not an implemented basis"
                 ". Try 'monomial' or 'gto'"
             )
         if radial_gaussian_width != None and radial_basis_name != "gto":
             raise ValueError("Gaussian width can only be provided with GTO basis")
+        elif radial_gaussian_width is None and radial_basis_name == "gto":
+            raise ValueError("Gaussian width must be provided with GTO basis")
+
         radial_hypers = {}
         radial_hypers["radial_basis"] = radial_basis_name.lower()  # lower case
         radial_hypers["radial_gaussian_width"] = radial_gaussian_width
