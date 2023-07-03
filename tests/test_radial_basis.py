@@ -1,6 +1,5 @@
 import numpy as np
 import pytest
-from equistore import TensorMap
 from numpy.testing import assert_allclose
 from scipy.spatial.transform import Rotation
 
