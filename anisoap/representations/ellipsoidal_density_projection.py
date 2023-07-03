@@ -16,8 +16,16 @@ import anisoap.representations.radial_basis as radial_basis
 from anisoap.representations.radial_basis import RadialBasis
 from anisoap.utils import compute_moments_inefficient_implementation
 from anisoap.utils.moment_generator import *
+<<<<<<< HEAD
 from anisoap.utils.spherical_to_cartesian import spherical_to_cartesian
 from equistore.core import Labels, TensorBlock, TensorMap
+=======
+from equistore.core import (
+    Labels,
+    TensorBlock,
+    TensorMap,
+)
+>>>>>>> 6432382 (isort with correct flags)
 from rascaline import NeighborList
 from scipy.spatial.transform import Rotation
 
