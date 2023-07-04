@@ -199,7 +199,7 @@ class RadialBasis:
         radial_basis_name = self.radial_basis
         if radial_basis_name != "gto":
             warnings.warn(
-                "Have not implemented normalization for non-gto basis, will return original values",
+                f"Normalization has not been implemented for the {radial_basis_name} basis, and features will not be normalized.",
                 UserWarning,
             )
             return features
