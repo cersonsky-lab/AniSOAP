@@ -1,6 +1,7 @@
 ﻿import builtins
 
 import ase
+import equistore
 import numpy as np
 import pytest
 
@@ -66,9 +67,19 @@ class TestEllipsoidalDensityProjection:
 
     @pytest.mark.parametrize("frames", TEST_FRAMES)
     def test_frames_normalization_condition(self, frames):
-        EllipsoidalDensityProjection(
+        edp = EllipsoidalDensityProjection(
             rotation_key="matrix", rotation_type="matrix", **DEFAULT_HYPERS
-        ).transform(frames, normalize=False)
+        )
+        rep_unnormalized = edp.transform(frames, normalize=False)
+        rep_normalized_1 = edp.transform(frames, normalize=True)
+        rep_normalized_2 = edp.radial_basis.orthonormalize_basis(rep_unnormalized)
+
+        for i in range(len(rep_unnormalized.blocks())):
+            block_norm_1 = rep_normalized_1.block(i)
+            block_norm_2 = rep_normalized_2.block(i)
+            assert equistore.allclose_block(
+                block_norm_1, block_norm_2, rtol=1e-10, atol=1e-10
+            )
 
 
 class TestBadInputs:
