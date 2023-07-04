@@ -12,9 +12,7 @@ from rascaline import NeighborList
 from scipy.spatial.transform import Rotation
 from tqdm import tqdm
 
-import anisoap.representations.radial_basis as radial_basis
 from anisoap.representations.radial_basis import RadialBasis
-from anisoap.utils import compute_moments_inefficient_implementation
 from anisoap.utils.moment_generator import *
 from anisoap.utils.spherical_to_cartesian import spherical_to_cartesian
 
@@ -400,7 +398,7 @@ class EllipsoidalDensityProjection:
 
         self.rotation_key = rotation_key
 
-    def transform(self, frames, show_progress=False):
+    def transform(self, frames, show_progress=False, normalize=True):
         """
         Computes the features and (if compute_gradients == True) gradients
         for all the provided frames. The features and gradients are stored in
@@ -411,6 +409,9 @@ class EllipsoidalDensityProjection:
             List containing all ase.Atoms structures
         show_progress : bool
             Show progress bar for frame analysis
+        normalize: bool
+            Whether to perform Lowdin Symmetric Orthonormalization or not. Orthonormalization generally
+            leads to better performance. Default: True.
         Returns
         -------
         None, but stores the projection coefficients and (if desired)
@@ -488,5 +489,8 @@ class EllipsoidalDensityProjection:
         )
 
         features = contract_pairwise_feat(pairwise_ellip_feat, species)
-
-        return features
+        if normalize:
+            normalized_features = self.radial_basis.orthonormalize_basis(features)
+            return normalized_features
+        else:
+            return features

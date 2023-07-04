@@ -1,6 +1,5 @@
 ase
 coverage[toml]
-numpy
 pytest
 scipy
 tqdm

@@ -1,10 +1,12 @@
 ﻿import builtins
 
 import ase
+import equistore
 import numpy as np
 import pytest
 
 from anisoap.representations import EllipsoidalDensityProjection
+from numpy.testing import assert_allclose
 
 
 def add_default_params(frame):
@@ -63,6 +65,25 @@ class TestEllipsoidalDensityProjection:
         EllipsoidalDensityProjection(
             rotation_key="matrix", rotation_type="matrix", **DEFAULT_HYPERS
         ).transform(frames, show_progress=True)
+
+    @pytest.mark.parametrize("frames", TEST_FRAMES)
+    def test_frames_normalization_condition(self, frames):
+        edp = EllipsoidalDensityProjection(
+            rotation_key="matrix", rotation_type="matrix", **DEFAULT_HYPERS
+        )
+        rep_unnormalized = edp.transform(frames, normalize=False)
+        rep_normalized_1 = edp.transform(frames, normalize=True)
+        rep_normalized_2 = edp.radial_basis.orthonormalize_basis(rep_unnormalized)
+
+        # Would do this, but failing GitHub CI for older versions of python (possibly b/c it's
+        # building an older version of equistore)?
+        # assert equistore.allclose(rep_normalized_1, rep_normalized_2)
+        for i in range(len(rep_unnormalized.blocks())):
+            block_norm_1 = rep_normalized_1.block(i)
+            block_norm_2 = rep_normalized_2.block(i)
+            assert_allclose(
+                block_norm_1.values, block_norm_2.values, rtol=1e-10, atol=1e-10
+            )
 
 
 class TestBadInputs:

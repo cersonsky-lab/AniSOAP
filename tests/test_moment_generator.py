@@ -1,13 +1,18 @@
 import numpy as np
 import pytest
-from scipy.special import gamma, comb
 from numpy.testing import assert_allclose
+from scipy.special import (
+    comb,
+    gamma,
+)
 
 # Import the different versions of the moment generators
-from anisoap.utils import compute_moments_single_variable
-from anisoap.utils import compute_moments_inefficient_implementation
-from anisoap.utils import compute_moments_diagonal_inefficient_implementation
-from anisoap.utils import assert_close
+from anisoap.utils import (
+    assert_close,
+    compute_moments_diagonal_inefficient_implementation,
+    compute_moments_inefficient_implementation,
+    compute_moments_single_variable,
+)
 
 
 class TestMomentsUnivariateGaussian:
