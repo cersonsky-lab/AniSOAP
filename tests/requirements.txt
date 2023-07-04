@@ -3,5 +3,4 @@ coverage[toml]
 pytest
 scipy
 tqdm
-git+https://github.com/lab-cosmo/equistore.git version==0.1.0
 git+https://github.com/Luthaf/rascaline.git
