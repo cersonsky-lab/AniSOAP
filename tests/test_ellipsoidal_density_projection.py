@@ -74,7 +74,16 @@ class TestEllipsoidalDensityProjection:
         rep_unnormalized = edp.transform(frames, normalize=False)
         rep_normalized_1 = edp.transform(frames, normalize=True)
         rep_normalized_2 = edp.radial_basis.orthonormalize_basis(rep_unnormalized)
-        assert equistore.allclose(rep_normalized_1, rep_normalized_2)
+
+        for i in range(len(rep_unnormalized.blocks())):
+            # This is not as elegant, I originally wanted to use equistore.assert_allclose for tensormaps
+            # or tensorblocks, which checks for equality in metadata, but it cannot be done as of July 4, 2023,
+            # because of a bug within equistore's code
+            block_norm_1 = rep_normalized_1.block(i)
+            block_norm_2 = rep_normalized_2.block(i)
+            assert_allclose(
+                block_norm_1.values, block_norm_2.values, rtol=1e-10, atol=1e-10
+            )
 
 
 class TestBadInputs:
