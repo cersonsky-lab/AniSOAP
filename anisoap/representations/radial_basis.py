@@ -95,7 +95,6 @@ class RadialBasis:
 
     Code relating to GTO orthonormalization is heavily inspired by work done in librascal, specifically this
     codebase here: https://github.com/lab-cosmo/librascal/blob/8405cbdc0b5c72a5f0b0c93593100dde348bb95f/bindings/rascal/utils/radial_basis.py
-    However, there are some typos in this codebase that I have fixed (specifically about the GTO overlap computation)
 
     """
 
