@@ -194,7 +194,6 @@ class RadialBasis:
             normalized_features: features containing values multiplied by proper normalization factors.
         """
         # In-place modification.
-        normalized_features = features
         radial_basis_name = self.radial_basis
         if radial_basis_name != "gto":
             warnings.warn(
@@ -202,7 +201,7 @@ class RadialBasis:
                 UserWarning,
             )
             return features
-        for label, block in normalized_features.items():
+        for label, block in features.items():
             l = label["angular_channel"]
             n_arr = block.properties["n"].values.flatten()
             l_2n_arr = l + 2 * n_arr
@@ -219,4 +218,4 @@ class RadialBasis:
                 "ijk,kl->ijl", block.values, orthonormalization_matrix
             )
 
-        return normalized_features
+        return features
