@@ -147,7 +147,7 @@ def standardize_keys(descriptor):
         )
     blocks = []
     keys = []
-    for key, block in descriptor:
+    for key, block in descriptor.items():
         key = tuple(key)
         if not "order_nu" in key_names:
             key = (1,) + key
@@ -160,7 +160,7 @@ def standardize_keys(descriptor):
                 components=block.components,
                 properties=Labels(
                     property_names,
-                    np.asarray(block.properties.view(dtype=np.int32)).reshape(
+                    np.asarray(block.properties, dtype=np.int32).reshape(
                         -1, len(property_names)
                     ),
                 ),
@@ -168,7 +168,7 @@ def standardize_keys(descriptor):
         )
 
     if not "order_nu" in key_names:
-        key_names = ("order_nu",) + key_names
+        key_names = ["order_nu"] + key_names
 
     return TensorMap(
         keys=Labels(names=key_names, values=np.asarray(keys, dtype=np.int32)),
@@ -196,8 +196,8 @@ def cg_combine(
     """
 
     # determines the cutoff in the new features
-    lmax_a = max(x_a.keys["angular_channel"])
-    lmax_b = max(x_b.keys["angular_channel"])
+    lmax_a = np.asarray(x_a.keys["angular_channel"], dtype="int32").max()
+    lmax_b = np.asarray(x_b.keys["angular_channel"], dtype="int32").max()
     if lcut is None:
         lcut = lmax_a + lmax_b
 
@@ -253,7 +253,7 @@ def cg_combine(
     X_grads = {}
 
     # loops over sparse blocks of x_a
-    for index_a, block_a in x_a:
+    for index_a, block_a in x_a.items():
         lam_a = index_a["angular_channel"]
         order_a = index_a["order_nu"]
         properties_a = (
@@ -262,7 +262,7 @@ def cg_combine(
         samples_a = block_a.samples
 
         # and x_b
-        for index_b, block_b in x_b:
+        for index_b, block_b in x_b.items():
             lam_b = index_b["angular_channel"]
             order_b = index_b["order_nu"]
             properties_b = block_b.properties
