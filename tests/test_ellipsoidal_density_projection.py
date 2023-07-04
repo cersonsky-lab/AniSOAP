@@ -6,6 +6,7 @@ import numpy as np
 import pytest
 
 from anisoap.representations import EllipsoidalDensityProjection
+from numpy.testing import assert_allclose
 
 
 def add_default_params(frame):
@@ -75,10 +76,13 @@ class TestEllipsoidalDensityProjection:
         rep_normalized_2 = edp.radial_basis.orthonormalize_basis(rep_unnormalized)
 
         for i in range(len(rep_unnormalized.blocks())):
+            # This is not as elegant, I originally wanted to use equistore.assert_allclose for tensormaps
+            # or tensorblocks, which checks for equality in metadata, but it cannot be done as of July 4, 2023,
+            # because of a bug within equistore's code
             block_norm_1 = rep_normalized_1.block(i)
             block_norm_2 = rep_normalized_2.block(i)
-            assert equistore.allclose_block(
-                block_norm_1, block_norm_2, rtol=1e-10, atol=1e-10
+            assert_allclose(
+                block_norm_1.values, block_norm_2.values, rtol=1e-10, atol=1e-10
             )
 
 
