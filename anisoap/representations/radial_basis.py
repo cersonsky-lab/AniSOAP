@@ -193,8 +193,8 @@ class RadialBasis:
         Returns:
             normalized_features: features containing values multiplied by proper normalization factors.
         """
-        # Not doing it in place yet, this is just a matter of API design.
-        normalized_features = features.copy()
+        # In-place modification.
+        normalized_features = features
         radial_basis_name = self.radial_basis
         if radial_basis_name != "gto":
             warnings.warn(
