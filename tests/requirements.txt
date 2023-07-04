@@ -1,5 +1,6 @@
 ase
 coverage[toml]
+equistore
 numpy
 pytest
 scipy
