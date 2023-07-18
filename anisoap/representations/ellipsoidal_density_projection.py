@@ -374,7 +374,11 @@ class EllipsoidalDensityProjection:
             raise ValueError("Gaussian width can only be provided with GTO basis")
         elif radial_gaussian_width is None and radial_basis_name == "gto":
             raise ValueError("Gaussian width must be provided with GTO basis")
-
+        elif type(radial_gaussian_width) == int:
+            warnings.warn(
+                "radial_gaussian_width is set as an integer, which could cause overflow errors. Pass in float to suppress warning in future. Casting to float..."
+            )
+            radial_gaussian_width = float(radial_gaussian_width)
         radial_hypers = {}
         radial_hypers["radial_basis"] = radial_basis_name.lower()  # lower case
         radial_hypers["radial_gaussian_width"] = radial_gaussian_width
