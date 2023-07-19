@@ -233,7 +233,7 @@ def contract_pairwise_feat(pair_ellip_feat, species):
                 sample_idx = [
                     idx
                     for idx, tup in enumerate(pair_block_sample)
-                    if tup[0].values[0] == sample[0] and tup[1].values[0] == sample[1]
+                    if tup[0] == sample[0] and tup[1] == sample[1]
                 ]
                 # all samples of the pair block that match the current sample
                 # in the example above, for sample = (0,0) we would identify sample_idx = [(0,0,1), (0,0,2)]
