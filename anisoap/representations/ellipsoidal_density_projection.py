@@ -10,7 +10,7 @@ from equistore.core import (
 )
 from rascaline import NeighborList
 from scipy.spatial.transform import Rotation
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 from anisoap.representations.radial_basis import RadialBasis
 from anisoap.utils.moment_generator import *
@@ -26,6 +26,7 @@ def pairwise_ellip_expansion(
     ellipsoid_lengths,
     sph_to_cart,
     radial_basis,
+    show_progress=False,
 ):
     """
     Function to compute the pairwise expansion <anlm|rho_ij> by combining the moments and the spherical to Cartesian
@@ -57,6 +58,9 @@ def pairwise_ellip_expansion(
     radial_basis : Instance of the RadialBasis Class
         anisoap.representations.radial_basis.RadialBasis that has been instantiated appropriately with the
         cutoff radius, radial basis type.
+
+    show_progress : bool
+        Show progress bar for frame analysis and feature generation
     -----------------------------------------------------------
     Returns:
         An Equistore TensorMap with keys (species_1, species_2, l) where ("species_1", "species_2") is key in the
@@ -81,7 +85,16 @@ def pairwise_ellip_expansion(
                     species_second_atom=neighbor_species,
                 )
 
-                for isample, nl_sample in enumerate(nl_block.samples):
+                for isample, nl_sample in enumerate(
+                    tqdm(
+                        nl_block.samples,
+                        disable=(not show_progress),
+                        desc="Iterating samples for ({}, {})".format(
+                            center_species, neighbor_species
+                        ),
+                        leave=False,
+                    )
+                ):
                     frame_idx, i, j = (
                         nl_sample["structure"],
                         nl_sample["first_atom"],
@@ -116,7 +129,12 @@ def pairwise_ellip_expansion(
                             np.einsum("mnpqr, pqr->mn", sph_to_cart[l], moments_l)
                         )
 
-                for l in range(lmax + 1):
+                for l in tqdm(
+                    range(lmax + 1),
+                    disable=(not show_progress),
+                    desc="Accruing lmax",
+                    leave=False,
+                ):
                     block = TensorBlock(
                         values=np.asarray(values_ldict[l]),
                         samples=nl_block.samples,  # as many rows as samples
@@ -145,7 +163,7 @@ def pairwise_ellip_expansion(
     return pairwise_ellip_feat
 
 
-def contract_pairwise_feat(pair_ellip_feat, species):
+def contract_pairwise_feat(pair_ellip_feat, species, show_progress=False):
     """
     Function to sum over the pairwise expansion \sum_{j in a} <anlm|rho_ij> = <anlm|rho_i>
     --------------------------------------------------------
@@ -157,6 +175,9 @@ def contract_pairwise_feat(pair_ellip_feat, species):
 
     species: list of ints
         List of atomic numbers present across the data frames
+
+    show_progress : bool
+        Show progress bar for frame analysis and feature generation
 
     -----------------------------------------------------------
     Returns:
@@ -180,14 +201,21 @@ def contract_pairwise_feat(pair_ellip_feat, species):
         "neighbor_species",
     ]
 
-    for key in ellip_keys:
+    for key in tqdm(
+        ellip_keys, disable=(not show_progress), desc="Iterating tensor block keys"
+    ):
         contract_blocks = []
         contract_properties = []
         contract_samples = []
         # these collect the values, properties and samples of the blocks when contracted over neighbor_species.
         # All these lists have as many entries as len(species).
 
-        for ele in species:
+        for ele in tqdm(
+            species,
+            disable=(not show_progress),
+            desc="Iterating neighbor species",
+            leave=False,
+        ):
             selection = Labels(names=["species_neighbor"], values=np.array([[ele]]))
             blockidx = pair_ellip_feat.blocks_matching(selection=selection)
             # indices of the blocks in pair_ellip_feat with neighbor species = ele
@@ -229,7 +257,14 @@ def contract_pairwise_feat(pair_ellip_feat, species):
             block_samples = []
             block_values = []
 
-            for isample, sample in enumerate(possible_block_samples):
+            for isample, sample in enumerate(
+                tqdm(
+                    possible_block_samples,
+                    disable=(not show_progress),
+                    desc="Finding matching block samples",
+                    leave=False,
+                )
+            ):
                 sample_idx = [
                     idx
                     for idx, tup in enumerate(pair_block_sample)
@@ -275,7 +310,14 @@ def contract_pairwise_feat(pair_ellip_feat, species):
         # values for each of them as \sum_{j in ele} <|rho_ij>
         #  Thus - all_block_values.shape = (num_final_samples, components_pair, properties_pair, num_species)
 
-        for iele, elem_cont_samples in enumerate(contract_samples):
+        for iele, elem_cont_samples in enumerate(
+            tqdm(
+                contract_samples,
+                disable=(not show_progress),
+                desc="Contracting features",
+                leave=False,
+            )
+        ):
             # This effectively loops over the species of the neighbors
             # Now we just need to add the contributions to the final samples and values from this species to the right
             # samples
@@ -408,7 +450,7 @@ class EllipsoidalDensityProjection:
         frames : ase.Atoms
             List containing all ase.Atoms structures
         show_progress : bool
-            Show progress bar for frame analysis
+            Show progress bar for frame analysis and feature generation
         normalize: bool
             Whether to perform Lowdin Symmetric Orthonormalization or not. Orthonormalization generally
             leads to better performance. Default: True.
@@ -443,10 +485,9 @@ class EllipsoidalDensityProjection:
         # Initialize arrays in which to store all features
         self.feature_gradients = 0
 
-        if show_progress:
-            frame_generator = tqdm(self.frames)
-        else:
-            frame_generator = self.frames
+        frame_generator = tqdm(
+            self.frames, disable=(not show_progress), desc="Computing neighborlist"
+        )
 
         self.frame_to_global_atom_idx = np.zeros((num_frames), int)
         for n in range(1, num_frames):
@@ -486,9 +527,10 @@ class EllipsoidalDensityProjection:
             ellipsoid_lengths,
             self.sph_to_cart,
             self.radial_basis,
+            show_progress,
         )
 
-        features = contract_pairwise_feat(pairwise_ellip_feat, species)
+        features = contract_pairwise_feat(pairwise_ellip_feat, species, show_progress)
         if normalize:
             normalized_features = self.radial_basis.orthonormalize_basis(features)
             return normalized_features
