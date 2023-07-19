@@ -203,7 +203,7 @@ class RadialBasis:
             return features
         for label, block in features.items():
             l = label["angular_channel"]
-            n_arr = block.properties["n"].values.flatten()
+            n_arr = block.properties["n"].flatten()
             l_2n_arr = l + 2 * n_arr
             # normalize all the GTOs by the appropriate prefactor first, since the overlap matrix is in terms of
             # normalized GTOs
