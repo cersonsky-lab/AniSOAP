@@ -202,20 +202,35 @@ class RadialBasis:
             )
             return features
         for label, block in features.items():
-            l = label["angular_channel"]
-            n_arr = block.properties["n"].flatten()
-            l_2n_arr = l + 2 * n_arr
-            # normalize all the GTOs by the appropriate prefactor first, since the overlap matrix is in terms of
-            # normalized GTOs
-            prefactor_arr = gto_prefactor(
-                l_2n_arr, self.hypers["radial_gaussian_width"]
-            )
-            block.values[:, :, :] = block.values[:, :, :] * prefactor_arr
+            neighbors = np.unique(block.properties["neighbor_species"])
+            for neighbor in neighbors:
+                l = label["angular_channel"]
+                n_arr = block.properties["n"][
+                    block.properties["neighbor_species"] == neighbor
+                ].flatten()
+                l_2n_arr = l + 2 * n_arr
+                # normalize all the GTOs by the appropriate prefactor first, since the overlap matrix is in terms of
+                # normalized GTOs
+                prefactor_arr = gto_prefactor(
+                    l_2n_arr, self.hypers["radial_gaussian_width"]
+                )
+                block.values[:, :, block.properties["neighbor_species"] == neighbor] = (
+                    block.values[:, :, block.properties["neighbor_species"] == neighbor]
+                    * prefactor_arr
+                )
 
-            gto_overlap_matrix_slice = self.overlap_matrix[l_2n_arr, :][:, l_2n_arr]
-            orthonormalization_matrix = inverse_matrix_sqrt(gto_overlap_matrix_slice)
-            block.values[:, :, :] = np.einsum(
-                "ijk,kl->ijl", block.values, orthonormalization_matrix
-            )
+                gto_overlap_matrix_slice = self.overlap_matrix[l_2n_arr, :][:, l_2n_arr]
+                orthonormalization_matrix = inverse_matrix_sqrt(
+                    gto_overlap_matrix_slice
+                )
+                block.values[
+                    :, :, block.properties["neighbor_species"] == neighbor
+                ] = np.einsum(
+                    "ijk,kl->ijl",
+                    block.values[
+                        :, :, block.properties["neighbor_species"] == neighbor
+                    ],
+                    orthonormalization_matrix,
+                )
 
         return features
