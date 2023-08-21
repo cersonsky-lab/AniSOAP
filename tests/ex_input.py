@@ -1,12 +1,16 @@
 import pathlib
 import time
-from anisoap.utils.code_timer import SimpleTimer
+from anisoap.utils.code_timer import SimpleTimer, SimpleTimerCollectMode
 from anisoap.utils.cyclic_list import CGRCacheList
 from io import TextIOWrapper
 from typing import Any
 import gc   # for manual garbage collection
+import warnings
 
-_MOST_RECENT_VER = 1
+try:
+    from tqdm import tqdm
+except ImportError:
+    tqdm = lambda x, **kwargs: x
 
 # ------------------------ Configurations Explanation ------------------------ # 
 """
@@ -19,20 +23,26 @@ _comp_version: list[int]
     Version 1: Ported computation of moments to Rust + CGR matrix is cached for
                each l_max.
 
-_cache_size: int
-    Determines the cache size for CGRCacheList. It will only be used for version >= 1.
-    The cache will be reset and recomputed when the version changes.
-
 _test_files: list[str]
     A list that determines which .xyz files to test for.
     The files must be stored at {proj_root}/benchmarks/two_particle_gb/ directory
     with .xyz extensions.
+
+_timer_collect_mode: SimpleTimerCollectMode
+    If there are multiple passes performed for same set of parameters, this mode
+    determines how to process time for final output file. Default mode is MAX, in
+    which the timer records the worst time across all iterations.
+    
+_cache_size: int
+    Determines the cache size for CGRCacheList. It will only be used for version >= 1.
+    The cache will be reset and recomputed when the version changes.
 """
 # ------------------------------ Configurations ------------------------------ # 
+_MOST_RECENT_VER = 1
+
 # See above for explanations for each variables.
 _comp_version = [_MOST_RECENT_VER]
-_cache_size = 5
-_test_files = [  # file name: repeat number
+_test_files = [
         "ellipsoid_frames"
         # "both_rotating_in_z", # Results in key error in frames.arrays['c_q']
         # "face_to_face",
@@ -42,20 +52,87 @@ _test_files = [  # file name: repeat number
         # "single_rotating_in_y",
         # "single_rotating_in_z"
     ]
+_timer_collect_mode = SimpleTimerCollectMode.MAX
+_cache_size = 5
+
+# set to ignore all waring messages.
+# As of version 1, there are two warnings for each iteration:
+#   1. UserWarning: In quaternion mode, quaternions are assumed to be in (w,x,y,z) format.
+#          * From ellipsoidal_density_projection.py
+#   2. UserWarning: periodic boundary conditions are disabled, but the cell matrix is not zero, we will set the cell to zero.
+#          * From ase.py
+warnings.filterwarnings("ignore")
 
 # ------------------------------ Hyperparameter ------------------------------ #
 # Performs one iteration for each parameter sets per file.
-#          lmax     σ       r_cut,  σ1,     σ2,     σ3
-_params = [[10,     2.0,    5.0,    3.0,    2.0,    1.0],
-           [10,     3.0,    4.0,    3.0,    2.0,    1.0],
-           [ 7,     4.0,    6.0,    3.0,    2.0,    1.0],
-           [ 5,     3.0,    5.0,    5.0,    3.0,    1.0],
-           [10,     2.0,    5.0,    3.0,    3.0,    0.8]]
+# NOTE: If there are identical set of parameters, the repeat number will be merged
+#       For example, below example should result in 8 iterations each for p1 ~ p5.
+#       p6 ~ p10 should be deleted.
+
+#            lmax    σ       r_cut   σ1      σ2      σ3     repeat
+_params = [[[10,     2.0,    5.0,    3.0,    2.0,    1.0],  6], # p1
+           [[10,     3.0,    4.0,    3.0,    2.0,    1.0],  4], # p2
+           [[ 7,     4.0,    6.0,    3.0,    2.0,    1.0],  3], # p3
+           [[ 5,     3.0,    5.0,    5.0,    3.0,    1.0],  6], # p4
+           [[10,     2.0,    5.0,    3.0,    3.0,    0.8],  8], # p5
+
+           [[10,     2.0,    5.0,    3.0,    2.0,    1.0],  1], # identical to p1
+           [[ 5,     3.0,    5.0,    5.0,    3.0,    1.0],  2], # identical to p4
+           [[10,     2.0,    5.0,    3.0,    2.0,    1.0],  1], # identical to p1
+           [[ 7,     4.0,    6.0,    3.0,    2.0,    1.0],  5], # identical to p3
+           [[10,     3.0,    4.0,    3.0,    2.0,    1.0],  4]] # identical to p2
 
 # --------------------------- Configuration Checks --------------------------- #
-# None
+def _identical_param(param1_index: int, param2_index: int) -> bool:
+    # Turn on strict, as all parameters should have same length.
+    # Index 0 contains all parameters as a list.
+    for p1, p2 in zip(_params[param1_index][0], _params[param2_index][0], strict=True):
+        #! This loop assumes all parameters are given as numbers. Change the condition
+        #! if that changes in the future.
+        if abs(p1 - p2) >= 1e-6:
+            return False    # return false if any of the parameters differ significantly.
+    return True
+
+def _remove_and_merge_duplicate_param() -> None:
+    to_merge: dict[int, list[int]] = dict() # keeps track of indices to merge.
+    to_delete = []
+    # Loop to check for all repeating parameters
+    for (param_index, _) in enumerate(_params):
+        # With loop starting from 0, this code should find the first index at which
+        # the parameter repetition occurs.
+        for prev_param_index in range(param_index):
+            if _identical_param(param_index, prev_param_index) and param_index not in to_delete:
+                if param_index not in to_delete:
+                    to_delete.append(param_index)
+
+                if prev_param_index not in to_merge:
+                    to_merge.update({prev_param_index: [param_index]})
+                else:
+                    to_merge[prev_param_index].append(param_index)
+
+    # Loops to update _params
+    for prev_index, index_list in to_merge.items():
+        for index in index_list:        
+            # Index "1" stores the repetition number. Merge number to the first instance of
+            # the identical parameter set.
+            _params[prev_index][1] += _params[index][1]
+
+    # Sort the indices to delete in descending order, as deleting element at larger
+    # index does not disturb the lower index, while the converse does not hold.
+    to_delete = sorted(to_delete, reverse=True)
+    for del_index in to_delete:
+        _params.pop(del_index)
+
+# Always have version 0 to compare against.
 if 0 not in _comp_version:
     _comp_version.insert(0, 0)
+
+_remove_and_merge_duplicate_param()
+
+# If any of the repeat number is not valid (0 or less), artificially set to 1.
+for param in _params:
+    if param[1] < 1:
+        param[1] = 1
 
 # -------------------------------- Main Codes -------------------------------- # 
 start_time = time.perf_counter()
@@ -210,7 +287,7 @@ def write_param_summary(file: TextIOWrapper, extra_info: list[Any]):
     file.write("Parameter Set,l_max,sigma,r_cut,sigma_1,sigma_2,sigma_3,Rotation Quaternion\n")
     quat_vec = ["i", "j", "k"]
 
-    for param_index, param in enumerate(_params):
+    for (param_index, (param, _)) in enumerate(_params):
         # l_max (param[0]) is an integer, so it will be treated differently from the rest.
         other_params = ",".join([f"{val:.01f}" for val in param[1:]])
         file.write(f"p{param_index + 1},{param[0]},{other_params},")
@@ -273,25 +350,26 @@ if __name__ == "__main__":
 
         for ver in _comp_version:
             matrix_cache = CGRCacheList(_cache_size)
+
             for test_file in _test_files:
                 file_path = str(pathlib.Path(__file__).parent.parent.absolute()) + "/benchmarks/two_particle_gb/" + test_file + ".xyz"
 
-                for param_index, param in enumerate(_params):
+                for (param_index, (param, repeat_no)) in enumerate(_params):
                     iter_str = get_key(ver, param_index + 1, test_file)
-                    print(f"Computation for {iter_str} has started")
 
-                    single_pass_timer.mark_start()
-                    comp_result, ex_info = single_pass(file_path, param, version=ver, cache_list=matrix_cache,timer=internal_timer)
-                    single_pass_timer.mark(iter_str)    
+                    for rep_index in tqdm(range(repeat_no), desc=f"{iter_str}"):
+                        single_pass_timer.mark_start()
+                        comp_result, ex_info = single_pass(file_path, param, version=ver, cache_list=matrix_cache,timer=internal_timer)
+                        single_pass_timer.mark(iter_str)
 
+                    # Only stores the result and extra info from the last iteration, as all iterations
+                    # should lead to identical results
                     raw_results.update({iter_str: comp_result})
                     extra_infos.update({iter_str: ex_info})
-
+                    
                     # Get SSE based on the original implementation (v0) of equivalent parameter set and the test file
                     errors.update({iter_str: total_error(raw_results.get(get_comp_key(iter_str)), comp_result)})
 
-                    print(f"Computation for {iter_str} has successfully finished")
-            
             # Make sure garbage collection does not interfere with the next iteration (version change).
             matrix_cache.clear_cache()
             del matrix_cache
@@ -299,6 +377,10 @@ if __name__ == "__main__":
 
         write_param_summary(out_file, extra_infos)
         out_file.write("\n")
-        write_result_summary(out_file, single_pass_timer, errors)
+
+        write_time = SimpleTimer()
+        write_time.collect_and_append(single_pass_timer, collect_mode=_timer_collect_mode)
+        write_result_summary(out_file, write_time, errors)
         out_file.write("\n")
+        
         write_raw_data(out_file, raw_results)
