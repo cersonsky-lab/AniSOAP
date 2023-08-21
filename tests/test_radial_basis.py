@@ -1,16 +1,20 @@
 import numpy as np
 import pytest
 from numpy.testing import assert_allclose
+from scipy.spatial.transform import Rotation
 
 # internal imports
 from anisoap.representations import RadialBasis, radial_basis
-from scipy.spatial.transform import Rotation
 
 
 class TestNumberOfRadialFunctions:
     """
     Test that the number of radial basis functions is correct.
     """
+
+    def test_notimplemented_basis(self):
+        with pytest.raises(ValueError):
+            basis = RadialBasis(radial_basis="nonsense", max_angular=5)
 
     def test_radial_functions_n5(self):
         basis_gto = RadialBasis(radial_basis="monomial", max_angular=5)
@@ -105,3 +109,61 @@ class TestGaussianParameters:
         atol = 1e-15 / sigma**2  # largest elements of matrix will be 1/sigma^2
         assert_allclose(center_gto, center_ref, rtol=1e-10, atol=atol)
         assert_allclose(prec_gto, prec_ref, rtol=1e-10, atol=atol)
+
+
+class TestGTOUtils:
+    # Create a list of semipositive definite matrices (spd), seminegative definite matrices (snd), and
+    # nonsymmetric matrices for testing
+
+    spd_matrices = []
+    snd_matrices = []
+    nonsym_matrices = []
+    for _ in range(100):
+        dim = np.random.randint(2, 100)
+        A = np.random.rand(dim, dim)
+        spd = A @ A.T
+        spd_matrices.append(spd)
+        snd_matrices.append(-spd)
+        nonsym_matrices.append(np.random.random(size=(dim, dim)))
+
+    num_trials = 100
+    basis_sizes = np.random.randint(2, 15, num_trials)
+
+    def test_nogto_warning(self):
+        with pytest.warns(UserWarning):
+            lmax = 5
+            non_gto_basis = RadialBasis("monomial", lmax)
+            # As a proxy for a tensor map, pass in a numpy array for features
+            features = np.random.random((5, 5))
+            non_normalized_features = non_gto_basis.orthonormalize_basis(features)
+            assert_allclose(features, non_normalized_features)
+
+    @pytest.mark.parametrize("spd", spd_matrices)
+    def test_spd_inverse_sqrt_no_exceptions(self, spd):
+        # Assert that exception is never raised for semipositive definite matrices
+        try:
+            radial_basis.inverse_matrix_sqrt(spd)
+        except ValueError:
+            assert (
+                False
+            ), f"calling inverse matrix square root on {spd} raised a value error"
+
+    @pytest.mark.parametrize("snd", snd_matrices)
+    def test_npd_inverse_sqrt_all_exceptions(self, snd):
+        # Assert that exception is ALWAYS raised for seminegative definite matrices
+        with pytest.raises(ValueError):
+            radial_basis.inverse_matrix_sqrt(snd)
+
+    @pytest.mark.parametrize("nonsym", nonsym_matrices)
+    def test_nonsymmetric_inverse_sqrt_all_exceptions(self, nonsym):
+        # Assert that exception is ALWAYS raised for nonsymmetric matrices
+        with pytest.raises(ValueError):
+            radial_basis.inverse_matrix_sqrt(nonsym)
+
+    @pytest.mark.parametrize("spd", spd_matrices)
+    def test_spd_inverse_sqrt(self, spd):
+        dim = np.shape(spd)[0]
+        inv_sqrt_s = radial_basis.inverse_matrix_sqrt(spd)
+        assert_allclose(
+            np.eye(dim), inv_sqrt_s @ inv_sqrt_s @ spd, rtol=1e-6, atol=1e-6
+        )

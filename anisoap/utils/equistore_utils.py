@@ -10,6 +10,7 @@ from equistore.core import (
 from .code_timer import SimpleTimer
 from .cyclic_list import CGRCacheList
 
+
 class ClebschGordanReal:
     def __init__(self, l_max, *, version: int = None, cache_list: CGRCacheList = None, timer: SimpleTimer = None):
         if timer is not None:
@@ -22,13 +23,13 @@ class ClebschGordanReal:
         c2r = {}
         if timer is not None:
             timer.mark("8-1. init vars")
-        
+
         for L in range(0, self._l_max + 1):
             r2c[L] = _real2complex(L)
             c2r[L] = np.conjugate(r2c[L]).T
         if timer is not None:
             timer.mark("8-2. compute r2c and c2r")
-        
+
         if version >= 1 and cache_list is not None:
             if l_max in cache_list.keys():
                 self._cg = cache_list.get_val(l_max)
@@ -45,7 +46,7 @@ class ClebschGordanReal:
                 cache_list.insert(l_max, self._cg)
         else:
             self._init_cg(r2c, c2r, timer=timer)
-    
+
     def _init_cg(self, r2c, c2r, *, timer: SimpleTimer = None):
         if timer is not None:
             internal_timer = SimpleTimer()
@@ -82,7 +83,8 @@ class ClebschGordanReal:
                         cg_nonzero = np.where(np.abs(rcg[:, :, M]) > 1e-15)
                         cg_M = np.zeros(
                             len(cg_nonzero[0]),
-                            dtype=[("m1", ">i4"), ("m2", ">i4"), ("cg", ">f8")],
+                            dtype=[("m1", ">i4"), ("m2", ">i4"),
+                                   ("cg", ">f8")],
                         )
                         cg_M["m1"] = cg_nonzero[0]
                         cg_M["m2"] = cg_nonzero[1]
@@ -92,8 +94,9 @@ class ClebschGordanReal:
                         internal_timer.mark("8-3-4. compute new cg")
                     self._cg[(l1, l2, L)] = new_cg
                     if timer is not None:
-                        internal_timer.mark("8-3-5. set cg at index [l1][l2][L]")
-        
+                        internal_timer.mark(
+                            "8-3-5. set cg at index [l1][l2][L]")
+
         if timer is not None:
             timer.mark("8-3. compute cg for all indices")
             timer.collect_and_append(internal_timer)
@@ -118,14 +121,16 @@ class ClebschGordanReal:
             )
 
         # infers the shape of the output using the einsum internals
-        features = np.einsum(combination_string, rho1[:, 0, ...], rho2[:, 0, ...]).shape
+        features = np.einsum(combination_string,
+                             rho1[:, 0, ...], rho2[:, 0, ...]).shape
         rho = np.zeros((n_items, 2 * L + 1) + features[1:])
 
         if (l1, l2, L) in self._cg:
             for M in range(2 * L + 1):
                 for m1, m2, cg in self._cg[(l1, l2, L)][M]:
                     rho[:, M, ...] += np.einsum(
-                        combination_string, rho1[:, m1, ...], rho2[:, m2, ...] * cg
+                        combination_string, rho1[:,
+                                                 m1, ...], rho2[:, m2, ...] * cg
                     )
 
         return rho
@@ -186,7 +191,7 @@ def standardize_keys(descriptor):
         )
     blocks = []
     keys = []
-    for key, block in descriptor:
+    for key, block in descriptor.items():
         key = tuple(key)
         if not "order_nu" in key_names:
             key = (1,) + key
@@ -199,7 +204,7 @@ def standardize_keys(descriptor):
                 components=block.components,
                 properties=Labels(
                     property_names,
-                    np.asarray(block.properties.view(dtype=np.int32)).reshape(
+                    np.asarray(block.properties, dtype=np.int32).reshape(
                         -1, len(property_names)
                     ),
                 ),
@@ -207,7 +212,7 @@ def standardize_keys(descriptor):
         )
 
     if not "order_nu" in key_names:
-        key_names = ("order_nu",) + key_names
+        key_names = ["order_nu"] + key_names
 
     return TensorMap(
         keys=Labels(names=key_names, values=np.asarray(keys, dtype=np.int32)),
@@ -235,8 +240,9 @@ def cg_combine(
     """
 
     # determines the cutoff in the new features
-    lmax_a = max(x_a.keys["angular_channel"])
-    lmax_b = max(x_b.keys["angular_channel"])
+    lmax_a = np.asarray(x_a.keys["angular_channel"], dtype="int32").max()
+    lmax_b = np.asarray(x_b.keys["angular_channel"], dtype="int32").max()
+
     if l_cut is None:
         l_cut = lmax_a + lmax_b
 
@@ -252,7 +258,8 @@ def cg_combine(
     )
 
     if other_keys_match is None:
-        OTHER_KEYS = [k + "_a" for k in other_keys_a] + [k + "_b" for k in other_keys_b]
+        OTHER_KEYS = [k + "_a" for k in other_keys_a] + \
+            [k + "_b" for k in other_keys_b]
     else:
         OTHER_KEYS = (
             other_keys_match
@@ -292,7 +299,7 @@ def cg_combine(
     X_grads = {}
 
     # loops over sparse blocks of x_a
-    for index_a, block_a in x_a:
+    for index_a, block_a in x_a.items():
         lam_a = index_a["angular_channel"]
         order_a = index_a["order_nu"]
         properties_a = (
@@ -301,7 +308,7 @@ def cg_combine(
         samples_a = block_a.samples
 
         # and x_b
-        for index_b, block_b in x_b:
+        for index_b, block_b in x_b.items():
             lam_b = index_b["angular_channel"]
             order_b = index_b["order_nu"]
             properties_b = block_b.properties
@@ -332,7 +339,8 @@ def cg_combine(
             sel_feats = []
             sel_idx = []
             sel_feats = (
-                np.indices((len(properties_a), len(properties_b))).reshape(2, -1).T
+                np.indices((len(properties_a), len(properties_b))
+                           ).reshape(2, -1).T
             )
 
             prop_ids_a = []
@@ -363,7 +371,8 @@ def cg_combine(
                     X_samples[KEY] = block_b.samples
                     if grad_components is not None:
                         X_grads[KEY] = []
-                        X_grad_samples[KEY] = block_b.gradient("positions").samples
+                        X_grad_samples[KEY] = block_b.gradient(
+                            "positions").samples
 
                 # builds all products in one go
                 one_shot_blocks = clebsch_gordan.combine_einsum(
@@ -386,7 +395,8 @@ def cg_combine(
                         L=L,
                         combination_string="iq,iaq->iaq",
                     ) + clebsch_gordan.combine_einsum(
-                        block_b.values[grad_b.samples["sample"]][:, :, sel_feats[:, 1]],
+                        block_b.values[grad_b.samples["sample"]
+                                       ][:, :, sel_feats[:, 1]],
                         grad_a_data[neighbor_slice, ..., sel_feats[:, 0]],
                         L=L,
                         combination_string="iq,iaq->iaq",
@@ -419,11 +429,13 @@ def cg_combine(
             samples=X_samples[KEY],
             components=[sph_components],
             properties=Labels(
-                feature_names, np.asarray(np.vstack(X_idx[KEY]), dtype=np.int32)
+                feature_names, np.asarray(
+                    np.vstack(X_idx[KEY]), dtype=np.int32)
             ),
         )
         if grad_components is not None:
-            grad_data = np.swapaxes(np.concatenate(X_grads[KEY], axis=-1), 2, 1)
+            grad_data = np.swapaxes(
+                np.concatenate(X_grads[KEY], axis=-1), 2, 1)
             newblock.add_gradient(
                 "positions",
                 data=grad_data,

@@ -1,5 +1,11 @@
-# anisoap
-A Python Package for Computing the Smooth Overlap of Anisotropic Positions
+AniSOAP
+=======
+
+<a href="https://github.com/cersonsky-lab/anisoap/actions?query=workflow%3ATest">
+  <img src="https://github.com/cersonsky-lab/anisoap/workflows/Test/badge.svg"/>
+</a><a href="https://codecov.io/gh/cersonsky-lab/anisoap/">
+  <img src="https://codecov.io/gh/cersonsky-lab/anisoap/branch/main/graph/badge.svg?token=UZJPJG34SM" />
+</a>
 
 ## Installation
 
@@ -30,3 +36,11 @@ Please run pytest and check that all tests pass before pushing new changes to th
 
     pytest tests/.
 
+Contributors
+------------
+
+Thanks goes to all people that make AniSOAP possible:
+
+<a href="https://github.com/cersonsky-lab/anisoap/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=cersonsky-lab/anisoap" />
+</a>

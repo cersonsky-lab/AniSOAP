@@ -1,5 +1,6 @@
+ase
 coverage[toml]
-numpy
 pytest
 scipy
+tqdm
 git+https://github.com/Luthaf/rascaline.git
