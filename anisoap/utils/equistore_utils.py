@@ -11,7 +11,7 @@ from .code_timer import SimpleTimer
 from .cyclic_list import CGRCacheList
 
 class ClebschGordanReal:
-    def __init__(self, l_max, *, timer: SimpleTimer = None, cache_list: CGRCacheList = None):
+    def __init__(self, l_max, *, version: int = None, cache_list: CGRCacheList = None, timer: SimpleTimer = None):
         if timer is not None:
             timer.mark_start()
         self._l_max = l_max
@@ -29,7 +29,7 @@ class ClebschGordanReal:
         if timer is not None:
             timer.mark("8-2. compute r2c and c2r")
         
-        if cache_list is not None:
+        if version >= 1 and cache_list is not None:
             if l_max in cache_list.keys():
                 self._cg = cache_list.get_val(l_max)
                 if timer is not None:

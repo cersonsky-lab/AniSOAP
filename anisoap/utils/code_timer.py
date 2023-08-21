@@ -1,9 +1,20 @@
 import time
 from collections import defaultdict
 from typing import Callable
+from enum import Enum
+
+
+class SimpleTimerCollectMode(Enum):
+    AVG = 1,
+    SUM = 2,
+    MIN = 3,
+    MAX = 4,
+    MED = 5,
 
 class SimpleTimer:
-    default_coll_mode = "avg"
+    # NOTE: Change this collect_mode default argument to change all measuring across the files
+    #       except the one specified.
+    default_coll_mode = SimpleTimerCollectMode.AVG
 
     def __init__(self):
         self._internal_time = time.perf_counter()
@@ -55,12 +66,10 @@ class SimpleTimer:
                 coll_dict[key] = collect_fn(val)
         return coll_dict
     
-    # NOTE: Change this collect_mode default argument to change all measuring across the files
-    #       except the one specified.
     def collect_and_append(
             self,
             other: 'SimpleTimer',
-            collect_mode: str | Callable[[list[float]], float] = None
+            collect_mode: SimpleTimerCollectMode | Callable[[list[float]], float] = None
         ):
         """
         Takes another SimpleTimer class as argument and calls average_trials
@@ -71,14 +80,16 @@ class SimpleTimer:
         if collect_mode == None:
             collect_mode = SimpleTimer.default_coll_mode
 
-        if collect_mode == "avg":
+        if collect_mode == SimpleTimerCollectMode.AVG:
             coll_dict = other.collect_trials(lambda x: sum(x) / len(x))
-        elif collect_mode == "sum":
+        elif collect_mode == SimpleTimerCollectMode.SUM:
             coll_dict = other.collect_trials(lambda x: sum(x))
-        elif collect_mode == "max":
+        elif collect_mode == SimpleTimerCollectMode.MAX:
             coll_dict = other.collect_trials(lambda x: max(x))
-        elif collect_mode == "min":
+        elif collect_mode == SimpleTimerCollectMode.MIN:
             coll_dict = other.collect_trials(lambda x: min(x))
+        elif collect_mode == SimpleTimerCollectMode.MED:
+            coll_dict = other.collect_trials(lambda x: SimpleTimer._median(x))
         else:
             coll_dict = other.collect_trials(lambda x: collect_mode(x))
         for key, val in coll_dict.items():
@@ -106,3 +117,14 @@ class SimpleTimer:
                 break
 
         return float(int_str) if len(int_str) > 0 else float("inf")
+    
+    @staticmethod
+    def _median(x: list[float]):
+        sorted_x = sorted(x)
+        len_x = len(x)
+        half_index = len_x // 2 # floor
+
+        if len_x % 2 == 0:  # even number of elements:
+            return (sorted_x[half_index - 1] + sorted_x[half_index]) / 2.0
+        else:
+            return sorted_x[half_index]

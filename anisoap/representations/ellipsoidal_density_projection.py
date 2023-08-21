@@ -39,7 +39,7 @@ def pairwise_ellip_expansion(
     radial_basis,
     *,
     timer: SimpleTimer = None,
-    moment_fn_lang: str = "rust"
+    version: int = None
 ):
     """
     Function to compute the pairwise expansion <anlm|rho_ij> by combining the moments and the spherical to Cartesian
@@ -149,7 +149,7 @@ def pairwise_ellip_expansion(
                     else:
                         internal_timer3 = None
                     
-                    if moment_fn_lang == "rust":
+                    if version is None or version >= 1:
                         # NOTE: This line was replaced with Rust implementation. 
                         moments = compute_moments(precision, center, lmax + np.max(num_ns))
                         # Mark the timers for consistency
@@ -475,7 +475,7 @@ class EllipsoidalDensityProjection:
 
         self.rotation_key = rotation_key
 
-    def transform(self, frames, show_progress=False, *, timer: SimpleTimer = None, moment_fn_lang: str = "rust"): # frames: List[Atoms]
+    def transform(self, frames, show_progress=False, *, version: int = None, timer: SimpleTimer = None): # frames: List[Atoms]
         """
         Computes the features and (if compute_gradients == True) gradients
         for all the provided frames. The features and gradients are stored in
@@ -585,7 +585,7 @@ class EllipsoidalDensityProjection:
             self.sph_to_cart,
             self.radial_basis,
             timer=internal_timer,
-            moment_fn_lang=moment_fn_lang
+            version=version
         )
         if timer is not None:
             timer.mark("5-8. pairwise ellip expansion")
