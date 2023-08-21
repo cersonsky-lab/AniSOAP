@@ -2,10 +2,13 @@ import pathlib
 import time
 from anisoap.utils.code_timer import SimpleTimer, SimpleTimerCollectMode
 from anisoap.utils.cyclic_list import CGRCacheList
+
+# Imported for type annotation purposes
 from io import TextIOWrapper
 from typing import Any
-import gc   # for manual garbage collection
-import warnings
+
+import gc           # for manual garbage collection
+import warnings     # to disable warning messages
 
 try:
     from tqdm import tqdm
@@ -149,69 +152,33 @@ def single_pass(
         file_path: str,
         params: list[float], *,
         version: int = _MOST_RECENT_VER,
-        cache_list: CGRCacheList = None,
-        timer: SimpleTimer = None
+        cache_list: CGRCacheList = None
     ) -> (list[list[float]], list[Any]):  # returns (result, extra_info)
-    if timer is not None:
-        timer.mark_start()
-
     # parameter decomposition
     l_max = params[0]
     sigma = params[1]
     r_cut = params[2]
     a1, a2, a3 = params[3:]
 
-    if timer is not None:
-        timer.mark("1. variable init")
-
     frames = read(file_path, ':')
-    if timer is not None:
-        timer.mark("2. file reading")
-
     representation = EllipsoidalDensityProjection(max_angular=l_max, 
                                                   radial_basis_name='gto', 
                                                   rotation_type='quaternion',
                                                   rotation_key='c_q',
                                                   cutoff_radius=r_cut,
                                                   radial_gaussian_width=sigma)
-    if timer is not None:
-        timer.mark("3. constructing EDP")
-
     for frame in frames:
         frame.arrays["c_diameter[1]"] = a1 * np.ones(len(frame))
         frame.arrays["c_diameter[2]"] = a2 * np.ones(len(frame))
         frame.arrays["c_diameter[3]"] = a3 * np.ones(len(frame))
         frame.arrays["quaternions"] = frame.arrays['c_q']
 
-    if timer is not None:
-        timer.mark("4. constructing frames")
-    
     # timer works internally inside "transform"
-    if timer is not None:
-        internal_timer = SimpleTimer()
-        rep_raw = representation.transform(frames, show_progress=False, timer=internal_timer, version=version)
-        timer.mark("5. repr transform")
-        timer.collect_and_append(internal_timer)
-        timer.mark_start()
-    else:
-        rep_raw = representation.transform(frames, show_progress=False, version=version)
-
+    rep_raw = representation.transform(frames, show_progress=False, version=version)
     rep = equistore.operations.mean_over_samples(rep_raw, sample_names="center")
-    if timer is not None:
-        timer.mark("6. mean over samples")
     
     anisoap_nu1 = standardize_keys(rep)
-    if timer is not None:
-        timer.mark("7. standardize keys")
-        internal_timer.clear_time()
-
-    if timer is not None:
-        my_cg = ClebschGordanReal(l_max, version=version, cache_list=cache_list, timer=internal_timer)
-        timer.mark("8. constructing CGR")
-        timer.collect_and_append(internal_timer)
-        timer.mark_start()
-    else:
-        my_cg = ClebschGordanReal(l_max, version=version, cache_list=cache_list)
+    my_cg = ClebschGordanReal(l_max, version=version, cache_list=cache_list)
 
     anisoap_nu2 = cg_combine(
         anisoap_nu1,
@@ -220,23 +187,14 @@ def single_pass(
         l_cut=0,
         other_keys_match=["species_center"],
     )
-    if timer is not None:
-        timer.mark("9. cg_combine")
-
+    
     x_raw = anisoap_nu2.block().values.squeeze()
     x_raw = x_raw[:, x_raw.var(axis=0)>1E-12]
-    if timer is not None:
-        timer.mark("10. squeeze and filter")
-
     x_scaler = StandardFlexibleScaler(column_wise=True).fit(
         x_raw
     )
-    if timer is not None:
-        timer.mark("11. SFS fit")
-
+    
     x = x_scaler.transform(x_raw)
-    if timer is not None:
-        timer.mark("12. scaler transform")
 
     # NOTE: frame.arrays["quaternions"] seems to output a matrix with two quaternions
     #       each one represented as a row of the matrix. It also seems that two quaternions
@@ -346,7 +304,6 @@ if __name__ == "__main__":
         out_file.write(f"initial_import time (sec), {import_duration: .04f}\n\n")
 
         single_pass_timer = SimpleTimer()
-        internal_timer = None   # disable internal timer
 
         for ver in _comp_version:
             matrix_cache = CGRCacheList(_cache_size)
@@ -359,7 +316,7 @@ if __name__ == "__main__":
 
                     for rep_index in tqdm(range(repeat_no), desc=f"{iter_str}"):
                         single_pass_timer.mark_start()
-                        comp_result, ex_info = single_pass(file_path, param, version=ver, cache_list=matrix_cache,timer=internal_timer)
+                        comp_result, ex_info = single_pass(file_path, param, version=ver, cache_list=matrix_cache)
                         single_pass_timer.mark(iter_str)
 
                     # Only stores the result and extra info from the last iteration, as all iterations

@@ -12,55 +12,34 @@ from .cyclic_list import CGRCacheList
 
 
 class ClebschGordanReal:
-    def __init__(self, l_max, *, version: int = None, cache_list: CGRCacheList = None, timer: SimpleTimer = None):
-        if timer is not None:
-            timer.mark_start()
+    def __init__(self, l_max, *, version: int = None, cache_list: CGRCacheList = None):
         self._l_max = l_max
         self._cg = {}
 
         # real-to-complex and complex-to-real transformations as matrices
         r2c = {}
         c2r = {}
-        if timer is not None:
-            timer.mark("8-1. init vars")
-
         for L in range(0, self._l_max + 1):
             r2c[L] = _real2complex(L)
             c2r[L] = np.conjugate(r2c[L]).T
-        if timer is not None:
-            timer.mark("8-2. compute r2c and c2r")
 
         if version >= 1 and cache_list is not None:
             if l_max in cache_list.keys():
                 self._cg = cache_list.get_val(l_max)
-                if timer is not None:
-                    # Mark the timers for consistency.
-                    timer.mark("8-3-1. compute complex cg matrix")
-                    timer.mark("8-3-2. compute real cg matrix")
-                    timer.mark("8-3-3. compute rcg")
-                    timer.mark("8-3-4. compute new cg")
-                    timer.mark("8-3-5. set cg at index [l1][l2][L]")
-                    timer.mark("8-3. compute cg for all indices")
             else:
-                self._init_cg(r2c, c2r, timer=timer)
+                self._init_cg(r2c, c2r)
                 cache_list.insert(l_max, self._cg)
         else:
-            self._init_cg(r2c, c2r, timer=timer)
+            self._init_cg(r2c, c2r)
 
-    def _init_cg(self, r2c, c2r, *, timer: SimpleTimer = None):
-        if timer is not None:
-            internal_timer = SimpleTimer()
-
+    def _init_cg(self, r2c, c2r):
         for l1 in range(self._l_max + 1):
             for l2 in range(self._l_max + 1):
                 for L in range(
                     max(l1, l2) - min(l1, l2), min(self._l_max, (l1 + l2)) + 1
                 ):
-                    if timer is not None:
-                        internal_timer.mark_start()
                     complex_cg = _complex_clebsch_gordan_matrix(l1, l2, L)
-                    if timer is not None:
-                        internal_timer.mark("8-3-1. compute complex cg matrix")
+                    
                     real_cg = (r2c[l1].T @ complex_cg.reshape(2 * l1 + 1, -1)).reshape(
                         complex_cg.shape
                     )
@@ -70,14 +49,11 @@ class ClebschGordanReal:
                     )
                     real_cg = real_cg.swapaxes(0, 1)
                     real_cg = real_cg @ c2r[L].T
-                    if timer is not None:
-                        internal_timer.mark("8-3-2. compute real cg matrix")
                     if (l1 + l2 + L) % 2 == 0:
                         rcg = np.real(real_cg)
                     else:
                         rcg = np.imag(real_cg)
-                    if timer is not None:
-                        internal_timer.mark("8-3-3. compute rcg")
+
                     new_cg = []
                     for M in range(2 * L + 1):
                         cg_nonzero = np.where(np.abs(rcg[:, :, M]) > 1e-15)
@@ -90,16 +66,8 @@ class ClebschGordanReal:
                         cg_M["m2"] = cg_nonzero[1]
                         cg_M["cg"] = rcg[cg_nonzero[0], cg_nonzero[1], M]
                         new_cg.append(cg_M)
-                    if timer is not None:
-                        internal_timer.mark("8-3-4. compute new cg")
-                    self._cg[(l1, l2, L)] = new_cg
-                    if timer is not None:
-                        internal_timer.mark(
-                            "8-3-5. set cg at index [l1][l2][L]")
 
-        if timer is not None:
-            timer.mark("8-3. compute cg for all indices")
-            timer.collect_and_append(internal_timer)
+                    self._cg[(l1, l2, L)] = new_cg
 
     def get_cg(self):
         return self._cg
