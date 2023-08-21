@@ -25,6 +25,10 @@ _comp_version: list[int]
     Version 0: Initial implementation. Guaranteed to be correct, but it is slow.
     Version 1: Ported computation of moments to Rust + CGR matrix is cached for
                each l_max.
+    Version 2: Version 1 change is maintained. Changed the loop structure of
+               pairwise_ellip_expansion such that it does not loop through every
+               possible combinations of species pair (only loops through pairs in
+               neighbor_list)
 
 _test_files: list[str]
     A list that determines which .xyz files to test for.
@@ -35,16 +39,21 @@ _timer_collect_mode: SimpleTimerCollectMode
     If there are multiple passes performed for same set of parameters, this mode
     determines how to process time for final output file. Default mode is MAX, in
     which the timer records the worst time across all iterations.
+    Enter all modes to report as a list.
     
 _cache_size: int
     Determines the cache size for CGRCacheList. It will only be used for version >= 1.
     The cache will be reset and recomputed when the version changes.
+
+_skip_raw_data: bool
+    Determines whether or not to write raw output (matrix) to the output file.
+    Default is false. If set to "True", the csv file may become quite large!
 """
 # ------------------------------ Configurations ------------------------------ # 
-_MOST_RECENT_VER = 1
+_MOST_RECENT_VER = 2
 
 # See above for explanations for each variables.
-_comp_version = [_MOST_RECENT_VER]
+_comp_version = [1, _MOST_RECENT_VER]
 _test_files = [
         "ellipsoid_frames"
         # "both_rotating_in_z", # Results in key error in frames.arrays['c_q']
@@ -55,8 +64,9 @@ _test_files = [
         # "single_rotating_in_y",
         # "single_rotating_in_z"
     ]
-_timer_collect_mode = SimpleTimerCollectMode.MAX
+_timer_collect_mode = [SimpleTimerCollectMode.MAX, SimpleTimerCollectMode.AVG, SimpleTimerCollectMode.MED]
 _cache_size = 5
+_skip_raw_data = True
 
 # set to ignore all waring messages.
 # As of version 1, there are two warnings for each iteration:
@@ -69,8 +79,8 @@ warnings.filterwarnings("ignore")
 # ------------------------------ Hyperparameter ------------------------------ #
 # Performs one iteration for each parameter sets per file.
 # NOTE: If there are identical set of parameters, the repeat number will be merged
-#       For example, below example should result in 8 iterations each for p1 ~ p5.
-#       p6 ~ p10 should be deleted.
+#       For example, below example should result in 8 iterations each for p1 ~ p6.
+#       p7 ~ p11 should be deleted.
 
 #            lmax    σ       r_cut   σ1      σ2      σ3     repeat
 _params = [[[10,     2.0,    5.0,    3.0,    2.0,    1.0],  6], # p1
@@ -78,6 +88,8 @@ _params = [[[10,     2.0,    5.0,    3.0,    2.0,    1.0],  6], # p1
            [[ 7,     4.0,    6.0,    3.0,    2.0,    1.0],  3], # p3
            [[ 5,     3.0,    5.0,    5.0,    3.0,    1.0],  6], # p4
            [[10,     2.0,    5.0,    3.0,    3.0,    0.8],  8], # p5
+        #    [[ 8,     0.5,    1.0,    1.0,    0.8,    0.5],  8], # p? << Results in bug from Rascaline?
+           [[ 8,    10.0,   10.0,   10.0,    7.0,    5.0],  8], # p6
 
            [[10,     2.0,    5.0,    3.0,    2.0,    1.0],  1], # identical to p1
            [[ 5,     3.0,    5.0,    5.0,    3.0,    1.0],  2], # identical to p4
@@ -126,16 +138,22 @@ def _remove_and_merge_duplicate_param() -> None:
     for del_index in to_delete:
         _params.pop(del_index)
 
-# Always have version 0 to compare against.
-if 0 not in _comp_version:
-    _comp_version.insert(0, 0)
-
 _remove_and_merge_duplicate_param()
 
 # If any of the repeat number is not valid (0 or less), artificially set to 1.
 for param in _params:
     if param[1] < 1:
         param[1] = 1
+
+if _timer_collect_mode == []:
+    _timer_collect_mode = [SimpleTimerCollectMode.MAX]
+
+# Always have version 0 to compare against.
+if 0 not in _comp_version:
+    _comp_version.insert(0, 0)
+
+# Remove duplicate with set. Convert to list then sort the versions in ascending order.
+_comp_version = sorted(list(set(_comp_version)))
 
 # -------------------------------- Main Codes -------------------------------- # 
 start_time = time.perf_counter()
@@ -240,6 +258,9 @@ def keys_in_order() -> list[str]:
                 all_tests_list.append(get_key(ver, param_index + 1, file_name))
     return all_tests_list
 
+def get_version(key_str: str) -> str:
+    return key_str.split("_")[0]
+
 def write_param_summary(file: TextIOWrapper, extra_info: list[Any]):
     file.write("----------------- Parameter Summary -----------------\n")
     file.write("Parameter Set,l_max,sigma,r_cut,sigma_1,sigma_2,sigma_3,Rotation Quaternion\n")
@@ -268,16 +289,45 @@ def write_param_summary(file: TextIOWrapper, extra_info: list[Any]):
 def write_result_summary(file: TextIOWrapper, timer: SimpleTimer, err_dict: dict[str, float]):
     file.write("------------------ Overall Summary ------------------\n")
     all_tests_list = keys_in_order()
-    file.write("Name,Runtime (sec),Runtime Change (from v0),SSE (from v0)\n")
-    timer_dict = timer.sorted_dict()
+    
+    file.write("Name,")
+    for mode in _timer_collect_mode:
+        if mode == SimpleTimerCollectMode.AVG:
+            mode_str = "Average"
+        elif mode == SimpleTimerCollectMode.SUM:
+            mode_str = "Total"
+        elif mode == SimpleTimerCollectMode.MAX:
+            mode_str = "Maximum"
+        elif mode == SimpleTimerCollectMode.MIN:
+            mode_str = "Minimum"
+        elif mode == SimpleTimerCollectMode.MED:
+            mode_str = "Median"
 
+        file.write(f"{mode_str} runtime (sec),")
+    file.write("SSE (from v0)\n")
+
+    prev_ver = "v0" # version 0 is always the first to be written.
     for key in all_tests_list:
-        curr_runtime = timer_dict.get(key)[0]
-        original_runtime = timer_dict.get(get_comp_key(key))[0]
-        percent_diff = (curr_runtime - original_runtime) / original_runtime * 100
-        file.write(f"{key},{curr_runtime:.4f},{percent_diff:.2f}%,{err_dict.get(key):.4e}\n")
+        curr_ver = get_version(key)
+        if prev_ver != curr_ver:
+            prev_ver = curr_ver
+            file.write("\n")
 
-    file.write("Note: Negative runtime change means computation was faster compared to the original implementation.\n")
+        file.write(f"{key},")
+        for mode in _timer_collect_mode:
+            collected_timer = SimpleTimer()
+            collected_timer.collect_and_append(timer, mode)
+            timer_dict = collected_timer.sorted_dict()
+
+            curr_runtime = timer_dict.get(key)[0]
+            original_runtime = timer_dict.get(get_comp_key(key))[0]
+            percent_diff = (curr_runtime - original_runtime) / original_runtime * 100
+            file.write(f"{curr_runtime:.4f} ({percent_diff:.2f}%),")
+
+        file.write(f"{err_dict.get(key):.4e}\n")
+
+    file.write("\nNote: Number in parenthesis after runtime refers to corresponding runtime change compared to original implementation (version 0).\n")
+    file.write("      Negative runtime change means computation was faster compared to the original implementation.\n")
 
 def write_raw_data(file: TextIOWrapper, raw_data: dict[str, list[list[float]]]):
     file.write("----------------- Raw Data (Result) -----------------\n")
@@ -335,9 +385,8 @@ if __name__ == "__main__":
         write_param_summary(out_file, extra_infos)
         out_file.write("\n")
 
-        write_time = SimpleTimer()
-        write_time.collect_and_append(single_pass_timer, collect_mode=_timer_collect_mode)
-        write_result_summary(out_file, write_time, errors)
+        write_result_summary(out_file, single_pass_timer, errors)
         out_file.write("\n")
         
-        write_raw_data(out_file, raw_results)
+        if not _skip_raw_data:
+            write_raw_data(out_file, raw_results)

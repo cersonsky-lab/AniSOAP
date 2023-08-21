@@ -23,7 +23,7 @@ class ClebschGordanReal:
             r2c[L] = _real2complex(L)
             c2r[L] = np.conjugate(r2c[L]).T
 
-        if version >= 1 and cache_list is not None:
+        if (version is None or version >= 1) and cache_list is not None:
             if l_max in cache_list.keys():
                 self._cg = cache_list.get_val(l_max)
             else:

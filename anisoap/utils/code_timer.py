@@ -7,9 +7,9 @@ from enum import Enum
 class SimpleTimerCollectMode(Enum):
     AVG = 1,
     SUM = 2,
-    MIN = 3,
-    MAX = 4,
-    MED = 5,
+    MIN = 4,
+    MAX = 8,
+    MED = 16,
 
 class SimpleTimer:
     # NOTE: Change this collect_mode default argument to change all measuring across the files

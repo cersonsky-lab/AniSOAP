@@ -81,94 +81,21 @@ def pairwise_ellip_expansion(
     keys = [tuple(i) + (l,) for i in keys for l in range(lmax + 1)]
     num_ns = radial_basis.get_num_radial_functions()
     
-    for center_species in species:
-        for neighbor_species in species:
-            if (center_species, neighbor_species) in neighbor_list.keys:
-                nl_block = neighbor_list.block(
-                    species_first_atom=center_species,
-                    species_second_atom=neighbor_species,
-                )
+    if version is None or version >= 2:    # Changes the loop structure
+        for (center_species, neighbor_species) in neighbor_list.keys:
+            _single_pair_expansion(tensorblock_list, neighbor_list, center_species,
+                                   neighbor_species, lmax, frame_to_global_atom_idx,
+                                   rotation_matrices, ellipsoid_lengths, radial_basis, 
+                                   num_ns, sph_to_cart, show_progress, version=version)
+    else:
+        for center_species in species:
+            for neighbor_species in species:
+                if (center_species, neighbor_species) in neighbor_list.keys:
+                    _single_pair_expansion(tensorblock_list, neighbor_list, center_species,
+                                           neighbor_species, lmax, frame_to_global_atom_idx,
+                                           rotation_matrices, ellipsoid_lengths, radial_basis, 
+                                           num_ns, sph_to_cart, show_progress, version=version)
                 
-                # moved from original position
-                values_ldict = {l: [] for l in range(lmax + 1)}
-                for isample, nl_sample in enumerate(
-                    tqdm(
-                        nl_block.samples,
-                        disable=(not show_progress),
-                        desc="Iterating samples for ({}, {})".format(
-                            center_species, neighbor_species
-                        ),
-                        leave=False,
-                    )
-                ):
-                    frame_idx, i, j = (
-                        nl_sample["structure"],
-                        nl_sample["first_atom"],
-                        nl_sample["second_atom"],
-                    )
-                    
-                    r_ij = np.asarray(
-                        [
-                            nl_block.values[isample, 0],
-                            nl_block.values[isample, 1],
-                            nl_block.values[isample, 2],
-                        ]
-                    ).reshape(
-                        3,
-                    )
-                    
-                    # moved from original position
-                    i_global = frame_to_global_atom_idx[frame_idx] + i
-                    j_global = frame_to_global_atom_idx[frame_idx] + j
-                    rot = rotation_matrices[j_global]
-                    lengths = ellipsoid_lengths[j_global]
-
-                    precision, center = radial_basis.compute_gaussian_parameters(
-                        r_ij, lengths, rot
-                    )
-
-                    if version is None or version >= 1:
-                        # NOTE: This line was replaced with Rust implementation.
-                        moments = compute_moments(
-                            precision, center, lmax + np.max(num_ns))
-                    else:
-                        moments = compute_moments_inefficient_implementation(
-                            precision, center, maxdeg=lmax + np.max(num_ns)
-                        )
-
-                    for l in range(lmax + 1):
-                        deg = l + 2 * (num_ns[l] - 1)
-                        moments_l = moments[: deg + 1, : deg + 1, : deg + 1]
-                        values_ldict[l].append(
-                            np.einsum("mnpqr, pqr->mn",
-                                      sph_to_cart[l], moments_l)
-                        )
-
-                for l in tqdm(
-                    range(lmax + 1),
-                    disable=(not show_progress),
-                    desc="Accruing lmax",
-                    leave=False,
-                ):
-                    block = TensorBlock(
-                        values=np.asarray(values_ldict[l]),
-                        samples=nl_block.samples,  # as many rows as samples
-                        components=[
-                            Labels(
-                                ["spherical_component_m"],
-                                np.asarray([list(range(-l, l + 1))], np.int32).reshape(
-                                    -1, 1
-                                ),
-                            )
-                        ],
-                        properties=Labels(
-                            ["n"],
-                            np.asarray(
-                                list(range(num_ns[l])), np.int32).reshape(-1, 1),
-                        ),
-                    )
-                    tensorblock_list.append(block)
-
     pairwise_ellip_feat = TensorMap(
         Labels(
             ["species_center", "species_neighbor", "angular_channel"],
@@ -177,6 +104,104 @@ def pairwise_ellip_expansion(
         tensorblock_list,
     )
     return pairwise_ellip_feat
+
+def _single_pair_expansion(tensorblock_list, neighbor_list, center_species,
+                           neighbor_species, lmax, frame_to_global_atom_idx,
+                           rotation_matrices, ellipsoid_lengths, radial_basis, 
+                           num_ns, sph_to_cart, show_progress, *, version):
+    """
+    A helper function for single iteration inside the for loop in pairwise_ellip_expansion.
+    It was factored out to test for v2's performance.
+
+    This function is NOT expected to be used outside of this file.
+    Also, body of this function is expected to go back to pairwise_ellip_expansion in the
+    final version, as it is not necessary anymore.
+    """
+    nl_block = neighbor_list.block(
+        species_first_atom=center_species,
+        species_second_atom=neighbor_species,
+    )
+                
+    # moved from original position
+    values_ldict = {l: [] for l in range(lmax + 1)}
+    for isample, nl_sample in enumerate(
+        tqdm(
+            nl_block.samples,
+            disable=(not show_progress),
+            desc="Iterating samples for ({}, {})".format(
+                center_species, neighbor_species
+            ),
+            leave=False,
+        )
+    ):
+        frame_idx, i, j = (
+            nl_sample["structure"],
+            nl_sample["first_atom"],
+            nl_sample["second_atom"],
+        )
+                    
+        r_ij = np.asarray(
+            [
+                nl_block.values[isample, 0],
+                nl_block.values[isample, 1],
+                nl_block.values[isample, 2],
+            ]
+        ).reshape(
+            3,
+        )
+                    
+        # moved from original position
+        # TODO: Remove this line in final version, as i_global is not used.
+        # i_global = frame_to_global_atom_idx[frame_idx] + i
+        j_global = frame_to_global_atom_idx[frame_idx] + j
+        rot = rotation_matrices[j_global]
+        lengths = ellipsoid_lengths[j_global]
+
+        precision, center = radial_basis.compute_gaussian_parameters(
+            r_ij, lengths, rot
+        )
+
+        if version is None or version >= 1:
+            # NOTE: This line was replaced with Rust implementation.
+            moments = compute_moments(
+                precision, center, lmax + np.max(num_ns))
+        else:
+            moments = compute_moments_inefficient_implementation(
+                precision, center, maxdeg=lmax + np.max(num_ns)
+            )
+
+        for l in range(lmax + 1):
+            deg = l + 2 * (num_ns[l] - 1)
+            moments_l = moments[: deg + 1, : deg + 1, : deg + 1]
+            values_ldict[l].append(
+                np.einsum("mnpqr, pqr->mn",
+                          sph_to_cart[l], moments_l)
+            )
+
+    for l in tqdm(
+        range(lmax + 1),
+        disable=(not show_progress),
+        desc="Accruing lmax",
+        leave=False,
+    ):
+        block = TensorBlock(
+            values=np.asarray(values_ldict[l]),
+            samples=nl_block.samples,  # as many rows as samples
+            components=[
+                Labels(
+                    ["spherical_component_m"],
+                    np.asarray([list(range(-l, l + 1))], np.int32).reshape(
+                        -1, 1
+                    ),
+                )
+            ],
+            properties=Labels(
+                ["n"],
+                np.asarray(
+                    list(range(num_ns[l])), np.int32).reshape(-1, 1),
+            ),
+        )
+        tensorblock_list.append(block)
 
 
 def contract_pairwise_feat(pair_ellip_feat, species, show_progress=False):
