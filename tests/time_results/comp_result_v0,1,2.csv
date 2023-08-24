@@ -1,7 +1,7 @@
 Comparison of versions [0 1 2]
 
 ---------------- Initialization Info ----------------
-initial_import time (sec),  0.1741
+initial_import time (sec),  0.0000
 
 ----------------- Parameter Summary -----------------
 Parameter Set,l_max,sigma,r_cut,sigma_1,sigma_2,sigma_3,Rotation Quaternion
@@ -14,26 +14,26 @@ p6,8,10.0,10.0,10.0,7.0,5.0,-0.7071 - 0.7071i + 0.0000j + 0.0000k
 
 ------------------ Overall Summary ------------------
 Name,Maximum runtime (sec),Average runtime (sec),Median runtime (sec),SSE (from v0)
-v0_p1_ellipsoid_frames,2.9687 (0.00%),2.2263 (0.00%),2.1698 (0.00%),0.0000e+00
-v0_p2_ellipsoid_frames,3.0131 (0.00%),2.2146 (0.00%),2.3428 (0.00%),0.0000e+00
-v0_p3_ellipsoid_frames,0.8387 (0.00%),0.6862 (0.00%),0.6699 (0.00%),0.0000e+00
-v0_p4_ellipsoid_frames,0.3204 (0.00%),0.2882 (0.00%),0.2875 (0.00%),0.0000e+00
-v0_p5_ellipsoid_frames,2.9677 (0.00%),2.1685 (0.00%),1.8968 (0.00%),0.0000e+00
-v0_p6_ellipsoid_frames,1.1140 (0.00%),0.9899 (0.00%),0.9981 (0.00%),0.0000e+00
+v0_p1_ellipsoid_frames,1.5496 (0.00%),1.4179 (0.00%),1.3896 (0.00%),0.0000e+00
+v0_p2_ellipsoid_frames,1.5932 (0.00%),1.4462 (0.00%),1.4384 (0.00%),0.0000e+00
+v0_p3_ellipsoid_frames,1.0969 (0.00%),0.9948 (0.00%),0.9906 (0.00%),0.0000e+00
+v0_p4_ellipsoid_frames,0.4106 (0.00%),0.3548 (0.00%),0.3471 (0.00%),0.0000e+00
+v0_p5_ellipsoid_frames,1.6332 (0.00%),1.5055 (0.00%),1.5008 (0.00%),0.0000e+00
+v0_p6_ellipsoid_frames,1.2431 (0.00%),1.1603 (0.00%),1.1598 (0.00%),0.0000e+00
 
-v1_p1_ellipsoid_frames,2.1326 (-28.17%),0.4361 (-80.41%),0.1909 (-91.20%),5.2077e-31
-v1_p2_ellipsoid_frames,0.1585 (-94.74%),0.1522 (-93.13%),0.1511 (-93.55%),1.5600e-32
-v1_p3_ellipsoid_frames,0.5007 (-40.30%),0.1720 (-74.94%),0.1170 (-82.54%),0.0000e+00
-v1_p4_ellipsoid_frames,0.2172 (-32.21%),0.1043 (-63.79%),0.0849 (-70.46%),7.7037e-34
-v1_p5_ellipsoid_frames,0.2017 (-93.20%),0.1799 (-91.71%),0.1773 (-90.65%),0.0000e+00
-v1_p6_ellipsoid_frames,0.7411 (-33.47%),0.2351 (-76.25%),0.1615 (-83.82%),3.7748e-32
+v1_p1_ellipsoid_frames,1.1449 (-26.12%),0.3169 (-77.65%),0.1961 (-85.89%),5.2077e-31
+v1_p2_ellipsoid_frames,0.1826 (-88.54%),0.1644 (-88.63%),0.1584 (-88.99%),1.5600e-32
+v1_p3_ellipsoid_frames,0.8857 (-19.25%),0.2344 (-76.43%),0.1396 (-85.91%),0.0000e+00
+v1_p4_ellipsoid_frames,0.3109 (-24.28%),0.1226 (-65.44%),0.0966 (-72.16%),7.7037e-34
+v1_p5_ellipsoid_frames,0.2249 (-86.23%),0.1892 (-87.43%),0.1832 (-87.79%),0.0000e+00
+v1_p6_ellipsoid_frames,0.8173 (-34.25%),0.2530 (-78.19%),0.1629 (-85.96%),3.7748e-32
 
-v2_p1_ellipsoid_frames,2.1299 (-28.26%),0.4310 (-80.64%),0.1845 (-91.50%),5.2077e-31
-v2_p2_ellipsoid_frames,0.1757 (-94.17%),0.1599 (-92.78%),0.1597 (-93.18%),1.5600e-32
-v2_p3_ellipsoid_frames,0.5261 (-37.27%),0.1776 (-74.11%),0.1222 (-81.76%),0.0000e+00
-v2_p4_ellipsoid_frames,0.2090 (-34.76%),0.1065 (-63.05%),0.0886 (-69.18%),7.7037e-34
-v2_p5_ellipsoid_frames,0.2087 (-92.97%),0.1803 (-91.69%),0.1764 (-90.70%),0.0000e+00
-v2_p6_ellipsoid_frames,0.7390 (-33.66%),0.2324 (-76.52%),0.1630 (-83.67%),3.7748e-32
+v2_p1_ellipsoid_frames,0.9388 (-39.42%),0.2874 (-79.73%),0.1960 (-85.89%),5.2077e-31
+v2_p2_ellipsoid_frames,0.1817 (-88.60%),0.1643 (-88.64%),0.1588 (-88.96%),1.5600e-32
+v2_p3_ellipsoid_frames,0.8425 (-23.19%),0.2288 (-77.00%),0.1388 (-85.99%),0.0000e+00
+v2_p4_ellipsoid_frames,0.3110 (-24.26%),0.1246 (-64.89%),0.0982 (-71.70%),7.7037e-34
+v2_p5_ellipsoid_frames,0.2107 (-87.10%),0.1951 (-87.04%),0.1948 (-87.02%),0.0000e+00
+v2_p6_ellipsoid_frames,0.8255 (-33.59%),0.2501 (-78.44%),0.1718 (-85.19%),3.7748e-32
 
 Note: Number in parenthesis after runtime refers to corresponding runtime change compared to original implementation (version 0).
       Negative runtime change means computation was faster compared to the original implementation.

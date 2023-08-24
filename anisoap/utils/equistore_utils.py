@@ -12,7 +12,9 @@ from .cyclic_list import CGRCacheList
 
 
 class ClebschGordanReal:
-    def __init__(self, l_max, *, version: int = None, cache_list: CGRCacheList = None):
+    cache_list = CGRCacheList(5)
+
+    def __init__(self, l_max, *, version: int = None):
         self._l_max = l_max
         self._cg = {}
 
@@ -23,12 +25,12 @@ class ClebschGordanReal:
             r2c[L] = _real2complex(L)
             c2r[L] = np.conjugate(r2c[L]).T
 
-        if (version is None or version >= 1) and cache_list is not None:
-            if l_max in cache_list.keys():
-                self._cg = cache_list.get_val(l_max)
+        if (version is None or version >= 1) and ClebschGordanReal.cache_list is not None:
+            if l_max in ClebschGordanReal.cache_list.keys():
+                self._cg = ClebschGordanReal.cache_list.get_val(l_max)
             else:
                 self._init_cg(r2c, c2r)
-                cache_list.insert(l_max, self._cg)
+                ClebschGordanReal.cache_list.insert(l_max, self._cg)
         else:
             self._init_cg(r2c, c2r)
 
@@ -39,7 +41,7 @@ class ClebschGordanReal:
                     max(l1, l2) - min(l1, l2), min(self._l_max, (l1 + l2)) + 1
                 ):
                     complex_cg = _complex_clebsch_gordan_matrix(l1, l2, L)
-                    
+
                     real_cg = (r2c[l1].T @ complex_cg.reshape(2 * l1 + 1, -1)).reshape(
                         complex_cg.shape
                     )
