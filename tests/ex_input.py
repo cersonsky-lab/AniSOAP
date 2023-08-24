@@ -61,7 +61,8 @@ _MOST_RECENT_VER = 2
 # See above for explanations for each variables.
 _comp_version = [1, _MOST_RECENT_VER]
 _test_files = [
-    "ellipsoid_frames"
+    "ellipsoid_frames",
+    "ell-trimers"
     # "both_rotating_in_z", # Results in key error in frames.arrays['c_q']
     # "face_to_face",
     # "random_rotations",
