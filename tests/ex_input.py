@@ -178,8 +178,7 @@ del start_time
 def single_pass(
     file_path: str,
     params: list[float], *,
-    version: int = _MOST_RECENT_VER,
-    cache_list: CGRCacheList = None
+    version: int = _MOST_RECENT_VER
 ) -> (list[list[float]], list[Any]):  # returns (result, extra_info)
     # parameter decomposition
     l_max = params[0]
