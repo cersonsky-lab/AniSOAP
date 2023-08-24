@@ -110,7 +110,7 @@ _params = [[[10,     2.0,    5.0,    3.0,    2.0,    1.0],  6],  # p1
 def _identical_param(param1_index: int, param2_index: int) -> bool:
     # Turn on strict, as all parameters should have same length.
     # Index 0 contains all parameters as a list.
-    for p1, p2 in zip(_params[param1_index][0], _params[param2_index][0], strict=True):
+    for p1, p2 in zip(_params[param1_index][0], _params[param2_index][0]):
         #! This loop assumes all parameters are given as numbers. Change the condition
         #! if that changes in the future.
         if abs(p1 - p2) >= 1e-6:

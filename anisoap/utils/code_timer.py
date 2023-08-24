@@ -1,6 +1,6 @@
 import time
 from collections import defaultdict
-from typing import Callable
+from typing import Callable, Union
 from enum import Enum
 
 
@@ -69,7 +69,7 @@ class SimpleTimer:
     def collect_and_append(
             self,
             other: 'SimpleTimer',
-            collect_mode: SimpleTimerCollectMode | Callable[[list[float]], float] = None
+            collect_mode: Union[SimpleTimerCollectMode, Callable[[list[float]], float]] = None
         ):
         """
         Takes another SimpleTimer class as argument and calls average_trials
