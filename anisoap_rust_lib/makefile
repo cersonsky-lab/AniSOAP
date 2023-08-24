@@ -10,7 +10,7 @@ ifeq ($(OS), Windows_NT)
 else
 	ifeq ($(shell uname), Darwin)
 		CURR_OS := mac
-		EXT := .dylib
+		EXT := dylib
 		MOVE_EXT := so
 	else
 		CURR_OS := linux
