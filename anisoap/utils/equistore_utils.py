@@ -195,7 +195,7 @@ def cg_combine(
     x_b,
     feature_names=None,
     clebsch_gordan=None,
-    l_cut=None,
+    lcut=None,
     other_keys_match=None,
 ):
     """
@@ -213,12 +213,12 @@ def cg_combine(
     lmax_a = np.asarray(x_a.keys["angular_channel"], dtype="int32").max()
     lmax_b = np.asarray(x_b.keys["angular_channel"], dtype="int32").max()
 
-    if l_cut is None:
-        l_cut = lmax_a + lmax_b
+    if lcut is None:
+        lcut = lmax_a + lmax_b
 
     # creates a CG object, if needed
     if clebsch_gordan is None:
-        clebsch_gordan = ClebschGordanReal(l_cut)
+        clebsch_gordan = ClebschGordanReal(lcut)
 
     other_keys_a = tuple(
         name for name in x_a.keys.names if name not in ["angular_channel", "order_nu"]
@@ -328,7 +328,7 @@ def cg_combine(
                 continue
             # loops over all permissible output blocks. note that blocks will
             # be filled from different la, lb
-            for L in range(np.abs(lam_a - lam_b), 1 + min(lam_a + lam_b, l_cut)):
+            for L in range(np.abs(lam_a - lam_b), 1 + min(lam_a + lam_b, lcut)):
                 # determines parity of the block
                 NU = order_a + order_b
                 KEY = (

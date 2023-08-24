@@ -213,7 +213,7 @@ def single_pass(
         anisoap_nu1,
         anisoap_nu1,
         clebsch_gordan=my_cg,
-        l_cut=0,
+        lcut=0,
         other_keys_match=["species_center"],
     )
 
