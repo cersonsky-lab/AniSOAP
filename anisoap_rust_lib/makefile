@@ -21,23 +21,33 @@ endif
 
 run: compile_$(CURR_OS) move_$(CURR_OS)
 
+run_manual: compile_$(CURR_OS) move_manual_$(CURR_OS)
+
 compile_windows: compile
+	cargo build --release
 
 compile_linux: compile
+	cargo build --release
 
 compile_mac:
 	cargo rustc --release -- -C link-arg=-undefined -C link-arg=dynamic_lookup
 
-compile: src/lib.rs Cargo.toml
-	cargo build --release
-
 move_windows:
-	echo F|xcopy /y "target\release\anisoap_rust_lib.$(EXT)" "..\anisoap\lib\anisoap_rust_lib.$(MOVE_EXT)"
+	echo F|xcopy /y "target\release\anisoap_rust_lib.$(EXT)" "..\lib\anisoap_rust_lib.$(MOVE_EXT)"
 
 move_linux:
-	cp -f target/release/libanisoap_rust_lib.$(EXT) ../anisoap/lib/anisoap_rust_lib.$(MOVE_EXT)
+	cp -f target/release/libanisoap_rust_lib.$(EXT) ../lib/anisoap_rust_lib.$(MOVE_EXT)
 
 move_mac:
+	cp -f target/release/libanisoap_rust_lib.$(EXT) ../lib/anisoap_rust_lib.$(MOVE_EXT)
+
+move_manual_windows:
+	echo F|xcopy /y "target\release\anisoap_rust_lib.$(EXT)" "..\anisoap\lib\anisoap_rust_lib.$(MOVE_EXT)"
+
+move_manual_linux:
+	cp -f target/release/libanisoap_rust_lib.$(EXT) ../anisoap/lib/anisoap_rust_lib.$(MOVE_EXT)
+
+move_manual_mac:
 	cp -f target/release/libanisoap_rust_lib.$(EXT) ../anisoap/lib/anisoap_rust_lib.$(MOVE_EXT)
 
 # # Build the library and move to the correct folder.
