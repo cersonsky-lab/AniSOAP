@@ -37,6 +37,9 @@ move_windows:
 move_linux:
 	cp -f target/release/libanisoap_rust_lib.$(EXT) ../anisoap/lib/anisoap_rust_lib.$(MOVE_EXT)
 
+move_mac:
+	cp -f target/release/libanisoap_rust_lib.$(EXT) ../anisoap/lib/anisoap_rust_lib.$(MOVE_EXT)
+
 # # Build the library and move to the correct folder.
 # linux: build move_linux
 
