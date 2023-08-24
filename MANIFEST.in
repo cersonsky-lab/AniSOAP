@@ -1,0 +1,18 @@
+global-exclude */__pycache__/*
+global-exclude .pyc
+global-exclude .DS_STORE
+
+recursive-include anisoap/reference *
+recursive-include anisoap/representations *
+recursive-include anisoap/utils *
+recursive-include anisoap/lib *
+
+include anisoap_rust_lib/Cargo.toml
+include anisoap_rust_lib/src/lib.rs
+include anisoap_rust_lib/src/ellip_expansion/mod.rs
+include anisoap_rust_lib/src/ellip_expansion/compute_moments.rs
+
+include Cargo.*
+include pyproject.toml
+include AUTHORS
+include LICENSE
