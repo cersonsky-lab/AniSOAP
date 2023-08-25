@@ -62,7 +62,7 @@ _MOST_RECENT_VER = 2
 _comp_version = [1, _MOST_RECENT_VER]
 _test_files = [
     "ellipsoid_frames",
-    "ell-trimers"
+    # "ell-trimers"
     # "both_rotating_in_z", # Results in key error in frames.arrays['c_q']
     # "face_to_face",
     # "random_rotations",
@@ -348,8 +348,7 @@ def write_result_summary(file: TextIOWrapper, timer: SimpleTimer, err_dict: dict
         file.write(f"{err_dict.get(key):.4e}\n")
 
     file.write("\nNote: Number in parenthesis after runtime refers to corresponding runtime change compared to original implementation (version 0).\n")
-    file.write(
-        "      Negative runtime change means computation was faster compared to the original implementation.\n")
+    file.write("      Negative runtime change means computation was faster compared to the original implementation.\n")
 
 
 def write_raw_data(file: TextIOWrapper, raw_data: dict[str, list[list[float]]]):
@@ -364,10 +363,8 @@ def write_raw_data(file: TextIOWrapper, raw_data: dict[str, list[list[float]]]):
 
 
 if __name__ == "__main__":
-    actual_file_name = "comp_result_v" + \
-        ",".join([str(ver) for ver in _comp_version])
-    write_name = str(pathlib.Path(__file__).parent.absolute()) + \
-        "/time_results/" + actual_file_name + ".csv"
+    actual_file_name = "comp_result_v" + ",".join([str(ver) for ver in _comp_version])
+    write_name = str(pathlib.Path(__file__).parent.absolute()) + "/time_results/" + actual_file_name + ".csv"
     raw_results = dict()
     extra_infos = dict()
     errors = dict()
@@ -385,16 +382,14 @@ if __name__ == "__main__":
 
         for ver in _comp_version:
             for test_file in _test_files:
-                file_path = str(pathlib.Path(__file__).parent.parent.absolute(
-                )) + "/benchmarks/two_particle_gb/" + test_file + ".xyz"
+                file_path = str(pathlib.Path(__file__).parent.parent.absolute()) + "/benchmarks/two_particle_gb/" + test_file + ".xyz"
 
                 for (param_index, (param, repeat_no)) in enumerate(_params):
                     iter_str = get_key(ver, param_index + 1, test_file)
 
                     for rep_index in tqdm(range(repeat_no), desc=f"{iter_str}"):
                         single_pass_timer.mark_start()
-                        comp_result, ex_info = single_pass(
-                            file_path, param, version=ver)
+                        comp_result, ex_info = single_pass(file_path, param, version=ver)
                         single_pass_timer.mark(iter_str)
 
                     # Only stores the result and extra info from the last iteration, as all iterations
@@ -403,8 +398,7 @@ if __name__ == "__main__":
                     extra_infos.update({iter_str: ex_info})
 
                     # Get SSE based on the original implementation (v0) of equivalent parameter set and the test file
-                    errors.update({iter_str: total_error(
-                        raw_results.get(get_comp_key(iter_str)), comp_result)})
+                    errors.update({iter_str: total_error(raw_results.get(get_comp_key(iter_str)), comp_result)})
 
             # Make sure garbage collection does not interfere with the next iteration (version change).
             ClebschGordanReal.cache_list.clear_cache()

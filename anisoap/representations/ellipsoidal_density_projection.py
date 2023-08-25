@@ -448,9 +448,9 @@ class EllipsoidalDensityProjection:
         # Currently, gradients are not supported
         if compute_gradients:
             raise NotImplementedError(
-                "Sorry! Gradients have not yet been implemented")
-        #
-
+                "Sorry! Gradients have not yet been implemented"
+            )
+        
         # Initialize the radial basis class
         if radial_basis_name not in ["monomial", "gto"]:
             raise NotImplementedError(
@@ -459,7 +459,8 @@ class EllipsoidalDensityProjection:
             )
         if radial_gaussian_width != None and radial_basis_name != "gto":
             raise ValueError(
-                "Gaussian width can only be provided with GTO basis")
+                "Gaussian width can only be provided with GTO basis"
+            )
         elif radial_gaussian_width is None and radial_basis_name == "gto":
             raise ValueError("Gaussian width must be provided with GTO basis")
         elif type(radial_gaussian_width) == int:
@@ -529,8 +530,6 @@ class EllipsoidalDensityProjection:
         
         # Define variables determining size of feature vector coming from frames
         self.num_atoms_per_frame = np.array([len(frame) for frame in frames])
-
-        num_particle_types = len(species)
         
         # Initialize arrays in which to store all features
         self.feature_gradients = 0
@@ -567,11 +566,7 @@ class EllipsoidalDensityProjection:
                     frames[i].arrays["c_diameter[3]"][j] / 2,
                 ]
         
-        # TypeError: NeighborList.__init__() takes 3 positional arguments but 4 were given
-        # Deleted the last "True" to resolve this error
-        # NeighborList(self.cutoff_radius, True, True) -> NeighborList(self.cutoff_radius, True)
-        self.nl = NeighborList(
-            self.cutoff_radius, True).compute(frame_generator)
+        self.nl = NeighborList(self.cutoff_radius, True, True).compute(frame_generator)
         
         pairwise_ellip_feat = pairwise_ellip_expansion(
             self.max_angular,
@@ -585,12 +580,9 @@ class EllipsoidalDensityProjection:
             version=version
         )
         
-        features = contract_pairwise_feat(
-            pairwise_ellip_feat, species, show_progress)
+        features = contract_pairwise_feat(pairwise_ellip_feat, species, show_progress)
         
         if normalize:
-            normalized_features = self.radial_basis.orthonormalize_basis(
-                features)
-            return normalized_features
+            return self.radial_basis.orthonormalize_basis(features)
         else:
             return features
