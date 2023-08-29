@@ -151,8 +151,6 @@ def _single_pair_expansion(tensorblock_list, neighbor_list, center_species,
         )
                     
         # moved from original position
-        # TODO: Remove this line in final version, as i_global is not used.
-        # i_global = frame_to_global_atom_idx[frame_idx] + i
         j_global = frame_to_global_atom_idx[frame_idx] + j
         rot = rotation_matrices[j_global]
         lengths = ellipsoid_lengths[j_global]
@@ -163,8 +161,7 @@ def _single_pair_expansion(tensorblock_list, neighbor_list, center_species,
 
         if version is None or version >= 1:
             # NOTE: This line was replaced with Rust implementation.
-            moments = compute_moments(
-                precision, center, lmax + np.max(num_ns))
+            moments = compute_moments(precision, center, lmax + np.max(num_ns))
         else:
             moments = compute_moments_inefficient_implementation(
                 precision, center, maxdeg=lmax + np.max(num_ns)
@@ -173,10 +170,7 @@ def _single_pair_expansion(tensorblock_list, neighbor_list, center_species,
         for l in range(lmax + 1):
             deg = l + 2 * (num_ns[l] - 1)
             moments_l = moments[: deg + 1, : deg + 1, : deg + 1]
-            values_ldict[l].append(
-                np.einsum("mnpqr, pqr->mn",
-                          sph_to_cart[l], moments_l)
-            )
+            values_ldict[l].append(np.einsum("mnpqr, pqr->mn", sph_to_cart[l], moments_l))
 
     for l in tqdm(
         range(lmax + 1),
@@ -272,7 +266,7 @@ def contract_pairwise_feat(pair_ellip_feat, species, show_progress=False):
             ]
 
             if not len(sel_blocks):
-                #                 print(key, ele, "skipped") # this block is not found in the pairwise feat
+                # print(key, ele, "skipped") # this block is not found in the pairwise feat
                 continue
             assert len(sel_blocks) == 1
 
@@ -316,11 +310,9 @@ def contract_pairwise_feat(pair_ellip_feat, species, show_progress=False):
                 # in the example above, for sample = (0,0) we would identify sample_idx = [(0,0,1), (0,0,2)]
                 if len(sample_idx) == 0:
                     continue
-                #             #print(key, ele, sample, block.samples[sample_idx])
+                # print(key, ele, sample, block.samples[sample_idx])
                 block_samples.append(sample)
-                block_values.append(
-                    block.values[sample_idx].sum(axis=0)
-                )  # sum over "j"  for given ele
+                block_values.append(block.values[sample_idx].sum(axis=0))  # sum over "j"  for given ele
 
                 # block_values has as many entries as samples satisfying (key, neighbor_species=ele).
                 # When we iterate over neighbor species, not all (structure, center) would be present
@@ -330,8 +322,7 @@ def contract_pairwise_feat(pair_ellip_feat, species, show_progress=False):
 
             contract_blocks.append(block_values)
             contract_samples.append(block_samples)
-            contract_properties.append(
-                [tuple(p) + (ele,) for p in block.properties])
+            contract_properties.append([tuple(p) + (ele,) for p in block.properties])
             # this adds the "ele" (i.e. neighbor_species) to the properties dimension
 
         #         print(len(contract_samples))

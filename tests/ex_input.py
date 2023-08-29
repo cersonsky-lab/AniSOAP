@@ -71,8 +71,7 @@ _test_files = [
     # "single_rotating_in_y",
     # "single_rotating_in_z"
 ]
-_timer_collect_mode = [SimpleTimerCollectMode.MAX,
-                       SimpleTimerCollectMode.AVG, SimpleTimerCollectMode.MED]
+_timer_collect_mode = [SimpleTimerCollectMode.MAX, SimpleTimerCollectMode.AVG, SimpleTimerCollectMode.MED]
 _cache_size = 5
 _skip_raw_data = True
 
@@ -200,11 +199,8 @@ def single_pass(
         frame.arrays["c_diameter[3]"] = a3 * np.ones(len(frame))
         frame.arrays["quaternions"] = frame.arrays['c_q']
 
-    # timer works internally inside "transform"
-    rep_raw = representation.transform(
-        frames, show_progress=False, version=version)
-    rep = equistore.operations.mean_over_samples(
-        rep_raw, sample_names="center")
+    rep_raw = representation.transform(frames, show_progress=False, version=version)
+    rep = equistore.operations.mean_over_samples(rep_raw, sample_names="center")
 
     anisoap_nu1 = standardize_keys(rep)
     my_cg = ClebschGordanReal(l_max, version=version)
@@ -341,8 +337,7 @@ def write_result_summary(file: TextIOWrapper, timer: SimpleTimer, err_dict: dict
 
             curr_runtime = timer_dict.get(key)[0]
             original_runtime = timer_dict.get(get_comp_key(key))[0]
-            percent_diff = (curr_runtime - original_runtime) / \
-                original_runtime * 100
+            percent_diff = (curr_runtime - original_runtime) / original_runtime * 100
             file.write(f"{curr_runtime:.4f} ({percent_diff:.2f}%),")
 
         file.write(f"{err_dict.get(key):.4e}\n")
