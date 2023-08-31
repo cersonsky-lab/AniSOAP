@@ -11,5 +11,6 @@ crate-type = ["dylib"]
 [dependencies]
 pyo3 = { version = "0.19.0", features = ["extension-module"] }
 numpy = "0.19.0"
-# equistore = { git = "https://github.com/lab-cosmo/equistore.git" }
-# rascaline = { git = "https://github.com/Luthaf/rascaline", default-features = false }
+# name changed from equistore to metatensor
+metatensor = { git = "https://github.com/lab-cosmo/metatensor.git", features = ["static"] }
+# rascaline = { git = "https://github.com/Luthaf/rascaline" }

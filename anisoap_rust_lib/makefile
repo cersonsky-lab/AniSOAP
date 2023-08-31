@@ -23,10 +23,10 @@ run: compile_$(CURR_OS) move_$(CURR_OS)
 
 run_manual: compile_$(CURR_OS) move_manual_$(CURR_OS)
 
-compile_windows: compile
+compile_windows:
 	cargo build --release
 
-compile_linux: compile
+compile_linux:
 	cargo build --release
 
 compile_mac:

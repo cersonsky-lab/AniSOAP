@@ -3,3 +3,38 @@ Comparison of versions [0 1 2]
 ---------------- Initialization Info ----------------
 initial_import time (sec),  0.0000
 
+----------------- Parameter Summary -----------------
+Parameter Set,l_max,sigma,r_cut,sigma_1,sigma_2,sigma_3,Rotation Quaternion
+p1,10,2.0,5.0,3.0,2.0,1.0,-0.7071 - 0.7071i + 0.0000j + 0.0000k
+p2,10,3.0,4.0,3.0,2.0,1.0,-0.7071 - 0.7071i + 0.0000j + 0.0000k
+p3,7,4.0,6.0,3.0,2.0,1.0,-0.7071 - 0.7071i + 0.0000j + 0.0000k
+p4,5,3.0,5.0,5.0,3.0,1.0,-0.7071 - 0.7071i + 0.0000j + 0.0000k
+p5,10,2.0,5.0,3.0,3.0,0.8,-0.7071 - 0.7071i + 0.0000j + 0.0000k
+p6,8,10.0,10.0,10.0,7.0,5.0,-0.7071 - 0.7071i + 0.0000j + 0.0000k
+
+------------------ Overall Summary ------------------
+Name,Maximum runtime (sec),Average runtime (sec),Median runtime (sec),SSE (from v0)
+v0_p1_ellipsoid_frames,3.2537 (0.00%),2.7706 (0.00%),2.8308 (0.00%),0.0000e+00
+v0_p2_ellipsoid_frames,3.5974 (0.00%),2.8544 (0.00%),2.6899 (0.00%),0.0000e+00
+v0_p3_ellipsoid_frames,0.9307 (0.00%),0.8404 (0.00%),0.8210 (0.00%),0.0000e+00
+v0_p4_ellipsoid_frames,0.4553 (0.00%),0.3792 (0.00%),0.3733 (0.00%),0.0000e+00
+v0_p5_ellipsoid_frames,3.6152 (0.00%),2.9301 (0.00%),2.9256 (0.00%),0.0000e+00
+v0_p6_ellipsoid_frames,1.4809 (0.00%),1.3596 (0.00%),1.3898 (0.00%),0.0000e+00
+
+v1_p1_ellipsoid_frames,1.6209 (-50.18%),0.4644 (-83.24%),0.2970 (-89.51%),5.6160e-31
+v1_p2_ellipsoid_frames,0.2907 (-91.92%),0.2779 (-90.27%),0.2784 (-89.65%),3.7748e-32
+v1_p3_ellipsoid_frames,0.5582 (-40.03%),0.2445 (-70.90%),0.1964 (-76.08%),0.0000e+00
+v1_p4_ellipsoid_frames,0.2538 (-44.27%),0.1467 (-61.32%),0.1310 (-64.92%),7.7037e-34
+v1_p5_ellipsoid_frames,0.3409 (-90.57%),0.3049 (-89.59%),0.2966 (-89.86%),6.9333e-33
+v1_p6_ellipsoid_frames,1.0122 (-31.65%),0.3321 (-75.58%),0.2325 (-83.27%),0.0000e+00
+
+v2_p1_ellipsoid_frames,1.6790 (-48.40%),0.4770 (-82.78%),0.3089 (-89.09%),5.6160e-31
+v2_p2_ellipsoid_frames,0.3134 (-91.29%),0.2887 (-89.88%),0.2849 (-89.41%),3.7748e-32
+v2_p3_ellipsoid_frames,0.6162 (-33.79%),0.2461 (-70.72%),0.1796 (-78.13%),0.0000e+00
+v2_p4_ellipsoid_frames,0.2578 (-43.37%),0.1474 (-61.13%),0.1295 (-65.32%),7.7037e-34
+v2_p5_ellipsoid_frames,0.3050 (-91.56%),0.2923 (-90.03%),0.2899 (-90.09%),6.9333e-33
+v2_p6_ellipsoid_frames,0.7632 (-48.46%),0.2971 (-78.15%),0.2271 (-83.66%),0.0000e+00
+
+Note: Number in parenthesis after runtime refers to corresponding runtime change compared to original implementation (version 0).
+      Negative runtime change means computation was faster compared to the original implementation.
+
