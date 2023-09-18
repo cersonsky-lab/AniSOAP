@@ -14,7 +14,37 @@ use numpy::ndarray::{Array2, ArrayView2};
 /// provided matrix. The function will return `Err(String)` if the matrix is
 /// singular, with string containing the basic error message.
 pub fn mat33_inverse(mat: &ArrayView2<'_, f64>) -> Result<(f64, Array2<f64>), String> {
-    Err("Not implemented yet".into())
+    let det = mat[[0, 0]] * (mat[[1, 1]] * mat[[2, 2]] - mat[[2, 1]] * mat[[1, 2]])
+        - mat[[0, 1]] * (mat[[1, 0]] * mat[[2, 2]] - mat[[2, 0]] * mat[[1, 2]])
+        + mat[[0, 2]] * (mat[[1, 0]] * mat[[2, 1]] - mat[[2, 0]] * mat[[1, 1]]);
+
+    if det.abs() < 1e-14 {
+        return Err("The given matrix is singular".into());
+    }
+
+    let mut inv = Array2::<f64>::zeros((3, 3));
+    for i in 0..3 {
+        for j in 0..3 {
+            let (cof_r1, cof_r2) = match i {
+                0 => (1, 2),
+                1 => (0, 2),
+                2 => (0, 1),
+                _ => (0, 0), // should not happen at all
+            };
+            let (cof_c1, cof_c2) = match j {
+                0 => (1, 2),
+                1 => (0, 2),
+                2 => (0, 1),
+                _ => (0, 0), // should not happen at all
+            };
+
+            inv[[i, j]] = (mat[[cof_r1, cof_c1]] * mat[[cof_r2, cof_c2]]
+                - mat[[cof_r1, cof_c2]] * mat[[cof_r2, cof_c1]])
+                / det;
+        }
+    }
+
+    Ok((det, inv))
 }
 
 /// Computes the inverse of a 3 x 3 symmetric matrix. However, this function will

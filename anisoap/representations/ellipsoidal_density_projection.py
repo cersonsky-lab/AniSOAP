@@ -1,9 +1,8 @@
-import sys
 import warnings
 from itertools import product
 
 import numpy as np
-from equistore.core import (
+from metatensor.core import (
     Labels,
     TensorBlock,
     TensorMap,
@@ -232,7 +231,7 @@ def contract_pairwise_feat(pair_ellip_feat, species, show_progress=False):
     # pair_ellip_feat.keys["angular_channel"] to form the keys of the single particle centered feature
     ellip_keys.sort()
     ellip_blocks = []
-    property_names = pair_ellip_feat.property_names + [
+    property_names = pair_ellip_feat.properties_names + [
         "neighbor_species",
     ]
 

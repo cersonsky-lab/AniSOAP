@@ -2,12 +2,11 @@ import re
 
 import numpy as np
 import wigners
-from equistore.core import (
+from metatensor.core import (
     Labels,
     TensorBlock,
     TensorMap,
 )
-from .code_timer import SimpleTimer
 from .cyclic_list import CGRCacheList
 
 

@@ -1,4 +1,5 @@
-import equistore
+import metatensor
+from metatensor.operations import mean_over_samples
 import numpy as np
 from anisoap.utils import standardize_keys, ClebschGordanReal, cg_combine
 from anisoap.representations import EllipsoidalDensityProjection
@@ -200,7 +201,7 @@ def single_pass(
         frame.arrays["quaternions"] = frame.arrays['c_q']
 
     rep_raw = representation.transform(frames, show_progress=False, version=version)
-    rep = equistore.operations.mean_over_samples(rep_raw, sample_names="center")
+    rep = mean_over_samples(rep_raw, samples_names="center")
 
     anisoap_nu1 = standardize_keys(rep)
     my_cg = ClebschGordanReal(l_max, version=version)
