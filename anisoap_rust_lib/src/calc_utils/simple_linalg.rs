@@ -13,6 +13,7 @@ use numpy::ndarray::{Array2, ArrayView2};
 /// `det` is the determinant of the matrix, and `inv` is the inverse of the
 /// provided matrix. The function will return `Err(String)` if the matrix is
 /// singular, with string containing the basic error message.
+#[allow(dead_code)] // Unused function for now.
 pub fn mat33_inverse(mat: &ArrayView2<'_, f64>) -> Result<(f64, Array2<f64>), String> {
     let det = mat[[0, 0]] * (mat[[1, 1]] * mat[[2, 2]] - mat[[2, 1]] * mat[[1, 2]])
         - mat[[0, 1]] * (mat[[1, 0]] * mat[[2, 2]] - mat[[2, 0]] * mat[[1, 2]])
