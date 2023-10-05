@@ -37,6 +37,10 @@ TEST_FRAMES = [
     [TEST_SINGLE_FRAME, TEST_QUAT_FRAME, TEST_MATRIX_FRAME],
 ]
 
+SINGLE_FEATURES = []
+QUAT_FEATURES = []
+MATRIX_FEATURES = []
+KNOWN_FEATURES = [SINGLE_FEATURES, QUAT_FEATURES, MATRIX_FEATURES, [SINGLE_FEATURES, QUAT_FEATURES, MATRIX_FEATURES]]
 
 DEFAULT_HYPERS = {
     "max_angular": 10,
@@ -54,6 +58,16 @@ class TestEllipsoidalDensityProjection:
     @pytest.mark.parametrize("frames", TEST_FRAMES)
     def test_frames(self, frames):
         EllipsoidalDensityProjection(**DEFAULT_HYPERS).transform(frames)
+
+    # @pytest.mark.parametrize("frames", TEST_FRAMES)
+    # @pytest.mark.parametrize("features", KNOWN_FEATURES)
+    # def test_outputs(self, frames, features):
+    #     rep=EllipsoidalDensityProjection(**DEFAULT_HYPERS).transform(frames)
+    
+    @pytest.mark.parametrize("frames", TEST_FRAMES)
+    def test_frames(self, frames):
+        EllipsoidalDensityProjection(**DEFAULT_HYPERS).transform(frames)
+        # get an x and compare it to features
 
     @pytest.mark.parametrize("frames", TEST_FRAMES)
     def test_frames_show_progress(self, frames):
