@@ -2,7 +2,7 @@ import warnings
 
 import numpy as np
 import scipy.linalg
-from equistore.core import TensorMap
+from metatensor.core import TensorMap
 from scipy.special import gamma
 
 

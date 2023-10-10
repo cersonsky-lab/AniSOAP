@@ -3,7 +3,7 @@ import warnings
 from itertools import product
 
 import numpy as np
-from equistore.core import (
+from metatensor.core import (
     Labels,
     TensorBlock,
     TensorMap,

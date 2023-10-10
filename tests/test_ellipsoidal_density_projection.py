@@ -1,7 +1,7 @@
 ﻿import builtins
 
 import ase
-import equistore
+import metatensor
 import numpy as np
 import pytest
 
@@ -76,8 +76,8 @@ class TestEllipsoidalDensityProjection:
         rep_normalized_2 = edp.radial_basis.orthonormalize_basis(rep_unnormalized)
 
         # Would do this, but failing GitHub CI for older versions of python (possibly b/c it's
-        # building an older version of equistore)?
-        # assert equistore.allclose(rep_normalized_1, rep_normalized_2)
+        # building an older version of metatensor)?
+        # assert metatensor.allclose(rep_normalized_1, rep_normalized_2)
         for i in range(len(rep_unnormalized.blocks())):
             block_norm_1 = rep_normalized_1.block(i)
             block_norm_2 = rep_normalized_2.block(i)
