@@ -2,7 +2,7 @@ import re
 
 import numpy as np
 import wigners
-from metatensor.core import (
+from metatensor import (
     Labels,
     TensorBlock,
     TensorMap,
