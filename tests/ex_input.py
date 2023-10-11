@@ -9,6 +9,7 @@ import pathlib
 import time
 from anisoap.utils.code_timer import SimpleTimer, SimpleTimerCollectMode
 from anisoap.utils.cyclic_list import CGRCacheList
+from ase import Atoms
 
 # Imported for type annotation purposes
 from io import TextIOWrapper
@@ -60,10 +61,10 @@ _skip_raw_data: bool
 _MOST_RECENT_VER = 2
 
 # See above for explanations for each variables.
-_comp_version = [1, _MOST_RECENT_VER]
+_comp_version = [0, _MOST_RECENT_VER]
 _test_files = [
-    "ellipsoid_frames",
-    # "ell-trimers"
+    # "ellipsoid_frames",
+    "ell-trimers"
     # "both_rotating_in_z", # Results in key error in frames.arrays['c_q']
     # "face_to_face",
     # "random_rotations",
@@ -76,6 +77,7 @@ _timer_collect_mode = [SimpleTimerCollectMode.MAX, SimpleTimerCollectMode.AVG, S
 _cache_size = 5
 _skip_raw_data = True
 
+_frame_cut = [10, 50, 100, 250, 500, 750, 1000, 1500, 2000, 2500, 3000, 3500]
 # set to ignore all waring messages.
 # As of version 1, there are two warnings for each iteration:
 #   1. UserWarning: In quaternion mode, quaternions are assumed to be in (w,x,y,z) format.
@@ -90,20 +92,8 @@ warnings.filterwarnings("ignore")
 #       For example, below example should result in 8 iterations each for p1 ~ p6.
 #       p7 ~ p11 should be deleted.
 
-#            lmax    σ       r_cut   σ1      σ2      σ3     repeat
-_params = [[[10,     2.0,    5.0,    3.0,    2.0,    1.0],  6],  # p1
-           [[10,     3.0,    4.0,    3.0,    2.0,    1.0],  4],  # p2
-           [[7,     4.0,    6.0,    3.0,    2.0,    1.0],  3],  # p3
-           [[5,     3.0,    5.0,    5.0,    3.0,    1.0],  6],  # p4
-           [[10,     2.0,    5.0,    3.0,    3.0,    0.8],  8],  # p5
-           #    [[ 8,     0.5,    1.0,    1.0,    0.8,    0.5],  8], # p? << Results in bug from Rascaline?
-           [[8,    10.0,   10.0,   10.0,    7.0,    5.0],  8],  # p6
-
-           [[10,     2.0,    5.0,    3.0,    2.0,    1.0],  1],  # identical to p1
-           [[5,     3.0,    5.0,    5.0,    3.0,    1.0],  2],  # identical to p4
-           [[10,     2.0,    5.0,    3.0,    2.0,    1.0],  1],  # identical to p1
-           [[7,     4.0,    6.0,    3.0,    2.0,    1.0],  5],  # identical to p3
-           [[10,     3.0,    4.0,    3.0,    2.0,    1.0],  4]]  # identical to p2
+#           lmax    σ       r_cut   σ1      σ2      σ3     repeat
+_params = [[[10,     5.0,    1.0,    1.0,    1.0,    2.0],  3]]  # p1
 
 # --------------------------- Configuration Checks --------------------------- #
 
@@ -153,12 +143,7 @@ def _remove_and_merge_duplicate_param() -> None:
 
 _remove_and_merge_duplicate_param()
 
-# If any of the repeat number is not valid (0 or less), artificially set to 1.
-for param in _params:
-    if param[1] < 1:
-        param[1] = 1
-
-if _timer_collect_mode == []:
+if len(_timer_collect_mode) == 0:
     _timer_collect_mode = [SimpleTimerCollectMode.MAX]
 
 # Always have version 0 to compare against.
@@ -171,15 +156,11 @@ _comp_version = sorted(list(set(_comp_version)))
 ClebschGordanReal.cache_list = CGRCacheList(_cache_size)
 
 # -------------------------------- Main Codes -------------------------------- #
-start_time = time.perf_counter()
-import_duration = time.perf_counter() - start_time
-del start_time
-
-
 def single_pass(
-    file_path: str,
+    frames: list[Atoms],
     params: list[float], *,
-    version: int = _MOST_RECENT_VER
+    num_frame: int = None,
+    version: int = _MOST_RECENT_VER,
 ) -> (list[list[float]], list[Any]):  # returns (result, extra_info)
     # parameter decomposition
     l_max = params[0]
@@ -187,7 +168,6 @@ def single_pass(
     r_cut = params[2]
     a1, a2, a3 = params[3:]
 
-    frames = read(file_path, ':')
     representation = EllipsoidalDensityProjection(max_angular=l_max,
                                                   radial_basis_name='gto',
                                                   rotation_type='quaternion',
@@ -199,6 +179,10 @@ def single_pass(
         frame.arrays["c_diameter[2]"] = a2 * np.ones(len(frame))
         frame.arrays["c_diameter[3]"] = a3 * np.ones(len(frame))
         frame.arrays["quaternions"] = frame.arrays['c_q']
+
+    if num_frame is None or num_frame > len(frames):
+        num_frame = len(frames)
+    frames = frames[0:num_frame]
 
     rep_raw = representation.transform(frames, show_progress=False, version=version)
     rep = mean_over_samples(rep_raw, samples_names="center")
@@ -244,12 +228,12 @@ def total_error(result1: list[list[float]], result2: list[list[float]]) -> float
     return sse
 
 
-def get_key(ver: int, param_index: int, file: str) -> str:
+def get_key(ver: int, param_index: int, n_frames: int, file: str) -> str:
     """
     Get the key of the dictionary, given version, parameter index, and the file name.
     Format is: v{ver}_p{param_index}_{file}
     """
-    return f"v{ver}_p{param_index}_{file}"
+    return f"v{ver}_p{param_index}_f{n_frames}_{file}"
 
 
 def get_comp_key(key: str) -> str:
@@ -268,7 +252,8 @@ def keys_in_order() -> list[str]:
     for ver in _comp_version:
         for file_name in _test_files:
             for param_index in range(len(_params)):
-                all_tests_list.append(get_key(ver, param_index + 1, file_name))
+                for n_frame in _frame_cut:
+                    all_tests_list.append(get_key(ver, param_index + 1, n_frame, file_name))
     return all_tests_list
 
 
@@ -290,7 +275,7 @@ def write_param_summary(file: TextIOWrapper, extra_info: list[Any]):
         # NOTE: Since the rotation quaternion does not depend on the file or version
         #       (considering the constructor of EDP, which does not depend on either),
         #       we can use v0 and any test_file's (in this case, index 0) rotation quaternion.
-        quat_key = get_key(0, param_index + 1, _test_files[0])
+        quat_key = get_key(0, param_index + 1, _frame_cut[0], _test_files[0])
         quat = extra_info.get(quat_key)[0]
         file.write(f"{quat[0]:.4f}")
         for i, suffix in enumerate(quat_vec):
@@ -369,32 +354,30 @@ if __name__ == "__main__":
         out_file.write(
             f"Comparison of versions [{' '.join([str(ver) for ver in _comp_version])}]\n\n")
 
-        out_file.write(
-            "---------------- Initialization Info ----------------\n")
-        out_file.write(
-            f"initial_import time (sec), {import_duration: .04f}\n\n")
-
         single_pass_timer = SimpleTimer()
 
         for ver in _comp_version:
             for test_file in _test_files:
                 file_path = str(pathlib.Path(__file__).parent.parent.absolute()) + "/benchmarks/two_particle_gb/" + test_file + ".xyz"
+                frames = read(file_path, ':')
+                len_frame = len(frames)
 
                 for (param_index, (param, repeat_no)) in enumerate(_params):
-                    iter_str = get_key(ver, param_index + 1, test_file)
+                    for n_frame in _frame_cut:
+                        iter_str = get_key(ver, param_index + 1, n_frame, test_file)
 
-                    for rep_index in tqdm(range(repeat_no), desc=f"{iter_str}"):
-                        single_pass_timer.mark_start()
-                        comp_result, ex_info = single_pass(file_path, param, version=ver)
-                        single_pass_timer.mark(iter_str)
+                        for rep_index in tqdm(range(repeat_no), desc=f"{iter_str}"):
+                            single_pass_timer.mark_start()
+                            comp_result, ex_info = single_pass(frames, param, version=ver, num_frame=n_frame)
+                            single_pass_timer.mark(iter_str)
 
-                    # Only stores the result and extra info from the last iteration, as all iterations
-                    # should lead to identical results
-                    raw_results.update({iter_str: comp_result})
-                    extra_infos.update({iter_str: ex_info})
+                        # Only stores the result and extra info from the last iteration, as all iterations
+                        # should lead to identical results
+                        raw_results.update({iter_str: comp_result})
+                        extra_infos.update({iter_str: ex_info})
 
-                    # Get SSE based on the original implementation (v0) of equivalent parameter set and the test file
-                    errors.update({iter_str: total_error(raw_results.get(get_comp_key(iter_str)), comp_result)})
+                        # Get SSE based on the original implementation (v0) of equivalent parameter set and the test file
+                        errors.update({iter_str: total_error(raw_results.get(get_comp_key(iter_str)), comp_result)})
 
             # Make sure garbage collection does not interfere with the next iteration (version change).
             ClebschGordanReal.cache_list.clear_cache()

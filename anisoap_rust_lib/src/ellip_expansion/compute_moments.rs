@@ -92,9 +92,12 @@ pub fn compute_moments_rust_unchecked(
 
     // Initialize degree-0 and degree-1 elements
     moments[[0, 0, 0]] = 1.0;
-    moments[[1, 0, 0]] = a0;
-    moments[[0, 1, 0]] = a1;
-    moments[[0, 0, 1]] = a2;
+
+    if max_deg >= 1 {
+        moments[[1, 0, 0]] = a0;
+        moments[[0, 1, 0]] = a1;
+        moments[[0, 0, 1]] = a2;
+    }
 
     if max_deg >= 2 {
         // Initialize degree-2 elements
@@ -112,48 +115,64 @@ pub fn compute_moments_rust_unchecked(
         for n0 in 0..=deg {
             for n1 in 0..=(deg - n0) {
                 let n2 = deg - n0 - n1; // Forces n0 + n1 + n2 = deg
-                let (n0_pos, n1_pos, n2_pos) = (n0 > 0, n1 > 0, n2 > 0);
+                let flag = if n0 == 0 { 0 } else { 0b100 }
+                    | if n1 == 0 { 0 } else { 0b010 }
+                    | if n2 == 0 { 0 } else { 0b001 };
 
-                // Run the x-iteration
-                moments[[n0 + 1, n1, n2]] = a0 * moments[[n0, n1, n2]]
-                    + if n0_pos {
-                        inv00 * n0 as f64 * moments[[n0 - 1, n1, n2]]
-                    } else {
-                        0.0
+                // Memory access to current element is shared across all branches.
+                let m_curr = moments[[n0, n1, n2]];
+                match flag {
+                    0 => {
+                        // (0, 0, 0): Run all iterations
+                        // Note this case is not likely to be encountered in the loop
+                        // as n0 + n1 + n2 = deg != 0.
+                        moments[[n0 + 1, n1, n2]] = a0 * m_curr;
+                        moments[[n0, n1 + 1, n2]] = a1 * m_curr;
+                        moments[[n0, n1, n2 + 1]] = a2 * m_curr;
                     }
-                    + if n1_pos {
-                        inv01 * n1 as f64 * moments[[n0, n1 - 1, n2]]
-                    } else {
-                        0.0
+                    1 => {
+                        // (0, 0, +): run x, y, and z iterations
+                        let z_mul = n2 as f64 * moments[[n0, n1, n2 - 1]];
+                        moments[[n0 + 1, n1, n2]] = a0 * m_curr + inv02 * z_mul;
+                        moments[[n0, n1 + 1, n2]] = a1 * m_curr + inv12 * z_mul;
+                        moments[[n0, n1, n2 + 1]] = a2 * m_curr + inv22 * z_mul;
                     }
-                    + if n2_pos {
-                        inv02 * n2 as f64 * moments[[n0, n1, n2 - 1]]
-                    } else {
-                        0.0
-                    };
-
-                // Run y-iteration if n0 is 0.
-                if !n0_pos {
-                    moments[[n0, n1 + 1, n2]] = a1 * moments[[n0, n1, n2]]
-                        + if n1_pos {
-                            inv11 * n1 as f64 * moments[[n0, n1 - 1, n2]]
-                        } else {
-                            0.0
-                        }
-                        + if n2_pos {
-                            inv12 * n2 as f64 * moments[[n0, n1, n2 - 1]]
-                        } else {
-                            0.0
-                        };
-
-                    // Run z-iteration if both n0 and n1 are 0.
-                    if !n1_pos {
-                        moments[[n0, n1, n2 + 1]] = a2 * moments[[n0, n1, n2]]
-                            + if n2_pos {
-                                inv22 * n2 as f64 * moments[[n0, n1, n2 - 1]]
-                            } else {
-                                0.0
-                            }
+                    2 => {
+                        // (0, +, 0): run x and y iterations.
+                        let y_mul = n1 as f64 * moments[[n0, n1 - 1, n2]];
+                        moments[[n0 + 1, n1, n2]] = a0 * m_curr + inv01 * y_mul;
+                        moments[[n0, n1 + 1, n2]] = a1 * m_curr + inv11 * y_mul;
+                    }
+                    3 => {
+                        // (0, +, +): run x and y iterations.
+                        let y_mul = n1 as f64 * moments[[n0, n1 - 1, n2]];
+                        let z_mul = n2 as f64 * moments[[n0, n1, n2 - 1]];
+                        moments[[n0 + 1, n1, n2]] = a0 * m_curr + inv01 * y_mul + inv02 * z_mul;
+                        moments[[n0, n1 + 1, n2]] = a1 * m_curr + inv11 * y_mul + inv12 * z_mul;
+                    }
+                    4 => {
+                        // (+, 0, 0): run x iteration only.
+                        moments[[n0 + 1, n1, n2]] =
+                            a0 * m_curr + inv00 * n0 as f64 * moments[[n0 - 1, n1, n2]];
+                    }
+                    5 => {
+                        // (+, 0, +): run x iteration only.
+                        moments[[n0 + 1, n1, n2]] = a0 * m_curr
+                            + inv00 * n0 as f64 * moments[[n0 - 1, n1, n2]]
+                            + inv02 * n2 as f64 * moments[[n0, n1, n2 - 1]];
+                    }
+                    6 => {
+                        // (+, +, 0): run x iteration only.
+                        moments[[n0 + 1, n1, n2]] = a0 * m_curr
+                            + inv00 * n0 as f64 * moments[[n0 - 1, n1, n2]]
+                            + inv01 * n1 as f64 * moments[[n0, n1 - 1, n2]];
+                    }
+                    _ => {
+                        // (+, +, +): run x iteration only.
+                        moments[[n0 + 1, n1, n2]] = a0 * m_curr
+                            + inv00 * n0 as f64 * moments[[n0 - 1, n1, n2]]
+                            + inv01 * n1 as f64 * moments[[n0, n1 - 1, n2]]
+                            + inv02 * n2 as f64 * moments[[n0, n1, n2 - 1]];
                     }
                 }
             }

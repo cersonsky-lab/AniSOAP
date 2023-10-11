@@ -6,7 +6,6 @@ version = 3
 name = "anisoap_rust_lib"
 version = "0.1.0"
 dependencies = [
- "chemfiles",
  "numpy",
  "pyo3",
 ]
@@ -24,46 +23,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
 
 [[package]]
-name = "cc"
-version = "1.0.83"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f1174fb0b6ec23863f8b971027804a42614e347eafb0a95bf0b12cdae21fc4d0"
-dependencies = [
- "libc",
-]
-
-[[package]]
 name = "cfg-if"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
-
-[[package]]
-name = "chemfiles"
-version = "0.10.40"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e11361a2e45ea955f1ce945a88894fa85e94228d150d21ee46a66533ef200d6a"
-dependencies = [
- "chemfiles-sys",
-]
-
-[[package]]
-name = "chemfiles-sys"
-version = "0.10.40"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a8378ff752699a677d423de4b5339798774ab4d498ba639d08541685ae680ff9"
-dependencies = [
- "cmake",
-]
-
-[[package]]
-name = "cmake"
-version = "0.1.50"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a31c789563b815f77f4250caee12365734369f942439b7defd71e18a48197130"
-dependencies = [
- "cc",
-]
 
 [[package]]
 name = "indoc"
