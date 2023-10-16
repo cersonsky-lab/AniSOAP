@@ -1,4 +1,3 @@
-import metatensor
 from metatensor.operations import mean_over_samples
 import numpy as np
 from anisoap.utils import standardize_keys, ClebschGordanReal, cg_combine
@@ -6,7 +5,6 @@ from anisoap.representations import EllipsoidalDensityProjection
 from skmatter.preprocessing import StandardFlexibleScaler
 from ase.io import read
 import pathlib
-import time
 from anisoap.utils.code_timer import SimpleTimer, SimpleTimerCollectMode
 from anisoap.utils.cyclic_list import CGRCacheList
 from ase import Atoms
@@ -17,11 +15,12 @@ from typing import Any
 
 import gc           # for manual garbage collection
 import warnings     # to disable warning messages
+import sys          # to get argv
 
 try:
     from tqdm import tqdm
 except ImportError:
-    tqdm = lambda x, **kwargs: x
+    tqdm = lambda x, **_: x
 
 # ------------------------ Configurations Explanation ------------------------ #
 """
@@ -360,9 +359,10 @@ if __name__ == "__main__":
             for test_file in _test_files:
                 file_path = str(pathlib.Path(__file__).parent.parent.absolute()) + "/benchmarks/two_particle_gb/" + test_file + ".xyz"
                 frames = read(file_path, ':')
-                len_frame = len(frames)
 
-                for (param_index, (param, repeat_no)) in enumerate(_params):
+                for (param_index, (param, _)) in enumerate(_params):
+                    # Override repetition number with argv
+                    repeat_no = int(sys.argv[1])
                     for n_frame in _frame_cut:
                         iter_str = get_key(ver, param_index + 1, n_frame, test_file)
 
