@@ -55,8 +55,8 @@ class CGRCacheList:
                 self._ins_index = (self._ins_index + 1) % self._size
                 curr_entry = self._cyclic_list[self._ins_index]
             
-            # Store [key with replace_flag = 1, value] pair in cyclic list
-            self._cyclic_list[self._ins_index] = [key | CGRCacheList._GET_RFLAG, value]
+            # Store [key with replace_flag = 0, value] pair in cyclic list
+            self._cyclic_list[self._ins_index] = [key, value]
             
             # Advance the "clock hand" once more after insertion.
             self._ins_index = (self._ins_index + 1) % self._size
