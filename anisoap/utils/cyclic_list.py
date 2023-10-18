@@ -70,7 +70,7 @@ class CGRCacheList:
             if element is not None and key == element[0] & CGRCacheList._REMOVE_RFLAG:
                 element[0] = element[0] | CGRCacheList._GET_RFLAG
                 return element[1]
-        raise IndexError(f"The specified key {key} is not in the list. Current keys in the list are: {self._keys}")
+        raise IndexError(f"The specified key {key} is not in the list. Current keys in the list are: {self.keys()}")
     
     def clear_cache(self) -> None:
         """
