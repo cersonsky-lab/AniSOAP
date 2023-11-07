@@ -53,7 +53,7 @@ class DensityProjectionCalculator:
         if compute_gradients:
             raise NotImplementedError("Sorry! Gradients have not yet been implemented")
 
-        # Precompute the spherical to Cartesian transformation
+        # Pre-compute the spherical to Cartesian transformation
         # coefficients.
         num_ns = []
         for l in range(max_angular + 1):
