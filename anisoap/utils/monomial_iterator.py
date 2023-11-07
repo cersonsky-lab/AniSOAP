@@ -1,6 +1,3 @@
-import numpy as np
-
-
 class TrivariateMonomialIndices:
     """
     Class for generating an iterator object over all trivariate

@@ -1,9 +1,4 @@
 import numpy as np
-from numpy.testing import assert_allclose
-from scipy.special import (
-    comb,
-    gamma,
-)
 
 
 # Define function to compute all moments for a single
@@ -40,7 +35,7 @@ def compute_moments_single_variable(A, a, maxdeg):
 
 
 # Define function to compute all moments for a diagonal dilation matrix.
-# The implementation focuses on conceptual simplicity, while sacrifizing
+# The implementation focuses on conceptual simplicity, while sacrificing
 # memory efficiency.
 # To be more specific, the array "moments" allows us to access the value
 # of the moment <x^n0 * y^n1 * z^n2> simply as moments[n0,n1,n2].
@@ -54,7 +49,7 @@ def compute_moments_diagonal_inefficient_implementation(
     - principal_components: np.ndarray of shape (3,)
         Array containing the three principal components
     - a: np.ndarray of shape (3,)
-        Vectorial center of the trivariate Gaussian
+        Vectorial center of the tri-variate Gaussian
     - maxdeg: int
         Maximum degree for which the moments need to be computed.
 
@@ -63,7 +58,7 @@ def compute_moments_diagonal_inefficient_implementation(
         moments[n0,n1,n2] is the (n0,n1,n2)-th moment of the Gaussian defined as
 
         .. math::
-        <x^{n_0} * y^{n_1} * z^{n_2}> = \int(x^{n_0} * y^{n_1} * z^{n_2}) * \exp(-0.5*(r-a).T@cov@(r-a)) dxdydz
+        <x^{n_0} * y^{n_1} * z^{n_2}> = \int(x^{n_0} * y^{n_1} * z^{n_2}) * \exp(-0.5*(r-a).T@cov@(r-a)) dx dy dz
         \sum_{i=1}^{\\infty} x_{i}
 
         Note that the term "moments" in probability theory are defined for normalized Gaussian distributions.
@@ -77,7 +72,7 @@ def compute_moments_diagonal_inefficient_implementation(
     # The advantage, however, is the simplicity in later use.
     moments = np.zeros((maxdeg + 1, maxdeg + 1, maxdeg + 1))
 
-    # Precompute the single variable moments in x- y- and z-directions:
+    # Pre-compute the single variable moments in x- y- and z-directions:
     moments_x = compute_moments_single_variable(principal_components[0], a[0], maxdeg)
     moments_y = compute_moments_single_variable(principal_components[1], a[1], maxdeg)
     moments_z = compute_moments_single_variable(principal_components[2], a[2], maxdeg)
@@ -103,7 +98,7 @@ def compute_moments_diagonal_inefficient_implementation(
 
 
 # Define function to compute all moments for a general dilation matrix.
-# The implementation focuses on conceptual simplicity, while sacrifizing
+# The implementation focuses on conceptual simplicity, while sacrificing
 # memory efficiency.
 # To be more specific, the array "moments" allows us to access the value
 # of the moment <x^n0 * y^n1 * z^n2> simply as moments[n0,n1,n2].
@@ -118,7 +113,7 @@ def compute_moments_inefficient_implementation(A, a, maxdeg):
         the orientation of the three principal axes, while D is a diagonal matrix
         whose three diagonal elements are the lengths of the principal axes.
     - a: np.ndarray of shape (3,)
-        Vectorial center of the trivariate Gaussian.
+        Vectorial center of the tri-variate Gaussian.
     - maxdeg: int
         Maximum degree for which the moments need to be computed.
 
@@ -126,7 +121,7 @@ def compute_moments_inefficient_implementation(A, a, maxdeg):
     - The list of moments defined as
 
         .. math::
-        <x^{n_0} * y^{n_1} * z^{n_2}> = \int(x^{n_0} * y^{n_1} * z^{n_2}) * \exp(-0.5*(r-a).T@cov@(r-a)) dxdydz
+        <x^{n_0} * y^{n_1} * z^{n_2}> = \int(x^{n_0} * y^{n_1} * z^{n_2}) * \exp(-0.5*(r-a).T@cov@(r-a)) dx dy dz
         \sum_{i=1}^{\\infty} x_{i}
 
         Note that the term "moments" in probability theory are defined for normalized Gaussian distributions.

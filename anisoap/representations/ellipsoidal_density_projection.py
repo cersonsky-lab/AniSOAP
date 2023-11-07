@@ -1,20 +1,22 @@
-import sys
 import warnings
-from itertools import product
-
 import numpy as np
+from itertools import product
+from rascaline import NeighborList
+from scipy.spatial.transform import Rotation
 from metatensor import (
     Labels,
     TensorBlock,
     TensorMap,
 )
-from rascaline import NeighborList
-from scipy.spatial.transform import Rotation
-from tqdm.auto import tqdm
 
-from anisoap.representations.radial_basis import RadialBasis
-from anisoap.utils.moment_generator import *
-from anisoap.utils.spherical_to_cartesian import spherical_to_cartesian
+from ..representations.radial_basis import RadialBasis
+from ..utils.moment_generator import *
+from ..utils.spherical_to_cartesian import spherical_to_cartesian
+
+try:
+    from tqdm.auto import tqdm
+except ImportError:
+    tqdm = lambda x, **_: x
 
 
 def pairwise_ellip_expansion(
@@ -95,12 +97,9 @@ def pairwise_ellip_expansion(
                         leave=False,
                     )
                 ):
-                    frame_idx, i, j = (
-                        nl_sample["structure"],
-                        nl_sample["first_atom"],
-                        nl_sample["second_atom"],
-                    )
-                    i_global = frame_to_global_atom_idx[frame_idx] + i
+                    frame_idx, j = (nl_sample["structure"], nl_sample["second_atom"])
+
+                    # i_global is not needed
                     j_global = frame_to_global_atom_idx[frame_idx] + j
 
                     r_ij = np.asarray(
@@ -257,13 +256,11 @@ def contract_pairwise_feat(pair_ellip_feat, species, show_progress=False):
             block_samples = []
             block_values = []
 
-            for isample, sample in enumerate(
-                tqdm(
-                    possible_block_samples,
-                    disable=(not show_progress),
-                    desc="Finding matching block samples",
-                    leave=False,
-                )
+            for sample in tqdm(
+                possible_block_samples,
+                disable=(not show_progress),
+                desc="Finding matching block samples",
+                leave=False,
             ):
                 sample_idx = [
                     idx
@@ -283,7 +280,7 @@ def contract_pairwise_feat(pair_ellip_feat, species, show_progress=False):
                 # block_values has as many entries as samples satisfying (key, neighbor_species=ele).
                 # When we iterate over neighbor species, not all (structure, center) would be present
                 # Example: (0,0,1) might be present in a block with neighbor_species = 1 but no other pair block
-                # ever has (0,0,x) present as a sample- so (0,0) doesnt show up in a block_sample for all ele
+                # ever has (0,0,x) present as a sample- so (0,0) doesn't show up in a block_sample for all ele
                 # so in general we have a ragged list of contract_blocks
 
             contract_blocks.append(block_values)
@@ -304,11 +301,11 @@ def contract_pairwise_feat(pair_ellip_feat, species, show_progress=False):
             )
         )
         # Create storage for the final values - we need as many rows as all_block_samples,
-        # block.values.shape[1:] accounts for "components" and "properties" that are already part of the pair blocks
-        # and we dont alter these
-        # len(contract_blocks) - adds the additional dimension for the neighbor_species since we accumulated
-        # values for each of them as \sum_{j in ele} <|rho_ij>
-        #  Thus - all_block_values.shape = (num_final_samples, components_pair, properties_pair, num_species)
+        # block.values.shape[1:] accounts for "components" and "properties" that
+        # are already part of the pair blocks and we dont alter these
+        # len(contract_blocks) - adds the additional dimension for the neighbor_species
+        # since we accumulated values for each of them as \sum_{j in ele} <|rho_ij>
+        # Thus - all_block_values.shape = (num_final_samples, components_pair, properties_pair, num_species)
 
         for iele, elem_cont_samples in enumerate(
             tqdm(
@@ -319,15 +316,14 @@ def contract_pairwise_feat(pair_ellip_feat, species, show_progress=False):
             )
         ):
             # This effectively loops over the species of the neighbors
-            # Now we just need to add the contributions to the final samples and values from this species to the right
-            # samples
+            # Now we just need to add the contributions to the final samples and
+            # values from this species to the right samples
             nzidx = [
                 i
                 for i in range(len(all_block_samples))
                 if all_block_samples[i] in elem_cont_samples
             ]
             # identifies where the samples that this species contributes to, are present in the final samples
-            #             print(apecies[ib],key, bb, all_block_samples)
             all_block_values[nzidx, :, :, iele] = contract_blocks[iele]
 
         new_block = TensorBlock(
@@ -420,11 +416,12 @@ class EllipsoidalDensityProjection:
             raise ValueError(
                 "radial_gaussian_width is set as an integer, which could cause overflow errors. Pass in float."
             )
-        radial_hypers = {}
-        radial_hypers["radial_basis"] = radial_basis_name.lower()  # lower case
-        radial_hypers["radial_gaussian_width"] = radial_gaussian_width
-        radial_hypers["max_angular"] = max_angular
-        self.radial_basis = RadialBasis(**radial_hypers)
+        radial_hypers = {
+            "radial_gaussian_width": radial_gaussian_width,
+        }
+        self.radial_basis = RadialBasis(
+            radial_basis_name.lower(), max_angular, **radial_hypers
+        )
 
         self.num_ns = self.radial_basis.get_num_radial_functions()
         self.sph_to_cart = spherical_to_cartesian(self.max_angular, self.num_ns)
@@ -455,7 +452,7 @@ class EllipsoidalDensityProjection:
         show_progress : bool
             Show progress bar for frame analysis and feature generation
         normalize: bool
-            Whether to perform Lowdin Symmetric Orthonormalization or not. Orthonormalization generally
+            Whether to perform Löwdin Symmetric Orthonormalization or not. Orthonormalization generally
             leads to better performance. Default: True.
         Returns
         -------
@@ -482,8 +479,6 @@ class EllipsoidalDensityProjection:
 
         # Define variables determining size of feature vector coming from frames
         self.num_atoms_per_frame = np.array([len(frame) for frame in frames])
-
-        num_particle_types = len(species)
 
         # Initialize arrays in which to store all features
         self.feature_gradients = 0

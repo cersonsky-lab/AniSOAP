@@ -1,12 +1,11 @@
 import numpy as np
-import scipy
+from ..utils import monomial_iterator
 from scipy.special import (
     comb,
     factorial,
     factorial2,
 )
 
-from anisoap.utils import monomial_iterator
 
 # Here we are implementing recurrence of the form R_{l}^m = prefact_minus1* z * T_{l-1} + prefact_minus2* r2 * T_{l-2}
 # where R_l^m is a solid harmonic, when expressed on a monomial basis - R_l^m = \sum_{n0+n1+n2=l} T_{l}[n0,n1,n2] x^n0 y^n1 z^n2
@@ -96,7 +95,7 @@ def spherical_to_cartesian(lmax, num_ns):
     for l in range(lmax + 1):
         deg = l
         myiter = iter(monomial_iterator.TrivariateMonomialIndices(deg))
-        for idx, n0, n1, n2 in myiter:
+        for _, n0, n1, n2 in myiter:
             a = prefact_minus1(l - 1)  # elements corresponding to m in (-l+2, ... l-2)
             b = prefact_minus2(l - 1)  # elements corresponding to m in (-l+1, .... l-1)
 
@@ -119,7 +118,7 @@ def spherical_to_cartesian(lmax, num_ns):
         for n in range(1, num_ns[l]):
             deg = l + 2 * n  # degree of polynomial
             myiter = iter(monomial_iterator.TrivariateMonomialIndices(deg))
-            for idx, n0, n1, n2 in myiter:
+            for _, n0, n1, n2 in myiter:
                 # Use recurrence relation to update
                 if n0 >= 2:
                     T[l][:, n, n0, n1, n2] += T[l][:, n - 1, n0 - 2, n1, n2]
