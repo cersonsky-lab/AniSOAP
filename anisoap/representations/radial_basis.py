@@ -98,10 +98,11 @@ class RadialBasis:
 
     """
 
-    def __init__(self, radial_basis, max_angular, num_radial=None, **hypers):
+    def __init__(self, radial_basis, max_angular, cutoff_radius, num_radial=None, **hypers):
         # Store all inputs into internal variables
         self.radial_basis = radial_basis
         self.max_angular = max_angular
+        self.cutoff_radius = cutoff_radius
         self.hypers = hypers
         if self.radial_basis not in ["monomial", "gto"]:
             raise ValueError(f"{self.radial_basis} is not an implemented basis.")
@@ -151,7 +152,7 @@ class RadialBasis:
     # by a precision matrix (inverse of covariance) and its center.
     # The current function computes the covariance matrix and the center
     # for the provided parameters as well as choice of radial basis.
-    def compute_gaussian_parameters(self, r_ij, lengths, rotation_matrix):
+    def compute_gaussian_parameters(self, r_ij, lengths, rotation_matrix, radial_gaussian_width=None):
         # Initialization
         center = r_ij
         diag = np.diag(1 / lengths**2)
@@ -159,7 +160,9 @@ class RadialBasis:
 
         # GTO basis with uniform Gaussian width in the basis functions
         if self.radial_basis == "gto":
-            sigma = self.hypers["radial_gaussian_width"]
+            sigma = radial_gaussian_width
+            if radial_gaussian_width is None:
+                sigma = self.hypers["radial_gaussian_width"]
             precision += np.eye(3) / sigma**2
             center -= 1 / sigma**2 * np.linalg.solve(precision, r_ij)
 
@@ -222,9 +225,19 @@ class RadialBasis:
             l_2n_arr = l + 2 * n_arr
             # normalize all the GTOs by the appropriate prefactor first, since the overlap matrix is in terms of
             # normalized GTOs
+            # Ensure that each gto width is the cutoff_radius * sqrt(n) / nmax. If n < 1, then take n = 1.
+            nmax = n_arr[-1] + 1
+            sigma_arr = []
+            for n in n_arr:
+                if n < 1:
+                    n = 1
+                sigma_arr.append(self.cutoff_radius * np.sqrt(n) / nmax)
+
+            sigma_arr = np.array(sigma_arr)
             prefactor_arr = gto_prefactor(
-                l_2n_arr, self.hypers["radial_gaussian_width"]
+                l_2n_arr, sigma_arr
             )
+            prefactor_arr = gto_prefactor(l_2n_arr, self.hypers["radial_gaussian_width"])
             block.values[:, :, :] = block.values[:, :, :] * prefactor_arr
 
             gto_overlap_matrix_slice = self.overlap_matrix[l_2n_arr, :][:, l_2n_arr]
