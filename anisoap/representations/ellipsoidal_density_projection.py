@@ -420,7 +420,6 @@ class EllipsoidalDensityProjection:
         max_radial=None,
         rotation_key="quaternion",
         rotation_type="quaternion",
-        num_radial=None,
     ):
         # Store the input variables
         self.max_angular = max_angular
