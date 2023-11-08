@@ -428,7 +428,6 @@ class EllipsoidalDensityProjection:
         max_radial=None,
         rotation_key="quaternion",
         rotation_type="quaternion",
-        num_radial=None,
     ):
         """Initializes an object of type EllipsoidalDensityProjection with hyperparameters.
 
