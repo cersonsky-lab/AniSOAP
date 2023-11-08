@@ -14,10 +14,10 @@ class TestNumberOfRadialFunctions:
 
     def test_notimplemented_basis(self):
         with pytest.raises(ValueError):
-            basis = RadialBasis(radial_basis="nonsense", max_angular=5)
+            basis = RadialBasis(radial_basis="nonsense", max_angular=5, cutoff_radius=5)
 
     def test_radial_functions_n5(self):
-        basis_gto = RadialBasis(radial_basis="monomial", max_angular=5)
+        basis_gto = RadialBasis(radial_basis="monomial", max_angular=5, cutoff_radius=5)
         num_ns = basis_gto.get_num_radial_functions()
 
         # Compare against exact results
@@ -27,11 +27,21 @@ class TestNumberOfRadialFunctions:
             assert num == num_ns_exact[l]
 
     def test_radial_functions_n6(self):
-        basis_gto = RadialBasis(radial_basis="monomial", max_angular=6)
+        basis_gto = RadialBasis(radial_basis="monomial", max_angular=6, cutoff_radius=5)
         num_ns = basis_gto.get_num_radial_functions()
 
         # Compare against exact results
         num_ns_exact = [4, 3, 3, 2, 2, 1, 1]
+        assert len(num_ns) == len(num_ns_exact)
+        for l, num in enumerate(num_ns):
+            assert num == num_ns_exact[l]
+
+    def test_radial_functions_n7(self):
+        basis_gto = RadialBasis(radial_basis="monomial", max_angular=6, max_radial=5, cutoff_radius=5)
+        num_ns = basis_gto.get_num_radial_functions()
+
+        # We specify max_radial so it's decoupled from max_angular.
+        num_ns_exact = [5, 5, 5, 5, 5, 5, 5]
         assert len(num_ns) == len(num_ns_exact)
         for l, num in enumerate(num_ns):
             assert num == num_ns_exact[l]
@@ -65,9 +75,9 @@ class TestGaussianParameters:
     @pytest.mark.parametrize("rotation_matrix", rotation_matrices)
     def test_limit_large_sigma(self, sigma, r_ij, lengths, rotation_matrix):
         # Initialize the classes
-        basis_mon = RadialBasis(radial_basis="monomial", max_angular=2)
+        basis_mon = RadialBasis(radial_basis="monomial", max_angular=2, cutoff_radius=5)
         basis_gto = RadialBasis(
-            radial_basis="gto", radial_gaussian_width=sigma, max_angular=2
+            radial_basis="gto", radial_gaussian_width=sigma, max_angular=2, cutoff_radius=5
         )
 
         # Get the center and precision matrix
@@ -93,7 +103,7 @@ class TestGaussianParameters:
     def test_limit_small_sigma(self, sigma, r_ij, lengths, rotation_matrix):
         # Initialize the class
         basis_gto = RadialBasis(
-            radial_basis="gto", radial_gaussian_width=sigma, max_angular=2
+            radial_basis="gto", radial_gaussian_width=sigma, max_angular=2, cutoff_radius=5
         )
 
         # Get the center and precision matrix
@@ -132,7 +142,7 @@ class TestGTOUtils:
     def test_nogto_warning(self):
         with pytest.warns(UserWarning):
             lmax = 5
-            non_gto_basis = RadialBasis("monomial", lmax)
+            non_gto_basis = RadialBasis("monomial", lmax, cutoff_radius=5)
             # As a proxy for a tensor map, pass in a numpy array for features
             features = np.random.random((5, 5))
             non_normalized_features = non_gto_basis.orthonormalize_basis(features)

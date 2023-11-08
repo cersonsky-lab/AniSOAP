@@ -134,6 +134,11 @@ class TestBadInputs:
             ValueError,
             "radial_gaussian_width is set as an integer, which could cause overflow errors. Pass in float.",
         ],
+        [
+            {**DEFAULT_HYPERS, "radial_gaussian_width": 5.0, "max_radial": 3},
+            ValueError,
+            "Only one of max_radial or radial_gaussian_width can be independently specified",
+        ]
     ]
 
     @pytest.mark.parametrize("hypers,error_type,expected_message", test_hypers)

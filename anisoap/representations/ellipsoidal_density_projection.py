@@ -425,6 +425,7 @@ class EllipsoidalDensityProjection:
         compute_gradients=False,
         subtract_center_contribution=False,
         radial_gaussian_width=None,
+        max_radial=None,
         rotation_key="quaternion",
         rotation_type="quaternion",
         num_radial=None,
@@ -475,11 +476,16 @@ class EllipsoidalDensityProjection:
             raise ValueError(
                 "radial_gaussian_width is set as an integer, which could cause overflow errors. Pass in float."
             )
+
+        if max_radial is not None and radial_basis_name == "gto" and radial_gaussian_width is not None:
+            raise ValueError("Only one of max_radial or radial_gaussian_width can be independently specified")
+
         radial_hypers = {}
         radial_hypers["radial_basis"] = radial_basis_name.lower()  # lower case
         radial_hypers["radial_gaussian_width"] = radial_gaussian_width
         radial_hypers["max_angular"] = max_angular
-        radial_hypers["num_radial"] = num_radial
+        radial_hypers["cutoff_radius"] = cutoff_radius
+        radial_hypers["max_radial"] = max_radial
         self.radial_basis = RadialBasis(**radial_hypers)
 
         self.num_ns = self.radial_basis.get_num_radial_functions()
