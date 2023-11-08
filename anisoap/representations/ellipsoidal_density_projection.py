@@ -396,8 +396,13 @@ class EllipsoidalDensityProjection:
         Key under which rotations are stored in ase frames arrays
     rotation_type : string
         Type of rotation object being passed. Currently implemented
-        are 'quaternion' and 'matrix'\
-        
+        are 'quaternion' and 'matrix'
+    num_radial : None, int, list of int
+        Number of radial bases to use. Can either correspond to number of
+        bases per spherical harmonic or a value to use with every harmonic.
+        If `None`, then for every `l`, `(max_angular - l) // 2 + 1` will
+        be used.
+
     Attributes
     ----------
     features : numpy.ndarray
@@ -414,6 +419,7 @@ class EllipsoidalDensityProjection:
         radial_gaussian_width=None,
         rotation_key="quaternion",
         rotation_type="quaternion",
+        num_radial=None,
     ):
         # Store the input variables
         self.max_angular = max_angular
@@ -445,6 +451,7 @@ class EllipsoidalDensityProjection:
         radial_hypers["radial_basis"] = radial_basis_name.lower()  # lower case
         radial_hypers["radial_gaussian_width"] = radial_gaussian_width
         radial_hypers["max_angular"] = max_angular
+        radial_hypers["num_radial"] = num_radial
         self.radial_basis = RadialBasis(**radial_hypers)
 
         self.num_ns = self.radial_basis.get_num_radial_functions()
