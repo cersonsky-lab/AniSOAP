@@ -1,11 +1,9 @@
 import numpy as np
 
 from ..representations.radial_basis import RadialBasis
+from ..utils import quaternion_to_rotation_matrix  # missing?
+from ..utils import compute_moments_inefficient_implementation
 from ..utils.spherical_to_cartesian import spherical_to_cartesian
-from ..utils import (
-    compute_moments_inefficient_implementation,
-    quaternion_to_rotation_matrix,  # missing?
-)
 
 try:
     from tqdm import tqdm

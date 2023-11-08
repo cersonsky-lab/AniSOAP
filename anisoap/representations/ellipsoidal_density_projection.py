@@ -1,13 +1,14 @@
 import warnings
-import numpy as np
 from itertools import product
-from rascaline import NeighborList
-from scipy.spatial.transform import Rotation
+
+import numpy as np
 from metatensor import (
     Labels,
     TensorBlock,
     TensorMap,
 )
+from rascaline import NeighborList
+from scipy.spatial.transform import Rotation
 
 from ..representations.radial_basis import RadialBasis
 from ..utils.moment_generator import *

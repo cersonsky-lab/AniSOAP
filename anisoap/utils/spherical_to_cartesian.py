@@ -4,8 +4,8 @@ from scipy.special import (
     factorial,
     factorial2,
 )
-from ..utils import monomial_iterator
 
+from ..utils import monomial_iterator
 
 # Here we are implementing recurrence of the form R_{l}^m = prefact_minus1* z * T_{l-1} + prefact_minus2* r2 * T_{l-2}
 # where R_l^m is a solid harmonic, when expressed on a monomial basis - R_l^m = \sum_{n0+n1+n2=l} T_{l}[n0,n1,n2] x^n0 y^n1 z^n2

@@ -1,4 +1,5 @@
 import warnings
+
 import numpy as np
 from metatensor import TensorMap
 from scipy.special import gamma
