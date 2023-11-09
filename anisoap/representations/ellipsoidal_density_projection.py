@@ -448,8 +448,14 @@ class EllipsoidalDensityProjection:
                 "radial_gaussian_width is set as an integer, which could cause overflow errors. Pass in float."
             )
 
-        if max_radial is not None and radial_basis_name == "gto" and radial_gaussian_width is not None:
-            raise ValueError("Only one of max_radial or radial_gaussian_width can be independently specified")
+        if (
+            max_radial is not None
+            and radial_basis_name == "gto"
+            and radial_gaussian_width is not None
+        ):
+            raise ValueError(
+                "Only one of max_radial or radial_gaussian_width can be independently specified"
+            )
 
         radial_hypers = {}
         radial_hypers["radial_basis"] = radial_basis_name.lower()  # lower case
