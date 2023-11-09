@@ -133,7 +133,9 @@ class RadialBasis:
 
     """
 
-    def __init__(self, radial_basis, max_angular, cutoff_radius, num_radial=None, **hypers):
+    def __init__(
+        self, radial_basis, max_angular, max_radial=None, cutoff_radius=None, **hypers
+    ):
         # Store all inputs into internal variables
         self.radial_basis = radial_basis
         self.max_angular = max_angular
@@ -187,7 +189,9 @@ class RadialBasis:
     # by a precision matrix (inverse of covariance) and its center.
     # The current function computes the covariance matrix and the center
     # for the provided parameters as well as choice of radial basis.
-    def compute_gaussian_parameters(self, r_ij, lengths, rotation_matrix, radial_gaussian_width=None):
+    def compute_gaussian_parameters(
+        self, r_ij, lengths, rotation_matrix, radial_gaussian_width=None
+    ):
         # Initialization
         center = r_ij
         diag = np.diag(1 / lengths**2)
@@ -288,10 +292,10 @@ class RadialBasis:
                 sigma_arr.append(self.cutoff_radius * np.sqrt(n) / nmax)
 
             sigma_arr = np.array(sigma_arr)
+            prefactor_arr = gto_prefactor(l_2n_arr, sigma_arr)
             prefactor_arr = gto_prefactor(
-                l_2n_arr, sigma_arr
+                l_2n_arr, self.hypers["radial_gaussian_width"]
             )
-            prefactor_arr = gto_prefactor(l_2n_arr, self.hypers["radial_gaussian_width"])
             block.values[:, :, :] = block.values[:, :, :] * prefactor_arr
 
             gto_overlap_matrix_slice = self.overlap_matrix[l_2n_arr, :][:, l_2n_arr]
