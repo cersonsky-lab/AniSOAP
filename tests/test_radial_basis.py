@@ -37,7 +37,9 @@ class TestNumberOfRadialFunctions:
             assert num == num_ns_exact[l]
 
     def test_radial_functions_n7(self):
-        basis_gto = RadialBasis(radial_basis="monomial", max_angular=6, max_radial=5, cutoff_radius=5)
+        basis_gto = RadialBasis(
+            radial_basis="monomial", max_angular=6, max_radial=5, cutoff_radius=5
+        )
         num_ns = basis_gto.get_num_radial_functions()
 
         # We specify max_radial so it's decoupled from max_angular.
@@ -77,7 +79,10 @@ class TestGaussianParameters:
         # Initialize the classes
         basis_mon = RadialBasis(radial_basis="monomial", max_angular=2, cutoff_radius=5)
         basis_gto = RadialBasis(
-            radial_basis="gto", radial_gaussian_width=sigma, max_angular=2, cutoff_radius=5
+            radial_basis="gto",
+            radial_gaussian_width=sigma,
+            max_angular=2,
+            cutoff_radius=5,
         )
 
         # Get the center and precision matrix
@@ -103,7 +108,10 @@ class TestGaussianParameters:
     def test_limit_small_sigma(self, sigma, r_ij, lengths, rotation_matrix):
         # Initialize the class
         basis_gto = RadialBasis(
-            radial_basis="gto", radial_gaussian_width=sigma, max_angular=2, cutoff_radius=5
+            radial_basis="gto",
+            radial_gaussian_width=sigma,
+            max_angular=2,
+            cutoff_radius=5,
         )
 
         # Get the center and precision matrix
