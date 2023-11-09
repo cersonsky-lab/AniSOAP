@@ -133,9 +133,7 @@ class RadialBasis:
 
     """
 
-    def __init__(
-        self, radial_basis, max_angular, max_radial=None, cutoff_radius=None, **hypers
-    ):
+    def __init__(self, radial_basis, max_angular, max_radial=None, **hypers):
         # Store all inputs into internal variables
         self.radial_basis = radial_basis
         self.max_angular = max_angular
@@ -289,7 +287,7 @@ class RadialBasis:
             for n in n_arr:
                 if n < 1:
                     n = 1
-                sigma_arr.append(self.cutoff_radius * np.sqrt(n) / nmax)
+                sigma_arr.append(self.hypers["cutoff_radius"] * np.sqrt(n) / nmax)
 
             sigma_arr = np.array(sigma_arr)
             prefactor_arr = gto_prefactor(l_2n_arr, sigma_arr)
