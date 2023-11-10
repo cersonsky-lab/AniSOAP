@@ -1,7 +1,4 @@
-﻿import builtins
-
-import ase
-import metatensor
+﻿import ase
 import numpy as np
 import pytest
 

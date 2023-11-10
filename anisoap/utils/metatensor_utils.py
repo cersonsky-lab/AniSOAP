@@ -259,14 +259,12 @@ def cg_combine(
         properties_a = (
             block_a.properties
         )  # pre-extract this block as accessing a c property has a non-zero cost
-        samples_a = block_a.samples
 
         # and x_b
         for index_b, block_b in x_b.items():
             lam_b = index_b["angular_channel"]
             order_b = index_b["order_nu"]
             properties_b = block_b.properties
-            samples_b = block_b.samples
 
             if other_keys_match is None:
                 OTHERS = tuple(index_a[name] for name in other_keys_a) + tuple(
@@ -298,9 +296,9 @@ def cg_combine(
 
             prop_ids_a = []
             prop_ids_b = []
-            for n_a, f_a in enumerate(properties_a):
+            for f_a in properties_a:
                 prop_ids_a.append(tuple(f_a) + (lam_a,))
-            for n_b, f_b in enumerate(properties_b):
+            for f_b in properties_b:
                 prop_ids_b.append(tuple(f_b) + (lam_b,))
             prop_ids_a = np.asarray(prop_ids_a)
             prop_ids_b = np.asarray(prop_ids_b)

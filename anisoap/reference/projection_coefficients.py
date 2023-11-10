@@ -1,18 +1,14 @@
 import numpy as np
 
-from anisoap.utils.spherical_to_cartesian import spherical_to_cartesian
+from ..representations.radial_basis import RadialBasis
+from ..utils import quaternion_to_rotation_matrix  # missing?
+from ..utils import compute_moments_inefficient_implementation
+from ..utils.spherical_to_cartesian import spherical_to_cartesian
 
 try:
     from tqdm import tqdm
 except ImportError:
-    tqdm = lambda i, **kwargs: i
-
-from ..utils import (
-    compute_moments_diagonal_inefficient_implementation,
-    compute_moments_inefficient_implementation,
-    quaternion_to_rotation_matrix,
-)
-from .radial_basis import RadialBasis
+    tqdm = lambda i, **_: i
 
 
 class DensityProjectionCalculator:
@@ -55,7 +51,7 @@ class DensityProjectionCalculator:
         if compute_gradients:
             raise NotImplementedError("Sorry! Gradients have not yet been implemented")
 
-        # Precompute the spherical to Cartesian transformation
+        # Pre-compute the spherical to Cartesian transformation
         # coefficients.
         num_ns = []
         for l in range(max_angular + 1):

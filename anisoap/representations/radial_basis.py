@@ -1,7 +1,6 @@
 import warnings
 
 import numpy as np
-import scipy.linalg
 from metatensor import TensorMap
 from scipy.special import gamma
 
@@ -33,22 +32,22 @@ def inverse_matrix_sqrt(matrix: np.array):
 def gto_square_norm(n, sigma):
     """
     Compute the square norm of GTOs (inner product of itself over R^3).
-    An unnormalized GTO of order n is \phi_n = r^n * e^{-r^2/(2*\sigma^2)}
-    The square norm of the unnormalized GTO has an analytic solution:
+    An un-normalized GTO of order n is \phi_n = r^n * e^{-r^2/(2*\sigma^2)}
+    The square norm of the un-normalized GTO has an analytic solution:
     <\phi_n | \phi_n> = \int_0^\infty dr r^2 |\phi_n|^2 = 1/2 * \sigma^{2n+3} * \Gamma(n+3/2)
     Args:
         n: order of the GTO
         sigma: width of the GTO
 
     Returns:
-        square norm: The square norm of the unnormalized GTO
+        square norm: The square norm of the un-normalized GTO
     """
     return 0.5 * sigma ** (2 * n + 3) * gamma(n + 1.5)
 
 
 def gto_prefactor(n, sigma):
     """
-    Computes the normalization prefactor of an unnormalized GTO.
+    Computes the normalization prefactor of an un-normalized GTO.
     This prefactor is simply 1/sqrt(square_norm_area).
     Scaling a GTO by this prefactor will ensure that the GTO has square norm equal to 1.
     Args:
@@ -123,20 +122,24 @@ class RadialBasis:
     def get_num_radial_functions(self):
         return self.num_radial_functions
 
-    # For each particle pair (i,j), we are provided with the three quantities
-    # that completely define the Gaussian distribution, namely
-    # the pair distance r_ij, the rotation matrix specifying the orientation
-    # of particle j's ellipsoid, as well the the three lengths of the
-    # principal axes.
-    # Combined with the choice of radial basis, these completely specify
-    # the mathematical problem, namely the integral that needs to be
-    # computed, which will be of the form
-    # integral gaussian(x,y,z) * polynomial(x,y,z) dx dy dz
-    # This function deals with the Gaussian part, which is specified
-    # by a precision matrix (inverse of covariance) and its center.
-    # The current function computes the covariance matrix and the center
-    # for the provided parameters as well as choice of radial basis.
     def compute_gaussian_parameters(self, r_ij, lengths, rotation_matrix):
+        """
+        For each particle pair (i,j), we are provided with the three quantities
+        that completely define the Gaussian distribution, namely
+        the pair distance r_ij, the rotation matrix specifying the orientation
+        of particle j's ellipsoid, as well the the three lengths of the
+        principal axes.
+
+        Combined with the choice of radial basis, these completely specify
+        the mathematical problem, namely the integral that needs to be
+        computed, which will be of the form
+        integral gaussian(x,y,z) * polynomial(x,y,z) dx dy dz
+
+        This function deals with the Gaussian part, which is specified
+        by a precision matrix (inverse of covariance) and its center.
+        The current function computes the covariance matrix and the center
+        for the provided parameters as well as choice of radial basis.
+        """
         # Initialization
         center = r_ij
         diag = np.diag(1 / lengths**2)
@@ -155,9 +158,9 @@ class RadialBasis:
         Computes the overlap matrix for GTOs.
         The overlap matrix is a Gram matrix whose entries are the overlap: S_{ij} = \int_0^\infty dr r^2 phi_i phi_j
         The overlap has an analytic solution (see above functions).
-        The overlap matrix is the first step to generating an orthonormal basis set of functions (Lodwin Symmetric
+        The overlap matrix is the first step to generating an orthonormal basis set of functions (Löwdin Symmetric
         Orthonormalization). The actual orthonormalization matrix cannot be fully precomputed because each tensor
-        block use a different set of GTOs. Hence, we precompute the full overlap matrix of dim l_max, and while
+        block use a different set of GTOs. Hence, we pre-compute the full overlap matrix of dim l_max, and while
         orthonormalizing each tensor block, we generate the respective orthonormal matrices from slices of the full
         overlap matrix.
 
@@ -179,15 +182,15 @@ class RadialBasis:
 
     def orthonormalize_basis(self, features: TensorMap):
         """
-        Apply an in-place orthonormalization on the features, using Lodwin Symmetric Orthonormalization.
+        Apply an in-place orthonormalization on the features, using  Löwdin Symmetric Orthonormalization.
         Each block in the features TensorMap uses a GTO set of l + 2n, so we must take the appropriate slices of
         the overlap matrix to compute the orthonormalization matrix.
-        An instructive example of Lodwin Symmetric Orthonormalization of a 2-element basis set is found here:
+        An instructive example of Löwdin Symmetric Orthonormalization of a 2-element basis set is found here:
         https://booksite.elsevier.com/9780444594365/downloads/16755_10030.pdf
 
         Parameters:
             features: A TensorMap whose blocks' values we wish to orthonormalize. Note that features is modified in place, so a
-            copy of features must be made before the function if you wish to retain the unnormalized values.
+            copy of features must be made before the function if you wish to retain the un-normalized values.
             radial_basis: An instance of RadialBasis
 
         Returns:
