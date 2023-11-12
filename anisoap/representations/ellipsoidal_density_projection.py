@@ -260,6 +260,15 @@ def contract_pairwise_feat(pair_ellip_feat, species, show_progress=False):
             block_samples = []
             block_values = []
 
+            indexed_sample_idx = {}
+            for idx, tup in enumerate(pair_block_sample):
+                if tup not in indexed_sample_idx:
+                    l = []
+                else:
+                    l = indexed_sample_idx[tup]
+                l.append(idx)
+                indexed_sample_idx[tup] = l
+
             for isample, sample in enumerate(
                 tqdm(
                     possible_block_samples,
@@ -268,26 +277,24 @@ def contract_pairwise_feat(pair_ellip_feat, species, show_progress=False):
                     leave=False,
                 )
             ):
-                sample_idx = [
-                    idx
-                    for idx, tup in enumerate(pair_block_sample)
-                    if tup[0] == sample[0] and tup[1] == sample[1]
-                ]
-                # all samples of the pair block that match the current sample
-                # in the example above, for sample = (0,0) we would identify sample_idx = [(0,0,1), (0,0,2)]
-                if len(sample_idx) == 0:
-                    continue
-                #             #print(key, ele, sample, block.samples[sample_idx])
-                block_samples.append(sample)
-                block_values.append(
-                    block.values[sample_idx].sum(axis=0)
-                )  # sum over "j"  for given ele
+                if sample in indexed_sample_idx:
+                    sample_idx = indexed_sample_idx[tuple(sample)]
 
-                # block_values has as many entries as samples satisfying (key, neighbor_species=ele).
-                # When we iterate over neighbor species, not all (structure, center) would be present
-                # Example: (0,0,1) might be present in a block with neighbor_species = 1 but no other pair block
-                # ever has (0,0,x) present as a sample- so (0,0) doesnt show up in a block_sample for all ele
-                # so in general we have a ragged list of contract_blocks
+                    # all samples of the pair block that match the current sample
+                    # in the example above, for sample = (0,0) we would identify sample_idx = [(0,0,1), (0,0,2)]
+                    if len(sample_idx) == 0:
+                        continue
+                    #             #print(key, ele, sample, block.samples[sample_idx])
+                    block_samples.append(sample)
+                    block_values.append(
+                        block.values[sample_idx].sum(axis=0)
+                    )  # sum over "j"  for given ele
+
+                    # block_values has as many entries as samples satisfying (key, neighbor_species=ele).
+                    # When we iterate over neighbor species, not all (structure, center) would be present
+                    # Example: (0,0,1) might be present in a block with neighbor_species = 1 but no other pair block
+                    # ever has (0,0,x) present as a sample- so (0,0) doesnt show up in a block_sample for all ele
+                    # so in general we have a ragged list of contract_blocks
 
             contract_blocks.append(block_values)
             contract_samples.append(block_samples)
@@ -313,6 +320,15 @@ def contract_pairwise_feat(pair_ellip_feat, species, show_progress=False):
         # values for each of them as \sum_{j in ele} <|rho_ij>
         #  Thus - all_block_values.shape = (num_final_samples, components_pair, properties_pair, num_species)
 
+        indexed_elem_cont_samples = {}
+        for i, val in enumerate(all_block_samples):
+            if val not in indexed_elem_cont_samples:
+                l = []
+            else:
+                l = indexed_elem_cont_samples[val]
+            l.append(i)
+            indexed_elem_cont_samples[val] = l
+
         for iele, elem_cont_samples in enumerate(
             tqdm(
                 contract_samples,
@@ -324,11 +340,16 @@ def contract_pairwise_feat(pair_ellip_feat, species, show_progress=False):
             # This effectively loops over the species of the neighbors
             # Now we just need to add the contributions to the final samples and values from this species to the right
             # samples
-            nzidx = [
-                i
-                for i in range(len(all_block_samples))
-                if all_block_samples[i] in elem_cont_samples
-            ]
+            nzidx = list(
+                sorted(
+                    [
+                        i
+                        for v in elem_cont_samples
+                        for i in indexed_elem_cont_samples[tuple(v)]
+                    ]
+                )
+            )
+
             # identifies where the samples that this species contributes to, are present in the final samples
             #             print(apecies[ib],key, bb, all_block_samples)
             all_block_values[nzidx, :, :, iele] = contract_blocks[iele]
