@@ -98,7 +98,9 @@ class RadialBasis:
 
     """
 
-    def __init__(self, radial_basis, max_angular, cutoff_radius, max_radial=None, **hypers):
+    def __init__(
+        self, radial_basis, max_angular, cutoff_radius, max_radial=None, **hypers
+    ):
         # Store all inputs into internal variables
         self.radial_basis = radial_basis
         self.max_angular = max_angular
