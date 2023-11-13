@@ -98,7 +98,7 @@ class RadialBasis:
 
     """
 
-    def __init__(self, radial_basis, max_angular, max_radial=None, **hypers):
+    def __init__(self, radial_basis, max_angular, cutoff_radius, max_radial=None, **hypers):
         # Store all inputs into internal variables
         self.radial_basis = radial_basis
         self.max_angular = max_angular
@@ -111,23 +111,23 @@ class RadialBasis:
         # functions, nmax, for each angular frequency l.
         self.num_radial_functions = []
         for l in range(max_angular + 1):
-            if num_radial is None:
+            if max_radial is None:
                 num_n = (max_angular - l) // 2 + 1
                 self.num_radial_functions.append(num_n)
-            elif isinstance(num_radial, list):
-                if len(num_radial) < l:
+            elif isinstance(max_radial, list):
+                if len(max_radial) < l:
                     raise ValueError(
                         "If you specify a list of number of radial components, this list must be of length {}. Received {}.".format(
-                            max_angular + 1, len(num_radial)
+                            max_angular + 1, len(max_radial)
                         )
                     )
-                if not isinstance(num_radial[l], int):
-                    raise ValueError("`num_radial` must be None, int, or list of int")
-                self.num_radial_functions.append(num_radial[l])
-            elif isinstance(num_radial, int):
-                self.num_radial_functions.append(num_radial)
+                if not isinstance(max_radial[l], int):
+                    raise ValueError("`max_radial` must be None, int, or list of int")
+                self.num_radial_functions.append(max_radial[l])
+            elif isinstance(max_radial, int):
+                self.num_radial_functions.append(max_radial)
             else:
-                raise ValueError("`num_radial` must be None, int, or list of int")
+                raise ValueError("`max_radial` must be None, int, or list of int")
 
         # As part of the initialization, compute the orthonormalization matrix for GTOs
         # If we are using the monomial basis, set self.overlap_matrix equal to None
