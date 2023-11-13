@@ -397,7 +397,7 @@ class EllipsoidalDensityProjection:
     rotation_type : string
         Type of rotation object being passed. Currently implemented
         are 'quaternion' and 'matrix'
-    num_radial : None, int, list of int
+    max_radial : None, int, list of int
         Number of radial bases to use. Can either correspond to number of
         bases per spherical harmonic or a value to use with every harmonic.
         If `None`, then for every `l`, `(max_angular - l) // 2 + 1` will
