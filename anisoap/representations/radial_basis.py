@@ -118,7 +118,7 @@ class RadialBasis:
                 self.num_radial_functions.append(num_n)
             elif isinstance(max_radial, list):
                 if len(max_radial) <= l:
-                     raise ValueError(
+                    raise ValueError(
                         "If you specify a list of number of radial components, this list must be of length {}. Received {}.".format(
                             max_angular + 1, len(max_radial)
                         )
