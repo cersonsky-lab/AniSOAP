@@ -48,6 +48,57 @@ class TestNumberOfRadialFunctions:
         for l, num in enumerate(num_ns):
             assert num == num_ns_exact[l]
 
+    def test_radial_functions_n8(self):
+        basis_gto = RadialBasis(
+            radial_basis="monomial", max_angular=6, max_radial=[1, 2, 3, 4, 5, 6, 7], cutoff_radius=5
+        )
+        num_ns = basis_gto.get_num_radial_functions()
+
+        # We specify max_radial so it's decoupled from max_angular.
+        num_ns_exact = [1, 2, 3, 4, 5, 6, 7]
+        assert len(num_ns) == len(num_ns_exact)
+        for l, num in enumerate(num_ns):
+            assert num == num_ns_exact[l]
+
+class TestBadInputs:
+    """
+    Class for testing if radial_basis fails with bad inputs
+    """
+    DEFAULT_HYPERS = {
+        "max_angular": 10,
+        "radial_basis": "gto",
+        "radial_gaussian_width": 5.0,
+        "cutoff_radius": 1.0,
+    }
+    test_hypers = [
+        # [
+        #     {**DEFAULT_HYPERS, "radial_gaussian_width": 5.0, "max_radial": 3},
+        #     ValueError,
+        #     "Only one of max_radial or radial_gaussian_width can be independently specified",
+        # ],
+        [
+            {**DEFAULT_HYPERS, "radial_gaussian_width": 5.0, "max_radial": [1, 2, 3]},  # default max_angular = 10
+            ValueError,
+            "If you specify a list of number of radial components, this list must be of length 11. Received 3."
+        ],
+        [
+            {**DEFAULT_HYPERS, "radial_gaussian_width": 5.0, "max_radial": "nonsense"},
+            ValueError,
+            "`max_radial` must be None, int, or list of int"
+        ],
+        [
+            {**DEFAULT_HYPERS, "radial_gaussian_width": 5.0, "max_radial": [1, "nonsense", 2]},
+            ValueError,
+            "`max_radial` must be None, int, or list of int"
+        ],
+
+    ]
+
+    @pytest.mark.parametrize("hypers,error_type,expected_message", test_hypers)
+    def test_hypers(self, hypers, error_type, expected_message):
+        with pytest.raises(error_type) as cm:
+            RadialBasis(**hypers)
+            assert cm.message == expected_message
 
 class TestGaussianParameters:
     """
