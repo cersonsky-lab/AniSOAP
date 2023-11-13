@@ -476,8 +476,6 @@ class EllipsoidalDensityProjection:
                 "radial_gaussian_width is set as an integer, which could cause overflow errors. Pass in float."
             )
 
-
-
         radial_hypers = {}
         radial_hypers["radial_basis"] = radial_basis_name.lower()  # lower case
         radial_hypers["radial_gaussian_width"] = radial_gaussian_width
