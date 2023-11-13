@@ -117,8 +117,8 @@ class RadialBasis:
                 num_n = (max_angular - l) // 2 + 1
                 self.num_radial_functions.append(num_n)
             elif isinstance(max_radial, list):
-                if len(max_radial) < l:
-                    raise ValueError(
+                if len(max_radial) <= l:
+                     raise ValueError(
                         "If you specify a list of number of radial components, this list must be of length {}. Received {}.".format(
                             max_angular + 1, len(max_radial)
                         )
@@ -235,7 +235,7 @@ class RadialBasis:
             for n in n_arr:
                 if n < 1:
                     n = 1
-                sigma_arr.append(self.hypers["cutoff_radius"] * np.sqrt(n) / nmax)
+                sigma_arr.append(self.cutoff_radius * np.sqrt(n) / nmax)
 
             sigma_arr = np.array(sigma_arr)
             prefactor_arr = gto_prefactor(l_2n_arr, sigma_arr)
