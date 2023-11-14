@@ -189,9 +189,7 @@ class RadialBasis:
     # by a precision matrix (inverse of covariance) and its center.
     # The current function computes the covariance matrix and the center
     # for the provided parameters as well as choice of radial basis.
-    def compute_gaussian_parameters(
-        self, r_ij, lengths, rotation_matrix, radial_gaussian_width=None
-    ):
+    def compute_gaussian_parameters(self, r_ij, lengths, rotation_matrix):
         # Initialization
         center = r_ij
         diag = np.diag(1 / lengths**2)
