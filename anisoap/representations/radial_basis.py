@@ -229,7 +229,9 @@ class RadialBasis:
 
         """
         # Consequence of the floor divide used to compute self.num_radial_functions
-        max_deg = np.max(np.arange(self.max_angular+1) + 2 * np.array(self.num_radial_functions))
+        max_deg = np.max(
+            np.arange(self.max_angular + 1) + 2 * np.array(self.num_radial_functions)
+        )
         n_grid = np.arange(max_deg)
         sigma = self.hypers["radial_gaussian_width"]
         sigma_grid = np.ones(max_deg) * sigma
