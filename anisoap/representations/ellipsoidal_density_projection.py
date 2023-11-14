@@ -75,7 +75,7 @@ def pairwise_ellip_expansion(
     keys = np.asarray(neighbor_list.keys, dtype=int)
     keys = [tuple(i) + (l,) for i in keys for l in range(lmax + 1)]
     num_ns = radial_basis.get_num_radial_functions()
-    maxdeg = np.max(np.arange(lmax+1) + 2 * np.array(num_ns))
+    maxdeg = np.max(np.arange(lmax + 1) + 2 * np.array(num_ns))
     for center_species in species:
         for neighbor_species in species:
             if (center_species, neighbor_species) in neighbor_list.keys:
