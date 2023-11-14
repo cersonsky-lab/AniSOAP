@@ -228,7 +228,6 @@ class RadialBasis:
             The overlap matrix
 
         """
-        # Consequence of the floor divide used to compute self.num_radial_functions
         max_deg = np.max(
             np.arange(self.max_angular + 1) + 2 * np.array(self.num_radial_functions)
         )
