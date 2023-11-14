@@ -31,6 +31,7 @@ jobs:
       - name: Lint with black
         run: |
           black --check .
+          black --diff .
       - name: Check imports
         run: |
           isort anisoap/*/*py -m 3 --tc --fgw --up -e -l 88 --check
