@@ -164,9 +164,7 @@ class RadialBasis:
 
         # GTO basis with uniform Gaussian width in the basis functions
         if self.radial_basis == "gto":
-            sigma = radial_gaussian_width
-            if radial_gaussian_width is None:
-                sigma = self.hypers["radial_gaussian_width"]
+            sigma = self.hypers["radial_gaussian_width"]
             precision += np.eye(3) / sigma**2
             center -= 1 / sigma**2 * np.linalg.solve(precision, r_ij)
 
@@ -229,16 +227,6 @@ class RadialBasis:
             l_2n_arr = l + 2 * n_arr
             # normalize all the GTOs by the appropriate prefactor first, since the overlap matrix is in terms of
             # normalized GTOs
-            # Ensure that each gto width is the cutoff_radius * sqrt(n) / nmax. If n < 1, then take n = 1.
-            nmax = n_arr[-1] + 1
-            sigma_arr = []
-            for n in n_arr:
-                if n < 1:
-                    n = 1
-                sigma_arr.append(self.cutoff_radius * np.sqrt(n) / nmax)
-
-            sigma_arr = np.array(sigma_arr)
-            prefactor_arr = gto_prefactor(l_2n_arr, sigma_arr)
             prefactor_arr = gto_prefactor(
                 l_2n_arr, self.hypers["radial_gaussian_width"]
             )
