@@ -145,7 +145,8 @@ class RadialBasis:
             raise ValueError(f"{self.radial_basis} is not an implemented basis.")
 
         # As part of the initialization, compute the number of radial basis
-        # functions, nmax, for each angular frequency l.
+        # functions, num_n, for each angular frequency l.
+        # If nmax is given, num_n = nmax + 1 (n ranges from 0 to nmax)
         self.num_radial_functions = []
         for l in range(max_angular + 1):
             if max_radial is None:
@@ -160,9 +161,9 @@ class RadialBasis:
                     )
                 if not isinstance(max_radial[l], int):
                     raise ValueError("`max_radial` must be None, int, or list of int")
-                self.num_radial_functions.append(max_radial[l])
+                self.num_radial_functions.append(max_radial[l] + 1)
             elif isinstance(max_radial, int):
-                self.num_radial_functions.append(max_radial)
+                self.num_radial_functions.append(max_radial + 1)
             else:
                 raise ValueError("`max_radial` must be None, int, or list of int")
 
