@@ -43,10 +43,10 @@ class TestNumberOfRadialFunctions:
         num_ns = basis_gto.get_num_radial_functions()
 
         # We specify max_radial so it's decoupled from max_angular.
-        num_ns_exact = [5, 5, 5, 5, 5, 5, 5]
-        assert len(num_ns) == len(num_ns_exact)
+        max_ns_exact = [5, 5, 5, 5, 5, 5, 5]
+        assert len(num_ns) == len(max_ns_exact)
         for l, num in enumerate(num_ns):
-            assert num == num_ns_exact[l]
+            assert num == max_ns_exact[l] + 1
 
     def test_radial_functions_n8(self):
         basis_gto = RadialBasis(
@@ -58,10 +58,10 @@ class TestNumberOfRadialFunctions:
         num_ns = basis_gto.get_num_radial_functions()
 
         # We specify max_radial so it's decoupled from max_angular.
-        num_ns_exact = [1, 2, 3, 4, 5, 6, 7]
-        assert len(num_ns) == len(num_ns_exact)
+        max_ns_exact = [1, 2, 3, 4, 5, 6, 7]
+        assert len(num_ns) == len(max_ns_exact)
         for l, num in enumerate(num_ns):
-            assert num == num_ns_exact[l]
+            assert num == max_ns_exact[l] + 1
 
 
 class TestBadInputs:
