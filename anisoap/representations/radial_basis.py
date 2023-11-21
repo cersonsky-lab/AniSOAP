@@ -7,16 +7,20 @@ from scipy.special import gamma
 
 
 def inverse_matrix_sqrt(matrix: np.array):
-    """
-    Returns the inverse matrix square root.
+    """Returns the inverse matrix square root.
+
     The inverse square root of the overlap matrix (or slices of the overlap matrix) yields the
     orthonormalization matrix
-    Args:
-        matrix: np.array
-            Symmetric square matrix to find the inverse square root of
 
-    Returns:
-        inverse_sqrt_matrix: S^{-1/2}
+    Parameters
+    ----------
+    matrix : np.array
+        Symmetric square matrix to find the inverse square root of
+
+    Returns
+    -------
+    inverse_sqrt_matrix 
+        :math:`S^{-1/2}`
 
     """
     if not np.allclose(matrix, matrix.conjugate().T):
@@ -31,54 +35,85 @@ def inverse_matrix_sqrt(matrix: np.array):
 
 
 def gto_square_norm(n, sigma):
-    """
-    Compute the square norm of GTOs (inner product of itself over R^3).
-    An unnormalized GTO of order n is \phi_n = r^n * e^{-r^2/(2*\sigma^2)}
-    The square norm of the unnormalized GTO has an analytic solution:
-    <\phi_n | \phi_n> = \int_0^\infty dr r^2 |\phi_n|^2 = 1/2 * \sigma^{2n+3} * \Gamma(n+3/2)
-    Args:
-        n: order of the GTO
-        sigma: width of the GTO
+    """Compute the square norm of GTOs (inner product of itself over :math:`R^3`).
 
-    Returns:
-        square norm: The square norm of the unnormalized GTO
+    An unnormalized GTO of order n is :math:`\phi_n = r^n * e^{-r^2/(2*\sigma^2)}`
+    The square norm of the unnormalized GTO has an analytic solution:
+
+    .. math:: 
+
+        \\langle \\phi_n | \\phi_n \\rangle = \\int_0^\\infty dr r^2 |\\phi_n|^2 = 
+            1/2 * \\sigma^{2n+3} * \\Gamma(n+3/2)
+
+    This function uses the above expression.
+
+    Parameters
+    ----------
+    n 
+        order of the GTO
+    sigma 
+        width of the GTO
+
+    Returns
+    -------
+    square norm 
+        The square norm of the unnormalized GTO
+
     """
     return 0.5 * sigma ** (2 * n + 3) * gamma(n + 1.5)
 
 
 def gto_prefactor(n, sigma):
-    """
-    Computes the normalization prefactor of an unnormalized GTO.
-    This prefactor is simply 1/sqrt(square_norm_area).
-    Scaling a GTO by this prefactor will ensure that the GTO has square norm equal to 1.
-    Args:
-        n: order of GTO
-        sigma: width of GTO
+    """Computes the normalization prefactor of an unnormalized GTO.
 
-    Returns:
-        N: normalization constant
+    This prefactor is simply :math:`\\frac{1}{sqrt(square_norm_area)}`.
+    Scaling a GTO by this prefactor will ensure that the GTO has square norm equal to 1.
+
+    Parameters
+    ----------
+    n 
+        order of GTO
+    sigma 
+        width of GTO
+
+    Returns
+    -------
+    N 
+        normalization constant
 
     """
     return np.sqrt(1 / gto_square_norm(n, sigma))
 
-
+# TODO: fix Returns section in gto_prefactor and gto_overlap
 def gto_overlap(n, m, sigma_n, sigma_m):
-    """
-    Compute overlap of two *normalized* GTOs
+    """Compute overlap of two *normalized* GTOs
+
     Note that the overlap of two GTOs can be modeled as the square norm of one GTO, with an effective
     n and sigma. All we need to do is to calculate those effective parameters, then compute the normalization.
-    <\phi_n, \phi_m> = \int_0^\infty dr r^2 r^n * e^{-r^2/(2*\sigma_n^2) * r^m * e^{-r^2/(2*\sigma_m^2)
-    = \int_0^\infty dr r^2 |r^{(n+m)/2} * e^{-r^2/4 * (1/\sigma_n^2 + 1/\sigma_m^2)}|^2
-    = \int_0^\infty dr r^2 r^n_{eff} * e^{-r^2/(2*\sigma_{eff}^2)
-    prefactor.
-    ---Arguments---
-    n: order of the first GTO
-    m: order of the second GTO
-    sigma_n: sigma parameter of the first GTO
-    sigma_m: sigma parameter of the second GTO
+    
+    .. math::
 
-    ---Returns---
-    S: overlap of the two normalized GTOs
+        \\langle \\phi_n, \\phi_m \\rangle &= \\int_0^\\infty dr r^2 r^n * e^{-r^2/(2*\\sigma_n^2) * r^m * e^{-r^2/(2*\\sigma_m^2) \\\\
+                                       &= \\int_0^\\infty dr r^2 |r^{(n+m)/2} * e^{-r^2/4 * (1/\\sigma_n^2 + 1/\\sigma_m^2)}|^2 \\\\
+                                       &= \\int_0^\\infty dr r^2 r^n_{eff} * e^{-r^2/(2*\\sigma_{eff}^2)
+
+    prefactor.
+
+    Parameters
+    ----------
+    n 
+        order of the first GTO
+    m 
+        order of the second GTO
+    sigma_n 
+        sigma parameter of the first GTO
+    sigma_m 
+        sigma parameter of the second GTO
+
+    Returns
+    S 
+        overlap of the two normalized GTOs
+
     """
     N_n = gto_prefactor(n, sigma_n)
     N_m = gto_prefactor(m, sigma_m)
@@ -88,13 +123,13 @@ def gto_overlap(n, m, sigma_n, sigma_m):
 
 
 class RadialBasis:
-    """
-    Class for precomputing and storing all results related to the radial basis.
+    """Class for precomputing and storing all results related to the radial basis.
+
     This helps to keep a cleaner main code by avoiding if-else clauses
     related to the radial basis.
 
-    Code relating to GTO orthonormalization is heavily inspired by work done in librascal, specifically this
-    codebase here: https://github.com/lab-cosmo/librascal/blob/8405cbdc0b5c72a5f0b0c93593100dde348bb95f/bindings/rascal/utils/radial_basis.py
+    Code relating to GTO orthonormalization is heavily inspired by work done in librascal, specifically the 
+    codebase found `here <https://github.com/lab-cosmo/librascal/blob/8405cbdc0b5c72a5f0b0c93593100dde348bb95f/bindings/rascal/utils/radial_basis.py>`_
 
     """
 
@@ -151,18 +186,29 @@ class RadialBasis:
         return precision, center
 
     def calc_gto_overlap_matrix(self):
-        """
-        Computes the overlap matrix for GTOs.
-        The overlap matrix is a Gram matrix whose entries are the overlap: S_{ij} = \int_0^\infty dr r^2 phi_i phi_j
+        """Computes the overlap matrix for GTOs.
+
+        The overlap matrix is a Gram matrix whose entries are the overlap: 
+
+        .. math::
+
+            S_{ij} = \\int_0^\\infty dr r^2 \\phi_i \\phi_j
+
         The overlap has an analytic solution (see above functions).
-        The overlap matrix is the first step to generating an orthonormal basis set of functions (Lodwin Symmetric
-        Orthonormalization). The actual orthonormalization matrix cannot be fully precomputed because each tensor
-        block use a different set of GTOs. Hence, we precompute the full overlap matrix of dim l_max, and while
-        orthonormalizing each tensor block, we generate the respective orthonormal matrices from slices of the full
+
+        The overlap matrix is the first step to generating an orthonormal basis 
+        set of functions (Lodwin Symmetric Orthonormalization). The actual 
+        orthonormalization matrix cannot be fully precomputed because each tensor
+        block uses a different set of GTOs. Hence, we precompute the full overlap 
+        matrix of dim l_max, and while orthonormalizing each tensor block, we 
+        generate the respective orthonormal matrices from slices of the full
         overlap matrix.
 
-        Returns:
-            S: 2D array. The overlap matrix
+        Returns
+        -------
+        S : 2D array 
+            The overlap matrix
+
         """
         # Consequence of the floor divide used to compute self.num_radial_functions
         max_deg = self.max_angular + 1
@@ -178,20 +224,28 @@ class RadialBasis:
         return S
 
     def orthonormalize_basis(self, features: TensorMap):
-        """
-        Apply an in-place orthonormalization on the features, using Lodwin Symmetric Orthonormalization.
-        Each block in the features TensorMap uses a GTO set of l + 2n, so we must take the appropriate slices of
-        the overlap matrix to compute the orthonormalization matrix.
-        An instructive example of Lodwin Symmetric Orthonormalization of a 2-element basis set is found here:
+        """Applies in-place orthonormalization on the features.
+
+        Apply an in-place orthonormalization on the features, using Lodwin Symmetric 
+        Orthonormalization. Each block in the features TensorMap uses a GTO set 
+        of l + 2n, so we must take the appropriate slices of the overlap matrix 
+        to compute the orthonormalization matrix. An instructive example of Lodwin 
+        Symmetric Orthonormalization of a 2-element basis set is found here:
         https://booksite.elsevier.com/9780444594365/downloads/16755_10030.pdf
 
-        Parameters:
-            features: A TensorMap whose blocks' values we wish to orthonormalize. Note that features is modified in place, so a
-            copy of features must be made before the function if you wish to retain the unnormalized values.
-            radial_basis: An instance of RadialBasis
+        Parameters
+        ----------
+        features : TensorMap 
+            contains blocks whose values we wish to orthonormalize. Note that 
+            features is modified in place, so a copy of features must be made 
+            before the function if you wish to retain the unnormalized values.
+        radial_basis : RadialBasis
 
-        Returns:
-            normalized_features: features containing values multiplied by proper normalization factors.
+        Returns
+        -------
+        normalized_features 
+            features containing values multiplied by normalization factors.
+
         """
         # In-place modification.
         radial_basis_name = self.radial_basis
