@@ -66,8 +66,9 @@ def gto_square_norm(n, sigma):
 def gto_prefactor(n, sigma):
     """Computes the normalization prefactor of an unnormalized GTO.
 
-    This prefactor is simply :math:`\\frac{1}{sqrt(square_norm_area)}`.
-    Scaling a GTO by this prefactor will ensure that the GTO has square norm equal to 1.
+    This prefactor is simply :math:`\\frac{1}{\\sqrt(\\text{square_norm_area)}}`.
+    Scaling a GTO by this prefactor will ensure that the GTO has square norm 
+    equal to 1.
 
     Parameters
     ----------
@@ -85,16 +86,16 @@ def gto_prefactor(n, sigma):
     return np.sqrt(1 / gto_square_norm(n, sigma))
 
 def gto_overlap(n, m, sigma_n, sigma_m):
-    """Compute overlap of two *normalized* GTOs
+    r"""Compute overlap of two *normalized* GTOs
 
     Note that the overlap of two GTOs can be modeled as the square norm of one GTO, with an effective
     n and sigma. All we need to do is to calculate those effective parameters, then compute the normalization.
     
     .. math::
 
-        \\langle \\phi_n, \\phi_m \\rangle &= \\int_0^\\infty dr r^2 r^n * e^{-r^2/(2*\\sigma_n^2) * r^m * e^{-r^2/(2*\\sigma_m^2) \\\\
-                                       &= \\int_0^\\infty dr r^2 |r^{(n+m)/2} * e^{-r^2/4 * (1/\\sigma_n^2 + 1/\\sigma_m^2)}|^2 \\\\
-                                       &= \\int_0^\\infty dr r^2 r^n_{eff} * e^{-r^2/(2*\\sigma_{eff}^2)
+        \langle \phi_n, \phi_m \rangle &= \int_0^\infty dr r^2 r^n * e^{-r^2/(2*\sigma_n^2) * r^m * e^{-r^2/(2*\sigma_m^2) \\
+                                       &= \int_0^\infty dr r^2 |r^{(n+m)/2} * e^{-r^2/4 * (1/\sigma_n^2 + 1/\sigma_m^2)}|^2 \\
+                                       &= \int_0^\infty dr r^2 r^n_{eff} * e^{-r^2/(2*\sigma_{eff}^2)
 
     prefactor.
 
@@ -110,6 +111,7 @@ def gto_overlap(n, m, sigma_n, sigma_m):
         sigma parameter of the second GTO
 
     Returns
+    -------
     S 
         overlap of the two normalized GTOs
 

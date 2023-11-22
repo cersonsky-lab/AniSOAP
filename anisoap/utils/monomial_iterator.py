@@ -9,21 +9,22 @@ class TrivariateMonomialIndices:
     order.
 
     Without this class, iterating over all monomials at some fixed degree
-    requires the use of a double loop of the form:
+    requires the use of a double loop of the form::
 
-    idx = 0
-    for n0 in range(deg, -1, -1):
-            for n1 in range(deg-n0, -1, -1):
-            n2 = deg - n0 - n1
+        idx = 0
+        for n0 in range(deg, -1, -1):
+                for n1 in range(deg-n0, -1, -1):
+                n2 = deg - n0 - n1
 
-            ... # do something with exponents (n0,n1,n2)
+                ... # do something with exponents (n0,n1,n2)
 
-            idx += 1
+                idx += 1
 
-    Instead, with this class, these lines can be reduced to
-    myiter = iter(TrivariateMonomialIndices(deg=2))
-    for idx, n0, n1, n2 in myiter:
-        ... # do something with exponents (n0, n1, n2)
+    Instead, with this class, these lines can be reduced to::
+
+        myiter = iter(TrivariateMonomialIndices(deg=2))
+        for idx, n0, n1, n2 in myiter:
+            ... # do something with exponents (n0, n1, n2)
 
     """
 

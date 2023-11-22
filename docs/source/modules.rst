@@ -26,8 +26,4 @@ Utils
 .. automodule:: anisoap.utils.spherical_to_cartesian
    :members:
 
-Reference
----------
-.. automodule:: anisoap.reference.projection_coefficients
-   :members:
 
