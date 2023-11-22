@@ -385,7 +385,7 @@ class EllipsoidalDensityProjection:
 
     Compute the spherical projection coefficients for a system of ellipsoids
     assuming a multivariate Gaussian density.
-       
+
     Initialize the calculator using the hyperparameters.
 
     Parameters
@@ -409,7 +409,7 @@ class EllipsoidalDensityProjection:
         bases per spherical harmonic or a value to use with every harmonic.
         If `None`, then for every `l`, `(max_angular - l) // 2 + 1` will
         be used.
-
+       
     Attributes
     ----------
     features : numpy.ndarray
