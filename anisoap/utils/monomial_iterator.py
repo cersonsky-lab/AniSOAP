@@ -2,10 +2,11 @@ import numpy as np
 
 
 class TrivariateMonomialIndices:
-    """
-    Class for generating an iterator object over all trivariate
-    monomials of the form f(x,y,z) = x^n0 * y^n1 * z^n2
-    sorted in the lexicographical order.
+    """Class for generating an iterator object over trivariate monomials.
+
+    Generates an iterator object over trivariate monomials of the form 
+    :math:`f(x,y,z) = x^{n_0} * y^{n_1} * z^{n_2}` sorted in the lexicographical 
+    order.
 
     Without this class, iterating over all monomials at some fixed degree
     requires the use of a double loop of the form:
@@ -52,8 +53,7 @@ class TrivariateMonomialIndices:
             raise StopIteration
 
     def find_idx(self, exponents):
-        """
-
+        """Finds the index of a given tuple of exponents.
 
         Parameters
         ----------

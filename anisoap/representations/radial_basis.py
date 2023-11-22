@@ -9,8 +9,8 @@ from scipy.special import gamma
 def inverse_matrix_sqrt(matrix: np.array):
     """Returns the inverse matrix square root.
 
-    The inverse square root of the overlap matrix (or slices of the overlap matrix) yields the
-    orthonormalization matrix
+    The inverse square root of the overlap matrix (or slices of the overlap matrix) 
+    yields the orthonormalization matrix
 
     Parameters
     ----------
@@ -37,7 +37,7 @@ def inverse_matrix_sqrt(matrix: np.array):
 def gto_square_norm(n, sigma):
     """Compute the square norm of GTOs (inner product of itself over :math:`R^3`).
 
-    An unnormalized GTO of order n is :math:`\phi_n = r^n * e^{-r^2/(2*\sigma^2)}`
+    An unnormalized GTO of order n is :math:`\\phi_n = r^n * e^{-r^2/(2*\\sigma^2)}`
     The square norm of the unnormalized GTO has an analytic solution:
 
     .. math:: 
@@ -84,7 +84,6 @@ def gto_prefactor(n, sigma):
     """
     return np.sqrt(1 / gto_square_norm(n, sigma))
 
-# TODO: fix Returns section in gto_prefactor and gto_overlap
 def gto_overlap(n, m, sigma_n, sigma_m):
     """Compute overlap of two *normalized* GTOs
 

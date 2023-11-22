@@ -93,11 +93,13 @@ class ClebschGordanReal:
 
 
 def _real2complex(L):
-    """
+    """Computes a matrix that converts from real to complex coefficients.
+
     Computes a matrix that can be used to convert from real to complex-valued
     spherical harmonics(coefficients) of order L.
 
     It's meant to be applied to the left, ``real2complex @ [-L..L]``.
+
     """
     result = np.zeros((2 * L + 1, 2 * L + 1), dtype=np.complex128)
 
@@ -138,7 +140,9 @@ def _remove_suffix(names, new_suffix=""):
 
 
 def standardize_keys(descriptor):
-    """Standardize the naming scheme of density expansion coefficient blocks (nu=1)"""
+    """Standardize the naming scheme of density expansion coefficient blocks (nu=1)
+
+    """
 
     key_names = descriptor.keys.names
     if not "angular_channel" in key_names:
@@ -184,15 +188,37 @@ def cg_combine(
     lcut=None,
     other_keys_match=None,
 ):
-    """
-    Performs a CG product of two sets of equivariants. Only requirement is that
-    sparse indices are labeled as ("inversion_sigma", "spherical_harmonics_l", "order_nu"). The automatically-determined
-    naming of output features can be overridden by giving a list of "feature_names".
-    By defaults, all other key labels are combined in an "outer product" mode, i.e. if there is a key-side
-    neighbor_species in both x_a and x_b, the returned keys will have two neighbor_species labels,
-    corresponding to the parent features. By providing a list `other_keys_match` of keys that should match, these are
-    not outer-producted, but combined together. for instance, passing `["species center"]` means that the keys with the
-    same species center will be combined together, but yield a single key with the same species_center in the results.
+    """Performs a CG product of two sets of equivariants. 
+
+    The only requirement is that sparse indices are labeled as 
+    ("inversion_sigma", "spherical_harmonics_l", "order_nu"). 
+
+    Parameters
+    ----------
+    x_a
+        First set of equivariants
+    x_b
+        Second set of equivariants
+    feature_names : list, optional
+        Overrides automatically-generated names of output features.  By default,
+        all other key labels are combined via their outer product, i.e. if there
+        is a key-side `neighbor-species` in both `x_a` and `x_b`, the returned
+        keys will have two `neighbor_species` labels, corresponding to the parent
+        features.
+    clebsch_gordan : ClebschGordanReal, optional
+    lcut : np.ndarray()
+        Cutoff in new features
+    other_keys_match : list, optional
+        List of keys that should match.  These will not need to have their outer
+        product taken, but will instead be merged into a new key.  For instance,
+        passing `["species center"]` will combine the keys with the same species
+        center, yielding a single key with the same species_center in the results.
+        
+    Returns
+    -------
+    TensorMap
+        The Clebsch-Gordan product of `x_a` and `x_b`
+
     """
 
     # determines the cutoff in the new features

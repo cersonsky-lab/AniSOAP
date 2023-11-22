@@ -28,10 +28,10 @@ def pairwise_ellip_expansion(
     radial_basis,
     show_progress=False,
 ):
-    """Computes pairwise expansion
+    r"""Computes pairwise expansion
 
-    Function to compute the pairwise expansion :math:`\\langle anlm|\\rho_{ij} \\rangle` 
-    by combining the moments and the spherical to Cartesian transformation
+    Function to compute the pairwise expansion :math:`\langle anlm|\rho_{ij} \rangle` 
+    by combining the moments and the spherical to Cartesian transformation.
 
     Parameters
     ----------
@@ -166,8 +166,12 @@ def pairwise_ellip_expansion(
 def contract_pairwise_feat(pair_ellip_feat, species, show_progress=False):
     """Sums over pairwise expansion
 
-    Function to sum over the pairwise expansion :math:`\\sum_{j \\in a} \\langle 
-    anlm|\\rho_{ij} \\rangle = \\langle anlm|\\rho_i \\rangle`
+    Function to sum over the pairwise expansion 
+
+    .. math::
+
+        \\sum_{j \\in a} \\langle anlm|\\rho_{ij} \\rangle 
+            = \\langle anlm|\\rho_i \\rangle
 
     Parameters
     ----------
@@ -185,12 +189,12 @@ def contract_pairwise_feat(pair_ellip_feat, species, show_progress=False):
     TensorMap
         An Equistore TensorMap with keys (species, l) "species" takes the value 
         of the atomic numbers present in the dataset and "l" is the angular 
-        channel. Each block of this tensormap has as samples ("structure", "center") 
+        channel. Each block of this tensormap has as samples ("structure", "center"), 
         yielding the indices of the frames and atoms that correspond to "species" 
         are present. block.value is a 3D array of the form (num_samples, num_components, properties) 
         where num_components take on the same values as in the pair_ellip_feat_feat.block. 
         block.properties now has an additional index for neighbor_species that 
-        corresponds to "a" in :math:`\langle anlm|rho_i \rangle`
+        corresponds to "a" in :math:`\\langle anlm|rho_i \\rangle`
 
     """
     ellip_keys = list(
@@ -381,34 +385,10 @@ def contract_pairwise_feat(pair_ellip_feat, species, show_progress=False):
 
 
 class EllipsoidalDensityProjection:
-    """Computes spherical projection coefficients
+    """Class for computing spherical projection coefficients.
 
     Compute the spherical projection coefficients for a system of ellipsoids
     assuming a multivariate Gaussian density.
-
-    Initialize the calculator using the hyperparameters.
-
-    Parameters
-    ----------
-    max_angular : int
-        Number of angular functions
-    radial_basis : str
-        The radial basis. Currently implemented are
-        'GTO_primitive', 'GTO', 'monomial'.
-    compute_gradients : bool
-        Compute gradients
-    subtract_center_contribution : bool
-        Subtract contribution from the central atom.
-    rotation_key : string
-        Key under which rotations are stored in ase frames arrays
-    rotation_type : string
-        Type of rotation object being passed. Currently implemented
-        are 'quaternion' and 'matrix'
-    max_radial : None, int, list of int
-        Number of radial bases to use. Can either correspond to number of
-        bases per spherical harmonic or a value to use with every harmonic.
-        If `None`, then for every `l`, `(max_angular - l) // 2 + 1` will
-        be used.
        
     Attributes
     ----------
@@ -429,26 +409,35 @@ class EllipsoidalDensityProjection:
         rotation_key="quaternion",
         rotation_type="quaternion",
     ):
-        """Initializes an object of type EllipsoidalDensityProjection with hyperparameters.
+        """Instantiates an object of type EllipsoidalDensityProjection.
 
         Parameters
         ----------
         max_angular : int
             Number of angular functions
-        radial_basis : str
-            The radial basis. Currently implemented are
-            'GTO_primitive', 'GTO', 'monomial'.
-        compute_gradients : bool
-            Compute gradients
-        subtract_center_contribution : bool
-            Subtract contribution from the central atom.
+        radial_basis_name : str
+            The radial basis. Currently implemented are 'GTO_primitive', 'GTO', 
+            and 'monomial'.
+        cutoff_radius
+            Cutoff radius of the projection
+        compute_gradients : bool, optional
+            Compute gradients; defaults to 'False'
+        subtract_center_contribution : bool, optional
+            Subtract contribution from the central atom.  Defaults to 'False'
+        radial_gaussian_width : float, optional
+            Width of the Gaussian
+        max_radial : int, list of int
+            Number of radial bases to use. Can either correspond to number of
+            bases per spherical harmonic or a value to use with every harmonic.
+            If `None`, then for every `l`, `(max_angular - l) // 2 + 1` will
+            be used.
         rotation_key : string
             Key under which rotations are stored in ase frames arrays
         rotation_type : string
             Type of rotation object being passed. Currently implemented
             are 'quaternion' and 'matrix'
-        """
 
+        """
         # Store the input variables
         self.max_angular = max_angular
         self.cutoff_radius = cutoff_radius
@@ -515,8 +504,7 @@ class EllipsoidalDensityProjection:
         show_progress : bool
             Show progress bar for frame analysis and feature generation
         normalize: bool
-            Whether to perform Lowdin Symmetric Orthonormalization or not. Orthonormalization generally
-            leads to better performance. Default: True.
+            Whether to perform Lowdin Symmetric Orthonormalization or not. 
 
         Returns
         -------

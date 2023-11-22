@@ -15,15 +15,25 @@ from anisoap.utils import monomial_iterator
 
 
 def prefact_minus1(l):
-    """
-    Parameters:
-    - l: int
+    """Computes the prefactor that multiplies the :math:`T_{l-1}` term in the iteration.
 
-    Returns:
-    - A list of size (2*l +1) corresponding to the prefactor that multiplies the T_{l-1} term in the iteration
+    For m in [-l, -l+2, ..., l], compute the factor as 
 
-    For m in [-l, -l+2, ..., l], compute the factor as :
-    sqrt(factorial(l+1-m)/ factorial(l+1+m)) sqrt(factorial(l+m)/ factorial(l-m)) (2*l+1)/(l+1-m)
+    :math::
+
+        \\frac{\\sqrt{(l+1-m)!}}{(l+1+m)!} * \\frac{\\sqrt{(l+m)!}}{(l-m)!} * \\frac{2*l+1}{l+1-m}
+
+
+    Parameters
+    ----------
+    l : int
+        Term immediately proceeding the term for which the prefactor is computed
+
+    Returns
+    -------
+    list of size (2*l +1)
+        corresponds to the prefactor that multiplies the :math:`T_{l-1}` term in 
+        the iteration
 
     """
     m = np.arange(-l, l + 1)
@@ -36,15 +46,25 @@ def prefact_minus1(l):
 
 
 def prefact_minus2(l):
-    """
-    Parameters:
-    - l: int
+    """Computes the prefactor that multiplies the :math:`T_{l-2}` term in the iteration.
 
-    Returns:
-    - A list of size (2*l -1) corresponding to the prefactor that multiplies the T_{l-2} term in the iteration
+    For m in [-l+1, -l+2, ..., l-1], compute the factor as
 
-    For m in [-l+1, -l+2, ..., l-1], compute the factor as :
-    sqrt(factorial(l+1-m)/ factorial(l+1+m)) sqrt(factorial(l-1+m)/ factorial(l-1-m)) (l+m)/(l-m+1)
+    :math::
+
+        \\frac{\\sqrt{(l+1-m)!}}{(l+1+m)!} * \\frac{\\sqrt{(l-1+m)!}{(l-1-m)!} * \\frac{l+m}{l-m+1}
+
+    Parameters
+    ----------
+    l : int
+        Term two places after the term for which the prefactor is computed
+
+    Returns
+    -------
+    list of size (2*l -1) 
+        Corresponds to the prefactor that multiplies the term in question
+
+
     """
     m = np.arange(-l + 1, l)
     return (

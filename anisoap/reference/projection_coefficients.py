@@ -16,9 +16,11 @@ from .radial_basis import RadialBasis
 
 
 class DensityProjectionCalculator:
-    """
-    Compute the spherical projection coefficients.
+    """Compute the spherical projection coefficients.
+
     Initialize the calculator using the hyperparameters.
+
+    Parameters
     ----------
     max_angular : int
         Number of angular functions
@@ -29,10 +31,12 @@ class DensityProjectionCalculator:
         Compute gradients
     subtract_center_contribution : bool
         Subtract contribution from the central atom.
+
     Attributes
     ----------
     features : numpy.ndarray
     feature_gradients : numpy.ndarray
+
     """
 
     def __init__(
@@ -78,20 +82,24 @@ class DensityProjectionCalculator:
         self.num_ns = self.radial_basis.get_num_radial_functions()
 
     def transform(self, frames, show_progress=False):
-        """
+        """Computes the features and gradients of frames.
+
         Computes the features and (if compute_gradients == True) gradients
         for all the provided frames. The features and gradients are stored in
         features and feature_gradients attribute.
+
         Parameters
         ----------
         frames : ase.Atoms
             List containing all ase.Atoms structures
         show_progress : bool
             Show progress bar for frame analysis
+
         Returns
         -------
         None, but stores the projection coefficients and (if desired)
         gradients as arrays as `features` and `features_gradients`.
+
         """
         self.frames = frames
 
@@ -133,10 +141,17 @@ class DensityProjectionCalculator:
             results = self._transform_single_frame(frame)
 
     def _transform_single_frame(self, frame):
-        """
+        """Compute features for single frame.
+
         Compute features for single frame and return to the transform()
         method which loops over all structures to obtain the complete
         vector for all environments.
+
+        Parameters
+        ----------
+        frame
+            frame to be transformed
+
         """
         ###
         # Initialization
