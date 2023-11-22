@@ -20,7 +20,7 @@ release = '0.0.1'
 extensions = ['sphinx.ext.autodoc', 'sphinx.ext.napoleon', 'sphinx.ext.mathjax',
               'sphinx.ext.coverage']
 
-sys.path.insert(0, os.path.abspath('../../anisoap'))
+sys.path.insert(0, os.path.abspath('../../'))
 
 templates_path = ['_templates']
 exclude_patterns = []

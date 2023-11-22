@@ -19,10 +19,9 @@ def prefact_minus1(l):
 
     For m in [-l, -l+2, ..., l], compute the factor as 
 
-    :math::
+    .. math::
 
         \\frac{\\sqrt{(l+1-m)!}}{(l+1+m)!} * \\frac{\\sqrt{(l+m)!}}{(l-m)!} * \\frac{2*l+1}{l+1-m}
-
 
     Parameters
     ----------
@@ -50,7 +49,7 @@ def prefact_minus2(l):
 
     For m in [-l+1, -l+2, ..., l-1], compute the factor as
 
-    :math::
+    .. math::
 
         \\frac{\\sqrt{(l+1-m)!}}{(l+1+m)!} * \\frac{\\sqrt{(l-1+m)!}{(l-1-m)!} * \\frac{l+m}{l-m+1}
 
@@ -63,7 +62,6 @@ def prefact_minus2(l):
     -------
     list of size (2*l -1) 
         Corresponds to the prefactor that multiplies the term in question
-
 
     """
     m = np.arange(-l + 1, l)
