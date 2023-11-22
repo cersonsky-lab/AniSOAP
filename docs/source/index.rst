@@ -13,7 +13,8 @@ Contents
 --------
 
 .. toctree::
+
    installation
    tutorials
    usage
-   modules
+   api
