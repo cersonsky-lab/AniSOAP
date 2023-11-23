@@ -1,8 +1,14 @@
 API
 ===
 
-.. autosummary::
-   :recursive:
-   
-   anisoap.representations
-   anisoap.utils
+Representations
+---------------
+
+.. automodule:: anisoap.representations
+   :members:
+
+Utilities
+---------
+
+.. automodule:: anisoap.utils
+   :members:
