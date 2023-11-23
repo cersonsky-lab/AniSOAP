@@ -6,7 +6,7 @@ sphinx-rtd-theme==1.3.0
 torch==1.11.0+cpu
 --find-links https://download.pytorch.org/whl/torch_stable.html
 torchvision==0.12.0+cpu
-metatensor[torch] >=0.1.0,<0.2.0
+metatensor >=0.1.0,<0.2.0
 
 chemfiles
 matplotlib
