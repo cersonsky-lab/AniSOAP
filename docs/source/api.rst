@@ -2,6 +2,7 @@ API
 ===
 
 .. autosummary::
+    :recursive:
 
     anisoap.representations.ellipsoidal_density_projection
     anisoap.representations.radial_basis
