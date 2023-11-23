@@ -1,4 +1,7 @@
-metatensor @ git+https://github.com/lab-cosmo/metatensor
+metatensor-core @ git+https://github.com/lab-cosmo/metatensor@releases/tag/metatensor-core-v0.1.0
+metatensor-torch @ git+https://github.com/lab-cosmo/metatensor@releases/tag/metatensor-torch-v0.1.0
+metatensor-operations @ git+https://github.com/lab-cosmo/metatensor@releases/tag/metatensor-operations-v0.1.0
+metatensor @ git+https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-python-v0.1.0
 rascaline @ git+https://github.com/Luthaf/rascaline
 alabaster==0.7.13
 anyio==4.0.0
