@@ -1,7 +1,4 @@
-metatensor-core @ git+https://github.com/lab-cosmo/metatensor@releases/tag/metatensor-core-v0.1.0#egg=metatensor-core
-metatensor-torch @ git+https://github.com/lab-cosmo/metatensor@releases/tag/metatensor-torch-v0.1.0#egg=metatensor-torch
-metatensor-operations @ git+https://github.com/lab-cosmo/metatensor@releases/tag/metatensor-operations-v0.1.0#egg=metatensor-operations
-metatensor @ git+https://github.com/lab-cosmo/metatensor/releases/tag/metatensor-python-v0.1.0
+--extra-index-url https://luthaf.fr/temporary-wheels/ metatensor
 rascaline @ git+https://github.com/Luthaf/rascaline
 alabaster==0.7.13
 anyio==4.0.0
