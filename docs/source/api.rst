@@ -1,14 +1,11 @@
-API
-===
+API Reference
+=============
 
-Representations
----------------
+.. autosummary::
+   :toctree: generated
+   :recursive:
 
-.. automodule:: anisoap.representations
-   :members:
+   anisoap.representations
+   anisoap.utils
 
-Utilities
----------
 
-.. automodule:: anisoap.utils
-   :members:
