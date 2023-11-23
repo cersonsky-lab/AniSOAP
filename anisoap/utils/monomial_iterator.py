@@ -5,8 +5,7 @@ class TrivariateMonomialIndices:
     """Class for generating an iterator object over trivariate monomials.
 
     Generates an iterator object over trivariate monomials of the form 
-    :math:`f(x,y,z) = x^{n_0} * y^{n_1} * z^{n_2}` sorted in the lexicographical 
-    order.
+    :math:`f(x,y,z) = x^{n_0} y^{n_1} z^{n_2}` sorted in lexicographical order.
 
     Without this class, iterating over all monomials at some fixed degree
     requires the use of a double loop of the form::
@@ -58,12 +57,12 @@ class TrivariateMonomialIndices:
 
         Parameters
         ----------
-        exponents : 3-tuple (n0, n1, n2)
-            The exponents of the monomial x^n0 * y^n1 * z^n2
+        exponents : 3-tuple of the form (n0, n1, n2)
+            The exponents of the monomial :math:`x^{n_0}  y^{n_1} z^{n_2}`
 
         Returns
         -------
-        The index of the tuple in the lexicographical order
+        The index of the tuple in lexicographical order
 
         """
         assert n0 + n1 + n2 == self.deg

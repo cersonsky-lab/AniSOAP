@@ -15,24 +15,25 @@ from anisoap.utils import monomial_iterator
 
 
 def prefact_minus1(l):
-    r"""Computes the prefactor that multiplies the :math:`T_{l-1}` term in the iteration.
+    r"""Computes the prefactor that multiplies the :math:`T_{l-1}^\text{th}` term in the iteration.
 
-    For m in [-l, -l+2, ..., l], compute the factor as 
+    For :math:`m \in \left[-l, -l+2, ..., l \right]`, compute the factor as 
 
     .. math::
 
-        (\frac{\sqrt{(l+1-m)!}}{(l+1+m)!})  (\frac{\sqrt{(l+m)!}}{(l-m)!}) (\frac{2*l+1}{l+1-m})
+        left( \frac{\sqrt{(l+1-m)!}}{(l+1+m)!} \right) \left( \frac{\sqrt{(l+m)!}}{(l-m)!} \right) 
+            \left( \frac{2l+1}{l+1-m} \right)
 
     Parameters
     ----------
     l : int
-        Term immediately proceeding the term for which the prefactor is computed
+        Term immediately proceeding the term for which the prefactor is computed.
 
     Returns
     -------
-    list of size (2*l +1)
-        corresponds to the prefactor that multiplies the :math:`T_{l-1}` term in 
-        the iteration
+    list of size (2l + 1)
+        corresponds to the prefactor that multiplies the :math:`T_{l-1}^\text{th}` 
+        term in the iteration
 
     """
     m = np.arange(-l, l + 1)
@@ -45,13 +46,14 @@ def prefact_minus1(l):
 
 
 def prefact_minus2(l):
-    r"""Computes the prefactor that multiplies the :math:`T_{l-2}` term in the iteration.
+    r"""Computes the prefactor that multiplies the :math:`T_{l-2}^\text{th}` term in the iteration.
 
-    For m in [-l+1, -l+2, ..., l-1], compute the factor as
+    For :math:`m \in \left[-l+1, -l+2, ..., l-1\right]`, compute the factor as
 
     .. math::
 
-        (\frac{\sqrt{(l+1-m)!}}{(l+1+m)!}) (\frac{\sqrt{(l-1+m)!}}{(l-1-m)!}) (\frac{l+m}{l-m+1})
+        \left( \frac{\sqrt{(l+1-m)!}}{(l+1+m)!} \right) \left(\frac{\sqrt{(l-1+m)!}}{(l-1-m)!} \right) 
+            \left( \frac{l+m}{l-m+1} \right)
 
     Parameters
     ----------
@@ -60,7 +62,7 @@ def prefact_minus2(l):
 
     Returns
     -------
-    list of size (2*l -1) 
+    list of size (2l - 1) 
         Corresponds to the prefactor that multiplies the term in question
 
     """

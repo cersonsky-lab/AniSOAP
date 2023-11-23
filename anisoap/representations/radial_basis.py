@@ -35,15 +35,15 @@ def inverse_matrix_sqrt(matrix: np.array):
 
 
 def gto_square_norm(n, sigma):
-    """Compute the square norm of GTOs (inner product of itself over :math:`R^3`).
+    r"""Compute the square norm of GTOs (inner product of itself over :math:`R^3`).
 
-    An unnormalized GTO of order n is :math:`\\phi_n = r^n * e^{-r^2/(2*\\sigma^2)}`
+    An unnormalized GTO of order n is :math:`\phi_n = r^n  e^{-r^2/(2*\sigma^2)}`
     The square norm of the unnormalized GTO has an analytic solution:
 
     .. math:: 
 
-        \\langle \\phi_n | \\phi_n \\rangle = \\int_0^\\infty dr r^2 |\\phi_n|^2 = 
-            1/2 * \\sigma^{2n+3} * \\Gamma(n+3/2)
+        \braket{\phi_n | \phi_n} &= \int_0^\infty dr \, r^2 \lvert\phi_n\rvert^2 \\
+                                 &=  \frac{1}{2} \sigma^{2n+3} \Gamma(n+\frac{3}{2})
 
     This function uses the above expression.
 
@@ -93,9 +93,9 @@ def gto_overlap(n, m, sigma_n, sigma_m):
     
     .. math::
 
-        \langle \phi_n, \phi_m \rangle &= \int_0^\infty dr r^2 r^n * e^{-r^2/(2*\sigma_n^2) * r^m * e^{-r^2/(2*\sigma_m^2) \\
-                                       &= \int_0^\infty dr r^2 |r^{(n+m)/2} * e^{-r^2/4 * (1/\sigma_n^2 + 1/\sigma_m^2)}|^2 \\
-                                       &= \int_0^\infty dr r^2 r^n_{eff} * e^{-r^2/(2*\sigma_{eff}^2)
+        \langle \phi_n, \phi_m \rangle &= \int_0^\infty dr \, r^2 r^n e^{-r^2/(2\sigma_n^2)} \, r^m  e^{-r^2/(2\sigma_m^2)} \\
+                                       &= \int_0^\infty dr \, r^2 \lvert r^{(n+m)/2} e^{-r^2/4 (1/\sigma_n^2 + 1/\sigma_m^2)}\rvert^2 \\
+                                       &= \int_0^\infty dr \, r^2 r^n_\text{eff} e^{-r^2/(2\sigma_\text{eff}^2)}
 
     prefactor.
 
@@ -212,7 +212,7 @@ class RadialBasis:
 
         .. math::
 
-            S_{ij} = \\int_0^\\infty dr r^2 \\phi_i \\phi_j
+            S_{ij} = \\int_0^\\infty dr \\, r^2 \\phi_i \\phi_j
 
         The overlap has an analytic solution (see above functions).
 

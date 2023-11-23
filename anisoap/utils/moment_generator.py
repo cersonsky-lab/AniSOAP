@@ -9,7 +9,7 @@ from scipy.special import (
 # Define function to compute all moments for a single
 # variable Gaussian.
 def compute_moments_single_variable(A, a, maxdeg):
-    r"""Computes all moments for a single variable Gaussian
+    r"""Computes all moments for a single variable Gaussian.
 
     Parameters
     ----------
@@ -23,15 +23,15 @@ def compute_moments_single_variable(A, a, maxdeg):
     Returns
     -------
     np.array
-        A numpy array of size (maxdeg+1,) containing the moments defined as
+        A numpy array of size (`maxdeg` + 1,) containing the moments defined as
 
         .. math::
 
-        \langle x^n \rangle = \int x^n \exp{-A(x-a)^2/2} dx
+            \langle x^n \rangle = \int x^n e^{-A(x-a)^2/2} dx
         
     Note
     ----
-    Note that the Gaussian is not normalized, meaning that we need to multiply 
+    The Gaussian is not normalized, meaning that we need to multiply 
     all results by a global factor if we wish to interpret these as moments of 
     a probability density.
 
@@ -64,8 +64,8 @@ def compute_moments_diagonal_inefficient_implementation(
 
     The implementation focuses on conceptual simplicity, while sacrificing memory
     efficiency.  To be specific, the `moments` array allows access to the value
-    of the moment :math:`\langle x^{n_0}  y^{n_1}  z^{n_2} \rangle` simply
-    as `moments[n0, n1, n2]`.  This leads to more intuitive code, at the cost of 
+    of the moment :math:`\langle x^{n_0}  y^{n_1}  z^{n_2} \rangle` simply as 
+    `moments[n0, n1, n2]`.  This leads to more intuitive code, at the cost of 
     wasting around a third of the memory in the array to store zeros.
 
     Parameters
@@ -79,14 +79,14 @@ def compute_moments_diagonal_inefficient_implementation(
 
     Returns
     -------
-    : np.ndarray of shape (3, maxdeg+1)
-        Moments calculated.  `moments[n0,n1,n2]` is the (n0,n1,n2)-th moment of 
-        the Gaussian defined as
+    : np.ndarray of shape (3, `maxdeg` + 1)
+        Moments calculated.  `moments[n0,n1,n2]` is the :math:`\left(n_0,n_1,n_2)^\text{th}` 
+        moment of the Gaussian defined as
 
         .. math::
 
             \langle x^{n_0}  y^{n_1}  z^{n_2} \rangle = 
-                \int(x^{n_0}  y^{n_1}  z^{n_2})  \exp(-0.5*(r-a).T@cov@(r-a)) dxdydz
+                \int(x^{n_0}  y^{n_1}  z^{n_2}) e^{-\frac{1}{2}(r-a).T@cov@(r-a)} dx\,dy\,dz\,
                 \sum_{i=1}^{\infty} x_{i}
 
     Note
@@ -141,10 +141,11 @@ def compute_moments_inefficient_implementation(A, a, maxdeg):
     Parameters
     ----------
     A : np.ndarray of shape (3,3)
-        Dilation matrix of the Gaussian that determines its shape.
-        It can be written as cov = RDR^T, where R is a rotation matrix that specifies
-        the orientation of the three principal axes, while D is a diagonal matrix
-        whose three diagonal elements are the lengths of the principal axes.
+        Dilation matrix of the Gaussian that determines its shape. It can be 
+        written as :math:`\mathbf{A} = \mathbf{R}\mathbf{D}\mathbf{R}^T`, where 
+        R is a rotation matrix that specifies the orientation of the three principal 
+        axes, while :math:`\mathbf{D}` is a diagonal matrix whose three diagonal 
+        elements are the lengths of the principal axes.
     a : np.ndarray of shape (3,)
         Vectorial center of the trivariate Gaussian.
     maxdeg : int
@@ -158,7 +159,7 @@ def compute_moments_inefficient_implementation(A, a, maxdeg):
         .. math::
 
             \langle x^{n_0} * y^{n_1} * z^{n_2} \rangle = 
-                \int(x^{n_0} * y^{n_1} * z^{n_2}) * \exp(-0.5*(r-a).T@cov@(r-a)) dxdydz
+                \int(x^{n_0} * y^{n_1} * z^{n_2}) * \exp(-0.5*(r-a).T@cov@(r-a)) dx\,dy\,dz\,
                 \sum_{i=1}^{\infty} x_{i}
 
     Note

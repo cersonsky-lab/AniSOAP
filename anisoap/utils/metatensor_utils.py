@@ -93,12 +93,30 @@ class ClebschGordanReal:
 
 
 def _real2complex(L):
-    """Computes a matrix that converts from real to complex coefficients.
+    r"""Computes a matrix that converts from real to complex coefficients.
 
     Computes a matrix that can be used to convert from real to complex-valued
-    spherical harmonics(coefficients) of order L.
+    spherical harmonics (coefficients) of order `L`.
 
-    It's meant to be applied to the left, ``real2complex @ [-L..L]``.
+    Parameters
+    ----------
+    L : int
+        The order of the spherical harmonics for which the matrix will be computed.
+
+    Returns
+    -------
+    np.ndarray
+        Matrix that can be used to convert from real to complex-valued spherical
+        harmonics of order `L`.
+
+    Note
+    ----
+    The matrix generated is meant to be applied from the left; that is, if :math:`\mathbf{R}`
+    is the matrix returned from the function, it should be used like this:
+
+    .. math::
+
+        \mathbf{R} \dot \left[-L..L\right] 
 
     """
     result = np.zeros((2 * L + 1, 2 * L + 1), dtype=np.complex128)
