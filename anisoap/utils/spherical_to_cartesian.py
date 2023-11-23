@@ -21,8 +21,8 @@ def prefact_minus1(l):
 
     .. math::
 
-        left( \frac{\sqrt{(l+1-m)!}}{(l+1+m)!} \right) \left( \frac{\sqrt{(l+m)!}}{(l-m)!} 
-            \right) \left( \frac{2l+1}{l+1-m} \right)
+        \left( \frac{\sqrt{(l+1-m)!}}{(l+1+m)!} \right) \left( \frac{\sqrt{(l+m)!}}{(l-m)!} \right) 
+            \left( \frac{2l+1}{l+1-m} \right)
 
     Parameters
     ----------
