@@ -80,7 +80,7 @@ def compute_moments_diagonal_inefficient_implementation(
     Returns
     -------
     : np.ndarray of shape (3, `maxdeg` + 1)
-        Moments calculated.  `moments[n0,n1,n2]` is the :math:`\left(n_0,n_1,n_2)^\text{th}` 
+        Moments calculated.  `moments[n0,n1,n2]` is the :math:`\left(n_0,n_1,n_2\right)^\text{th}` 
         moment of the Gaussian defined as
 
         .. math::
