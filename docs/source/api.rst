@@ -1,11 +1,33 @@
 API Reference
 =============
 
-.. autosummary::
-   :toctree: generated
-   :recursive:
+Representations
+---------------
+.. automodule:: anisoap.representations.ellipsoidal_density_projection
+   :members:
+   :show-inheritance:
+   :inherited-members:
+.. automodule:: anisoap.representations.radial_basis
+   :members:
+   :show-inheritance:
+   :inherited-members:
 
-   anisoap.representations
-   anisoap.utils
-
+Utilities
+---------
+.. automodule:: anisoap.utils.metatensor_utils
+   :members:
+   :show-inheritance:
+   :inherited-members:
+.. automodule:: anisoap.utils.moment_generator
+   :members:
+   :show-inheritance:
+   :inherited-members:
+.. automodule:: anisoap.utils.monomial_iterator
+   :members:
+   :show-inheritance:
+   :inherited-members:
+.. automodule:: anisoap.utils.spherical_to_cartesian
+   :members:
+   :show-inheritance:
+   :inherited-members:
 
