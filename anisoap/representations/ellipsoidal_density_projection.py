@@ -25,6 +25,7 @@ except ImportError:
 
 from anisoap.lib import compute_moments
 
+
 def pairwise_ellip_expansion(
     lmax,
     neighbor_list,
