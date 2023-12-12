@@ -19,11 +19,22 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install dependencies
+      - name: Install easy dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r tests/requirements.txt
-          pip install -e .
+          pip install ase pytest tqdm 
+      - name: Install coverage
+        run: |
+          pip install coverage[toml] 
+      - name: Install scipy
+        run: |
+          pip install scipy 
+      - name: Install rascaline 
+        run: |
+          pip install git+https://github.com/Luthaf/rascaline.git 
+      - name: Install anisoap
+        run: |
+          pip install .
       - name: Run tests
         run: |
           pytest -v tests/.
