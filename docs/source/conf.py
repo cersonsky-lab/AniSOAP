@@ -10,8 +10,8 @@ import os, sys
 root_doc = 'index'
 
 project = 'AniSOAP'
-copyright = '2023, Lucas'
-author = 'Lucas'
+copyright = '2023, Cersonsky Lab'
+author = 'The Cersonsky Lab'
 release = '0.0.1'
 
 # -- General configuration ---------------------------------------------------

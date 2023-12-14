@@ -10,6 +10,11 @@ descriptors by computing anisotrophy extensions.
 
    This project is under active development.
 
+.. note::
+
+   AniSOAP documentation is a work in progress; please contact us with questions 
+   not yet addressed here.
+
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
