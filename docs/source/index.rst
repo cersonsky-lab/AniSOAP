@@ -1,3 +1,4 @@
+===================================
 Welcome to AniSOAP's documentation!
 ===================================
 
@@ -9,13 +10,14 @@ descriptors by computing anisotrophy extensions.
 
    This project is under active development.
 
-Contents
---------
-
 .. toctree::
    :maxdepth: 2
+   :caption: Contents:
 
    installation
+   getting_started
    tutorials
    usage
    api
+
+
