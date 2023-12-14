@@ -43,7 +43,7 @@ def gto_square_norm(n, sigma):
     Returns:
         square norm: The square norm of the unnormalized GTO
     """
-    return 0.5 * sigma ** (2 * n + 3) * gamma(n + 1.5)
+    return (2 ** (n + 1.5)) * sigma ** (2 * n + 3) * gamma(n + 1.5)
 
 
 def gto_prefactor(n, sigma):
