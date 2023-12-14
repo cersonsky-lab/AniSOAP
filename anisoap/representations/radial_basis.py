@@ -56,7 +56,7 @@ def gto_square_norm(n, sigma):
 
     Returns
     -------
-    square norm 
+    float 
         The square norm of the unnormalized GTO
 
     """
@@ -79,8 +79,8 @@ def gto_prefactor(n, sigma):
 
     Returns
     -------
-    N 
-        normalization constant
+    float 
+        The normalization constant
 
     """
     return np.sqrt(1 / gto_square_norm(n, sigma))
@@ -88,8 +88,9 @@ def gto_prefactor(n, sigma):
 def gto_overlap(n, m, sigma_n, sigma_m):
     r"""Compute overlap of two *normalized* GTOs
 
-    Note that the overlap of two GTOs can be modeled as the square norm of one GTO, with an effective
-    n and sigma. All we need to do is to calculate those effective parameters, then compute the normalization.
+    Note that the overlap of two GTOs can be modeled as the square norm of one 
+    GTO, with an effective :math:`n` and :math:`\sigma`. All we need to do is to 
+    calculate those effective parameters, then compute the normalization prefactor.
     
     .. math::
 
@@ -97,7 +98,6 @@ def gto_overlap(n, m, sigma_n, sigma_m):
                                        &= \int_0^\infty dr \, r^2 \lvert r^{(n+m)/2} e^{-r^2/4 (1/\sigma_n^2 + 1/\sigma_m^2)}\rvert^2 \\
                                        &= \int_0^\infty dr \, r^2 r^n_\text{eff} e^{-r^2/(2\sigma_\text{eff}^2)}
 
-    prefactor.
 
     Parameters
     ----------
@@ -112,7 +112,7 @@ def gto_overlap(n, m, sigma_n, sigma_m):
 
     Returns
     -------
-    S 
+    float 
         overlap of the two normalized GTOs
 
     """
@@ -129,8 +129,9 @@ class RadialBasis:
     This helps to keep a cleaner main code by avoiding if-else clauses
     related to the radial basis.
 
-    Code relating to GTO orthonormalization is heavily inspired by work done in librascal, specifically the 
-    codebase found `here <https://github.com/lab-cosmo/librascal/blob/8405cbdc0b5c72a5f0b0c93593100dde348bb95f/bindings/rascal/utils/radial_basis.py>`_
+    Code relating to GTO orthonormalization is heavily inspired by work done in 
+    librascal, specifically the codebase found 
+    `here <https://github.com/lab-cosmo/librascal/blob/8405cbdc0b5c72a5f0b0c93593100dde348bb95f/bindings/rascal/utils/radial_basis.py>`_
 
     """
 
@@ -226,7 +227,7 @@ class RadialBasis:
 
         Returns
         -------
-        S : 2D array 
+        2D array 
             The overlap matrix
 
         """
@@ -264,7 +265,7 @@ class RadialBasis:
 
         Returns
         -------
-        normalized_features 
+        TensorMap
             features containing values multiplied by normalization factors.
 
         """

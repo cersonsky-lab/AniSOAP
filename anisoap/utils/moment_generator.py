@@ -79,15 +79,17 @@ def compute_moments_diagonal_inefficient_implementation(
 
     Returns
     -------
-    : np.ndarray of shape (3, `maxdeg` + 1)
+    np.ndarray of shape (3, `maxdeg` + 1)
         Moments calculated.  `moments[n0,n1,n2]` is the :math:`\left(n_0,n_1,n_2\right)^\text{th}` 
         moment of the Gaussian defined as
 
         .. math::
 
             \langle x^{n_0}  y^{n_1}  z^{n_2} \rangle = 
-                \int(x^{n_0}  y^{n_1}  z^{n_2}) e^{-\frac{1}{2}(r-a).T@cov@(r-a)} dx\,dy\,dz\,
+                \int(x^{n_0}  y^{n_1}  z^{n_2}) e^{-\frac{1}{2}(r-a)^T \Sigma (r-a)} dx\,dy\,dz\,
                 \sum_{i=1}^{\infty} x_{i}
+
+        where :math:`\Sigma` is the covariance matrix.
 
     Note
     ----
@@ -158,9 +160,11 @@ def compute_moments_inefficient_implementation(A, a, maxdeg):
 
         .. math::
 
-            \langle x^{n_0} * y^{n_1} * z^{n_2} \rangle = 
-                \int(x^{n_0} * y^{n_1} * z^{n_2}) * \exp(-0.5*(r-a).T@cov@(r-a)) dx\,dy\,dz\,
+            \langle x^{n_0} y^{n_1} z^{n_2} \rangle = 
+                \int(x^{n_0} y^{n_1} z^{n_2}) \exp(-0.5(r-a)^T \Sigma (r-a)) dx\,dy\,dz\,
                 \sum_{i=1}^{\infty} x_{i}
+
+        where :math:`\Sigma` is the covariance matrix.
 
     Note
     ----
