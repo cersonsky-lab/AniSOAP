@@ -33,7 +33,7 @@ def pairwise_ellip_expansion(
     Function to compute the pairwise expansion :math:`\langle anlm|\rho_{ij} \rangle` 
     by combining the moments and the spherical to Cartesian transformation.
 
-    parameters
+    Parameters
     ----------
     lmax : int
         Maximum angular
@@ -59,7 +59,7 @@ def pairwise_ellip_expansion(
     show_progress : bool
         Show progress bar for frame analysis and feature generation
 
-    returns
+    Returns
     -------
     TensorMap
         An Equistore TensorMap with keys (species_1, species_2, l) where 
@@ -391,6 +391,8 @@ class EllipsoidalDensityProjection:
     assuming a multivariate Gaussian density.
        
     Initialize the calculator using the hyperparameters.
+
+    Parameters
     ----------
     max_angular : int
         Number of angular functions
