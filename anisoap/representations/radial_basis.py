@@ -27,11 +27,13 @@ def inverse_matrix_sqrt(matrix: np.array):
 
     result = eve @ np.diag(1 / np.sqrt(eva)) @ eve.T
 
-    # Do quick test to make sure inverse matrix sqrt succeeded (should succeed for overlap matrices up to order 100)
-    # If it doesn't, matrix likely wasn't a gram matrix to start with.
-    matrix2 = np.linalg.pinv(result @ result)    # this should be very close to the original matrix
-    if np.linalg.norm(matrix-matrix2) > 1.0e-3:
-        raise ValueError(f"Incurred Numerical Imprecision {np.linalg.norm(matrix-matrix2)= :.3f}")
+    # Do quick test to make sure inverse square of the inverse matrix sqrt succeeded
+    # This should succed for most cases (e.g. GTO orders up to 100), if not the matrix likely wasn't a gram matrix to start with.
+    matrix2 = np.linalg.pinv(result @ result)
+    if np.linalg.norm(matrix - matrix2) > 1.0e-3:
+        raise ValueError(
+            f"Incurred Numerical Imprecision {np.linalg.norm(matrix-matrix2)= :.3f}"
+        )
     return result
 
 
