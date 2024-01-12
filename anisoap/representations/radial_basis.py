@@ -22,12 +22,17 @@ def inverse_matrix_sqrt(matrix: np.array):
     if not np.allclose(matrix, matrix.conjugate().T):
         raise ValueError("Matrix is not hermitian")
     eva, eve = np.linalg.eigh(matrix)
+    eve = eve[:, eva > 1e-8]
+    eva = eva[eva > 1e-8]
 
-    if (eva < 0).any():
-        raise ValueError(
-            "Matrix is not positive semidefinite. Check that a valid gram matrix is passed."
-        )
-    return eve @ np.diag(1 / np.sqrt(eva)) @ eve.T
+    result = eve @ np.diag(1 / np.sqrt(eva)) @ eve.T
+
+    # Do quick test to make sure inverse matrix sqrt succeeded (should succeed for overlap matrices up to order 100)
+    # If it doesn't, matrix likely wasn't a gram matrix to start with.
+    matrix2 = np.linalg.pinv(result @ result)    # this should be very close to the original matrix
+    if np.linalg.norm(matrix-matrix2) > 1.0e-3:
+        raise ValueError(f"Incurred Numerical Imprecision {np.linalg.norm(matrix-matrix2)= :.3f}")
+    return result
 
 
 def gto_square_norm(n, sigma):
