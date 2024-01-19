@@ -1,12 +1,11 @@
 import warnings
 
 import numpy as np
-import scipy.linalg
 from metatensor import TensorMap
 from scipy.special import gamma
 
 
-def inverse_matrix_sqrt(matrix: np.array):
+def inverse_matrix_sqrt(matrix: np.array, rcond=1e-8, tol=1e-3):
     """
     Returns the inverse matrix square root.
     The inverse square root of the overlap matrix (or slices of the overlap matrix) yields the
@@ -15,6 +14,13 @@ def inverse_matrix_sqrt(matrix: np.array):
         matrix: np.array
             Symmetric square matrix to find the inverse square root of
 
+        rcond: float
+            Lower bound for eigenvalues for inverse square root
+
+        tol: float
+            Tolerance for differences between original matrix and reconstruction via
+            inverse square root
+
     Returns:
         inverse_sqrt_matrix: S^{-1/2}
 
@@ -22,12 +28,19 @@ def inverse_matrix_sqrt(matrix: np.array):
     if not np.allclose(matrix, matrix.conjugate().T):
         raise ValueError("Matrix is not hermitian")
     eva, eve = np.linalg.eigh(matrix)
+    eve = eve[:, eva > rcond]
+    eva = eva[eva > rcond]
 
-    if (eva < 0).any():
+    result = eve @ np.diag(1 / np.sqrt(eva)) @ eve.T
+
+    # Do quick test to make sure inverse square of the inverse matrix sqrt succeeded
+    # This should succed for most cases (e.g. GTO orders up to 100), if not the matrix likely wasn't a gram matrix to start with.
+    matrix2 = np.linalg.pinv(result @ result)
+    if np.linalg.norm(matrix - matrix2) > tol:
         raise ValueError(
-            "Matrix is not positive semidefinite. Check that a valid gram matrix is passed."
+            f"Incurred Numerical Imprecision {np.linalg.norm(matrix-matrix2)= :.3f}"
         )
-    return eve @ np.diag(1 / np.sqrt(eva)) @ eve.T
+    return result
 
 
 def gto_square_norm(n, sigma):
@@ -99,13 +112,23 @@ class RadialBasis:
     """
 
     def __init__(
-        self, radial_basis, max_angular, cutoff_radius, max_radial=None, **hypers
+        self,
+        radial_basis,
+        max_angular,
+        cutoff_radius,
+        max_radial=None,
+        rcond=1e-8,
+        tol=1e-3,
+        **hypers,
     ):
         # Store all inputs into internal variables
         self.radial_basis = radial_basis
         self.max_angular = max_angular
         self.cutoff_radius = cutoff_radius
         self.hypers = hypers
+        self.rcond = rcond
+        self.tol = tol
+
         if self.radial_basis not in ["monomial", "gto"]:
             raise ValueError(f"{self.radial_basis} is not an implemented basis.")
 
@@ -240,7 +263,7 @@ class RadialBasis:
 
                 gto_overlap_matrix_slice = self.overlap_matrix[l_2n_arr, :][:, l_2n_arr]
                 orthonormalization_matrix = inverse_matrix_sqrt(
-                    gto_overlap_matrix_slice
+                    gto_overlap_matrix_slice, self.rcond, self.tol
                 )
                 block.values[:, :, neighbor_mask] = np.einsum(
                     "ijk,kl->ijl",
