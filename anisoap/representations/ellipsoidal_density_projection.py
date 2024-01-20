@@ -423,8 +423,8 @@ class EllipsoidalDensityProjection:
         max_radial=None,
         rotation_key="quaternion",
         rotation_type="quaternion",
-        basis_rcond=None,
-        basis_tol=None,
+        basis_rcond=0,
+        basis_tol=1e-8,
     ):
         # Store the input variables
         self.max_angular = max_angular
@@ -448,22 +448,23 @@ class EllipsoidalDensityProjection:
 
         # Initialize the radial basis class
         if radial_basis_name == "gto":
+            if radial_hypers.get("radial_gaussian_width") is None:
+                raise ValueError("Gaussian width must be provided with GTO basis")
+            if type(radial_hypers.get("radial_gaussian_width")) == int:
+                raise ValueError(
+                    "radial_gaussian_width is set as an integer, which could cause overflow errors. Pass in float."
+                )
             self.radial_basis = GTORadialBasis(**radial_hypers)
         elif radial_basis_name == "monomial":
+            rgw = radial_hypers.pop("radial_gaussian_width")
+            if rgw is not None:
+                raise ValueError("Gaussian width can only be provided with GTO basis")
             self.radial_basis = MonomialBasis(**radial_hypers)
         else:
             raise NotImplementedError(
                 f"{self.radial_basis_name} is not an implemented basis"
                 ". Try 'monomial' or 'gto'"
             )
-        # if radial_gaussian_width != None and radial_basis_name != "gto":
-        #     raise ValueError("Gaussian width can only be provided with GTO basis")
-        # elif radial_gaussian_width is None and radial_basis_name == "gto":
-        #     raise ValueError("Gaussian width must be provided with GTO basis")
-        # elif type(radial_gaussian_width) == int:
-        #     raise ValueError(
-        #         "radial_gaussian_width is set as an integer, which could cause overflow errors. Pass in float."
-        #     )
 
         self.num_ns = self.radial_basis.get_num_radial_functions()
         self.sph_to_cart = spherical_to_cartesian(self.max_angular, self.num_ns)
