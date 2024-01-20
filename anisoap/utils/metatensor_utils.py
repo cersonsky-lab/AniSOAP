@@ -8,8 +8,12 @@ from metatensor import (
     TensorMap,
 )
 
+from .cyclic_list import CGRCacheList
+
 
 class ClebschGordanReal:
+    cache_list = CGRCacheList(5)
+
     def __init__(self, l_max):
         self._l_max = l_max
         self._cg = {}
@@ -21,6 +25,13 @@ class ClebschGordanReal:
             r2c[L] = _real2complex(L)
             c2r[L] = np.conjugate(r2c[L]).T
 
+        if l_max in ClebschGordanReal.cache_list.keys():
+            self._cg = ClebschGordanReal.cache_list.get_val(l_max)
+        else:
+            self._init_cg(r2c, c2r)
+            ClebschGordanReal.cache_list.insert(l_max, self._cg)
+
+    def _init_cg(self, r2c, c2r):
         for l1 in range(self._l_max + 1):
             for l2 in range(self._l_max + 1):
                 for L in range(
@@ -31,15 +42,12 @@ class ClebschGordanReal:
                     real_cg = (r2c[l1].T @ complex_cg.reshape(2 * l1 + 1, -1)).reshape(
                         complex_cg.shape
                     )
-
                     real_cg = real_cg.swapaxes(0, 1)
                     real_cg = (r2c[l2].T @ real_cg.reshape(2 * l2 + 1, -1)).reshape(
                         real_cg.shape
                     )
                     real_cg = real_cg.swapaxes(0, 1)
-
                     real_cg = real_cg @ c2r[L].T
-
                     if (l1 + l2 + L) % 2 == 0:
                         rcg = np.real(real_cg)
                     else:
@@ -198,6 +206,7 @@ def cg_combine(
     # determines the cutoff in the new features
     lmax_a = np.asarray(x_a.keys["angular_channel"], dtype="int32").max()
     lmax_b = np.asarray(x_b.keys["angular_channel"], dtype="int32").max()
+
     if lcut is None:
         lcut = lmax_a + lmax_b
 
@@ -259,14 +268,12 @@ def cg_combine(
         properties_a = (
             block_a.properties
         )  # pre-extract this block as accessing a c property has a non-zero cost
-        samples_a = block_a.samples
 
         # and x_b
         for index_b, block_b in x_b.items():
             lam_b = index_b["angular_channel"]
             order_b = index_b["order_nu"]
             properties_b = block_b.properties
-            samples_b = block_b.samples
 
             if other_keys_match is None:
                 OTHERS = tuple(index_a[name] for name in other_keys_a) + tuple(
@@ -298,9 +305,9 @@ def cg_combine(
 
             prop_ids_a = []
             prop_ids_b = []
-            for n_a, f_a in enumerate(properties_a):
+            for f_a in properties_a:
                 prop_ids_a.append(tuple(f_a) + (lam_a,))
-            for n_b, f_b in enumerate(properties_b):
+            for f_b in properties_b:
                 prop_ids_b.append(tuple(f_b) + (lam_b,))
             prop_ids_a = np.asarray(prop_ids_a)
             prop_ids_b = np.asarray(prop_ids_b)

@@ -1,4 +1,5 @@
 from anisoap import (
+    lib,
     representations,
     utils,
 )

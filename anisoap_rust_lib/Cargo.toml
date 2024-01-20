@@ -1,0 +1,21 @@
+[package]
+name = "anisoap_rust_lib"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "anisoap_rust_lib"
+crate-type = ["dylib"]
+
+[profile.release]
+strip = true    # strip unnecessary symbol information in release build. 
+
+[dependencies]
+pyo3 = { version = "0.20.0", features = ["extension-module"] }
+numpy = "0.20.0"
+
+# Unused dependencies -- may use later.
+# metatensor = { git = "https://github.com/lab-cosmo/metatensor.git", features = ["static"] }
+# rascaline = { git = "https://github.com/Luthaf/rascaline" }
+# chemfiles = "0.10"
