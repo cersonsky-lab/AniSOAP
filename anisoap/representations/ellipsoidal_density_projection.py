@@ -15,6 +15,7 @@ from tqdm.auto import tqdm
 from anisoap.representations.radial_basis import (
     GTORadialBasis,
     MonomialBasis,
+    ShiftedGTORadialBasis,
 )
 from anisoap.utils.moment_generator import *
 from anisoap.utils.spherical_to_cartesian import spherical_to_cartesian
@@ -420,6 +421,7 @@ class EllipsoidalDensityProjection:
         compute_gradients=False,
         subtract_center_contribution=False,
         radial_gaussian_width=None,
+        radial_gaussian_shift=None,
         max_radial=None,
         rotation_key="quaternion",
         rotation_type="quaternion",
@@ -440,6 +442,7 @@ class EllipsoidalDensityProjection:
 
         radial_hypers = {}
         radial_hypers["radial_gaussian_width"] = radial_gaussian_width
+        radial_hypers["radial_gaussian_shift"] = radial_gaussian_shift
         radial_hypers["max_angular"] = max_angular
         radial_hypers["cutoff_radius"] = cutoff_radius
         radial_hypers["max_radial"] = max_radial
@@ -455,6 +458,8 @@ class EllipsoidalDensityProjection:
                     "radial_gaussian_width is set as an integer, which could cause overflow errors. Pass in float."
                 )
             self.radial_basis = GTORadialBasis(**radial_hypers)
+        elif radial_basis_name == "shifted_gto":
+            self.radial_basis = ShiftedGTORadialBasis(**radial_hypers)
         elif radial_basis_name == "monomial":
             rgw = radial_hypers.pop("radial_gaussian_width")
             if rgw is not None:
@@ -463,7 +468,7 @@ class EllipsoidalDensityProjection:
         else:
             raise NotImplementedError(
                 f"{self.radial_basis_name} is not an implemented basis"
-                ". Try 'monomial' or 'gto'"
+                ". Try 'monomial' or 'gto' or 'shifted_gto'"
             )
 
         self.num_ns = self.radial_basis.get_num_radial_functions()
