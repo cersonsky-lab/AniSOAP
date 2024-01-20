@@ -38,7 +38,7 @@ def inverse_matrix_sqrt(matrix: np.array, rcond=1e-8, tol=1e-3):
     matrix2 = np.linalg.pinv(result @ result)
     if np.linalg.norm(matrix - matrix2) > tol:
         raise ValueError(
-            f"Incurred Numerical Imprecision {np.linalg.norm(matrix-matrix2)= :.3f}"
+            f"Incurred Numerical Imprecision {np.linalg.norm(matrix-matrix2)= :.8f}"
         )
     return result
 
