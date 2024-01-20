@@ -308,6 +308,7 @@ class MonomialBasis(_RadialBasis):
         return features
 
     def get_basis(self, rs):
+        all_gs = np.empty(shape=(len(rs), 1))
         for l in range(0, self.max_angular):
             n_arr = np.arange(self.num_radial_functions[l])
             l_2n_arr = l + 2 * n_arr
@@ -327,7 +328,11 @@ class MonomialBasis(_RadialBasis):
                 gs,
                 orthonormalization_matrix,
             )
-        return gs
+            if all_gs is None:
+                all_gs = gs.copy()
+
+            all_gs = np.hstack((all_gs, gs))
+        return all_gs[:, 1:]
 
 
 class GTORadialBasis(_RadialBasis):
@@ -452,6 +457,7 @@ class GTORadialBasis(_RadialBasis):
     def get_basis(self, rs):
         from matplotlib import pyplot as plt
 
+        all_gs = np.empty(shape=(len(rs), 1))
         for l in range(0, self.max_angular):
             n_arr = np.arange(self.num_radial_functions[l])
             l_2n_arr = l + 2 * n_arr
@@ -478,4 +484,6 @@ class GTORadialBasis(_RadialBasis):
                 gs,
                 orthonormalization_matrix,
             )
-        return gs
+
+            all_gs = np.hstack((all_gs, gs))
+        return all_gs[:, 1:]
