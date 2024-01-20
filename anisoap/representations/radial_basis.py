@@ -374,7 +374,6 @@ class GTORadialBasis(_RadialBasis):
 
         # GTO basis with uniform Gaussian width in the basis functions
         sigma = self.radial_gaussian_width
-        print(sigma)
         precision += np.eye(3) / sigma**2
         center -= 1 / sigma**2 * np.linalg.solve(precision, r_ij)
 
@@ -469,7 +468,6 @@ class GTORadialBasis(_RadialBasis):
                     for n in n_arr
                 ]
             ).T
-            print(l, n_arr)
 
             prefactor_arr = gto_prefactor(l_2n_arr, self.radial_gaussian_width)
 
