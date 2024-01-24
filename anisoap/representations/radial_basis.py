@@ -201,6 +201,15 @@ class _RadialBasis:
 
     # Get number of radial functions
     def get_num_radial_functions(self):
+        """
+        Output the number of radial basis functions considered per value of l.
+        If max_angular and max_radial are both specified, then the list will contain repeated values of max_radial
+        Otherwise, the outputted list will specify the number of radial basis functions per l, which may be automatically
+        calculated if max_radial=None. If a custom list of max_radial is specified when initializing, then it will
+        return the same inputted list.
+        Returns:
+            self.num_radial_functions: list containing the number of radial basis functions considered per l.
+        """
         return self.num_radial_functions
 
     def plot_basis(self, n_r=100):
