@@ -82,8 +82,7 @@ def gto_overlap(n, m, sigma_n, sigma_m):
     n and sigma. All we need to do is to calculate those effective parameters, then compute the normalization.
     <\phi_n, \phi_m> = \int_0^\infty dr r^2 r^n * e^{-r^2/(2*\sigma_n^2) * r^m * e^{-r^2/(2*\sigma_m^2)
     = \int_0^\infty dr r^2 |r^{(n+m)/2} * e^{-r^2/4 * (1/\sigma_n^2 + 1/\sigma_m^2)}|^2
-    = \int_0^\infty dr r^2 r^n_{eff} * e^{-r^2/(2*\sigma_{eff}^2)
-    prefactor.
+    = \int_0^\infty dr r^2 |r^{n_{eff}} * e^{-r^2/(2*\sigma_{eff}^2)|^2
     ---Arguments---
     n: order of the first GTO
     m: order of the second GTO
@@ -130,9 +129,19 @@ def monomial_prefactor(n, r_cut):
 
 def monomial_overlap(n, m, r_cut):
     """
+    Compute overlap of two *normalized* monomials
+    Note that the overlap of two monomials can be modeled as the square norm of one monomial, with an effective
+    n. All we need to do is to calculate those effective parameters, then compute the normalization.
+    <\phi_n, \phi_m> = \int_0^\infty dr r^2 r^n r^m
+    = \int_0^r_{cut} dr r^2 |r^{(n+m)/2}|^2
+    = \int_0^r_{cut} dr r^2 |r^{n_{eff}}|^2
 
+    ---Arguments---
+    n: order of the first monomial
+    m: order of the second monomial
+    r_cut: float. cutoff radius
     ---Returns---
-    S: overlap of the two normalized GTOs
+    S: overlap of the two normalized monomial
     """
     N_n = monomial_prefactor(n, r_cut)
     N_m = monomial_prefactor(m, r_cut)
@@ -195,7 +204,15 @@ class _RadialBasis:
         return self.num_radial_functions
 
     def plot_basis(self, n_r=100):
-        """ """
+        """
+        Plot the normalized basis functions used in calculating the expansion coefficients
+        Args:
+            n_r: int
+             number of mesh points. Default: 100
+
+        Returns:
+            None
+        """
         from matplotlib import pyplot as plt
 
         rs = np.linspace(0, self.cutoff_radius, n_r)
@@ -203,6 +220,14 @@ class _RadialBasis:
 
 
 class MonomialBasis(_RadialBasis):
+    """
+    A subclass of _RadialBasis that contains attributes and methods required for the Monomial basis.
+    The monomial basis of order n is defined to be R(r) = r^n.
+    For monomial basis with defined nmax and lmax, our radial basis set consists of monomials of order n=0 to n=lmax + 2nmax.
+    For monomial basis with coupled nmax and lmax, our radial basis set consists of monomials of order n=0 to n=max(lmax + 2nmax)
+    Monomials are not square-integrable from [0, ∞], so we orthonormalize by integrating up to the cutoff radius
+    """
+
     def __init__(
         self,
         max_angular,
@@ -213,9 +238,7 @@ class MonomialBasis(_RadialBasis):
     ):
         super().__init__("monomial", max_angular, cutoff_radius, max_radial, rcond, tol)
 
-        # As part of the initialization, compute the orthonormalization matrix for GTOs
-        # If we are using the monomial basis, set self.overlap_matrix equal to None
-        self.overlap_matrix = None
+        # As part of the initialization, compute the orthonormalization matrix for monomials
         self.overlap_matrix = self.calc_overlap_matrix()
 
     # For each particle pair (i,j), we are provided with the three quantities
@@ -308,6 +331,17 @@ class MonomialBasis(_RadialBasis):
         return features
 
     def get_basis(self, rs):
+        """
+        Evaluate orthonormalized monomial basis functions on mesh rs.
+        If lmax and nmax defined, then the number of functions outputted is lmax*(nmax+1)
+        If lmax and nmax coupled, then the number of functions outputted is \sum_{l=0}^{lmax} (number_of_radial_functions_per_l)
+        Args:
+            rs: np.array
+              a mesh to evaluate the basis functions
+
+        Returns:
+            S: a matrix containing orthonormalized monomial basis functions evaluated on rs
+        """
         all_gs = np.empty(shape=(len(rs), 1))
         for l in range(0, self.max_angular):
             n_arr = np.arange(self.num_radial_functions[l])
@@ -336,6 +370,13 @@ class MonomialBasis(_RadialBasis):
 
 
 class GTORadialBasis(_RadialBasis):
+    """
+    A subclass of _RadialBasis that contains attributes and methods required for the GTO basis.
+    The GTO basis of order n is defined to be R(r) = r^n * e^(-r^2/(2*sigma^2)).
+    For GTO basis with defined nmax and lmax, our radial basis set consists of GTO of order n=0 to n=lmax + 2nmax.
+    For GTO basis with coupled nmax and lmax, our radial basis set consists of GTO of order n=0 to n=max(lmax + 2nmax)
+    """
+
     def __init__(
         self,
         max_angular,
@@ -454,6 +495,17 @@ class GTORadialBasis(_RadialBasis):
         return features
 
     def get_basis(self, rs):
+        """
+        Evaluate orthonormalized GTO basis functions on mesh rs.
+        If lmax and nmax defined, then the number of functions outputted is lmax*(nmax+1)
+        If lmax and nmax coupled, then the number of functions outputted is \sum_{l=0}^{lmax} (number_of_radial_functions_per_l)
+        Args:
+            rs: np.array
+              a mesh to evaluate the basis functions
+
+        Returns:
+            S: a matrix containing orthonormalized GTO basis functions evaluated on rs
+        """
         from matplotlib import pyplot as plt
 
         all_gs = np.empty(shape=(len(rs), 1))

@@ -390,7 +390,7 @@ class EllipsoidalDensityProjection:
         Number of angular functions
     radial_basis : str
         The radial basis. Currently implemented are
-        'GTO_primitive', 'GTO', 'monomial'.
+        'gto', 'monomial'.
     compute_gradients : bool
         Compute gradients
     subtract_center_contribution : bool
