@@ -134,6 +134,11 @@ class TestBadInputs:
             ValueError,
             "radial_gaussian_width is set as an integer, which could cause overflow errors. Pass in float.",
         ],
+        [
+            {**DEFAULT_HYPERS, "cutoff_radius": 5},
+            ValueError,
+            "cutoff_radius is set as an integer, which could cause overflow errors. Pass in float.",
+        ],
     ]
 
     @pytest.mark.parametrize("hypers,error_type,expected_message", test_hypers)

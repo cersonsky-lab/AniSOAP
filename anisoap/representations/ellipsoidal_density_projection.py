@@ -447,6 +447,10 @@ class EllipsoidalDensityProjection:
         radial_hypers["tol"] = basis_tol
 
         # Initialize the radial basis class
+        if type(cutoff_radius) == int:
+            raise ValueError(
+                "r_cut is set as an integer, which could cause overflow errors. Pass in float"
+            )
         if radial_basis_name == "gto":
             if radial_hypers.get("radial_gaussian_width") is None:
                 raise ValueError("Gaussian width must be provided with GTO basis")
