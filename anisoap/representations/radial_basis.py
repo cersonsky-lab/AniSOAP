@@ -40,7 +40,7 @@ def inverse_matrix_sqrt(matrix: np.array, rcond=1e-8, tol=1e-3):
     matrix2 = np.linalg.pinv(result @ result)
     if np.linalg.norm(matrix - matrix2) > tol:
         raise ValueError(
-            f"Incurred Numerical Imprecision {np.linalg.norm(matrix-matrix2)= :.3f}"
+            f"Incurred Numerical Imprecision {np.linalg.norm(matrix-matrix2)= :.8f}"
         )
     return result
 
@@ -96,6 +96,7 @@ def gto_prefactor(n, sigma):
     """
     return np.sqrt(1 / gto_square_norm(n, sigma))
 
+
 def gto_overlap(n, m, sigma_n, sigma_m):
     r"""Compute overlap of two *normalized* GTOs
 
@@ -134,9 +135,79 @@ def gto_overlap(n, m, sigma_n, sigma_m):
     return N_n * N_m * gto_square_norm(n_eff, sigma_eff)
 
 
-class RadialBasis:
-    """Class for precomputing and storing all results related to the radial basis.
+def monomial_square_norm(n, r_cut):
+    """
+    Compute the square norm of monomials (inner product of itself over R^3).
 
+    Parameters
+    ----------
+    n
+        order of the basis
+
+    Returns
+    -------
+    float
+        The square norm of the unnormalized basis
+    """
+    return r_cut ** (2 * n + 3) / (2 * n + 3)
+
+
+def monomial_prefactor(n, r_cut):
+    """
+    Computes the normalization prefactor of an unnormalized monomial basis.
+    This prefactor is simply :math:`1/sqrt{square_norm_area}`.
+    Scaling a basis by this prefactor will ensure that the basis has square norm equal to 1.
+
+    Parameters
+    ----------
+    n
+        order of the basis
+
+    Returns
+    -------
+    float
+        normalization constant
+
+    """
+    return np.sqrt(1 / monomial_square_norm(n, r_cut))
+
+
+def monomial_overlap(n, m, r_cut):
+    r"""
+    Compute overlap of two *normalized* monomials
+
+    Note that the overlap of two monomials can be modeled as the square norm of one monomial, with an effective
+    n. All we need to do is to calculate those effective parameters, then compute the normalization:
+
+        .. math::
+
+            \langle \phi_n, \phi_m \rangle &= \int_0^\infty dr r^2 r^n r^m
+                                           &= \int_0^r_{cut} dr r^2 |r^{(n+m)/2}|^2
+                                           &= \int_0^r_{cut} dr r^2 |r^{n_{eff}}|^2
+
+    Parameters
+    ----------
+    n
+        order of the first monomial
+    m
+        order of the second monomial
+    r_cut: float
+        cutoff radius
+    Returns
+    -------
+    float
+        overlap of the two normalized monomial
+
+    """
+    N_n = monomial_prefactor(n, r_cut)
+    N_m = monomial_prefactor(m, r_cut)
+    n_eff = (n + m) / 2
+    return N_n * N_m * monomial_square_norm(n_eff, r_cut)
+
+
+class _RadialBasis:
+    """
+    Class for precomputing and storing all results related to the radial basis.
     This helps to keep a cleaner main code by avoiding if-else clauses
     related to the radial basis.
 
@@ -154,18 +225,13 @@ class RadialBasis:
         max_radial=None,
         rcond=1e-8,
         tol=1e-3,
-        **hypers,
     ):
         # Store all inputs into internal variables
         self.radial_basis = radial_basis
         self.max_angular = max_angular
         self.cutoff_radius = cutoff_radius
-        self.hypers = hypers
         self.rcond = rcond
         self.tol = tol
-
-        if self.radial_basis not in ["monomial", "gto"]:
-            raise ValueError(f"{self.radial_basis} is not an implemented basis.")
 
         # As part of the initialization, compute the number of radial basis
         # functions, num_n, for each angular frequency l.
@@ -190,15 +256,245 @@ class RadialBasis:
             else:
                 raise ValueError("`max_radial` must be None, int, or list of int")
 
-        # As part of the initialization, compute the orthonormalization matrix for GTOs
-        # If we are using the monomial basis, set self.overlap_matrix equal to None
-        self.overlap_matrix = None
-        if self.radial_basis == "gto":
-            self.overlap_matrix = self.calc_gto_overlap_matrix()
-
     # Get number of radial functions
     def get_num_radial_functions(self):
+        """
+        Output the number of radial basis functions considered per value of l.
+        If max_angular and max_radial are both specified, then the list will contain repeated values of max_radial
+        Otherwise, the outputted list will specify the number of radial basis functions per l, which may be automatically
+        calculated if max_radial=None. If a custom list of max_radial is specified when initializing, then it will
+        return the same inputted list.
+
+        Returns
+        -------
+        array_like
+            The attribute `self.num_radial_functions`, which is a list containing 
+            the number of radial basis functions considered per `l`.
+        """
         return self.num_radial_functions
+
+    def plot_basis(self, n_r=100):
+        """
+        Plot the normalized basis functions used in calculating the expansion 
+        coefficients
+        
+        Parameters
+        ----------
+        n_r: int
+            number of mesh points. Default: 100
+
+        """
+        from matplotlib import pyplot as plt
+
+        rs = np.linspace(0, self.cutoff_radius, n_r)
+        plt.plot(rs, self.get_basis(rs))
+
+
+class MonomialBasis(_RadialBasis):
+    r"""
+    A subclass of _RadialBasis that contains attributes and methods required for 
+    the Monomial basis.
+
+    The monomial basis of order n is defined to be :math:`R(r) = r^n`.
+
+    For monomial basis with defined :math:`n_{\text{max}}` and :math:`l_{\text{max}}`,
+    our radial basis set consists of monomials of order :math:`n=0` to `n=l_{\text{max}} + 2n_{\text{max}}`.
+
+    For monomial basis with coupled :math:`n_{\text{max}}` and :math:`l_{\text{max}}`, 
+    our radial basis set consists of monomials of order :math:`n=0` to 
+    :math:`n=\text{max}{l_{\text{max}} + 2n_{\text{max}}}
+    
+    Monomials are not square-integrable from :math:`[0, \infty]`, so we orthonormalize 
+    by integrating up to the cutoff radius
+    """
+
+    def __init__(
+        self,
+        max_angular,
+        cutoff_radius,
+        max_radial=None,
+        rcond=1e-8,
+        tol=1e-3,
+    ):
+        super().__init__("monomial", max_angular, cutoff_radius, max_radial, rcond, tol)
+
+        # As part of the initialization, compute the orthonormalization matrix for monomials
+        self.overlap_matrix = self.calc_overlap_matrix()
+
+    # For each particle pair (i,j), we are provided with the three quantities
+    # that completely define the Gaussian distribution, namely
+    # the pair distance r_ij, the rotation matrix specifying the orientation
+    # of particle j's ellipsoid, as well the the three lengths of the
+    # principal axes.
+    # Combined with the choice of radial basis, these completely specify
+    # the mathematical problem, namely the integral that needs to be
+    # computed, which will be of the form
+    # integral gaussian(x,y,z) * polynomial(x,y,z) dx dy dz
+    # This function deals with the Gaussian part, which is specified
+    # by a precision matrix (inverse of covariance) and its center.
+    # The current function computes the covariance matrix and the center
+    # for the provided parameters as well as choice of radial basis.
+    def compute_gaussian_parameters(self, r_ij, lengths, rotation_matrix):
+        # Initialization
+        center = r_ij
+        diag = np.diag(1 / lengths**2)
+        precision = rotation_matrix @ diag @ rotation_matrix.T
+
+        return precision, center
+
+    def calc_overlap_matrix(self):
+        """
+        Computes the overlap matrix for Monomnials over a fixed interval.
+
+        The overlap matrix is a Gram matrix whose entries are the overlap: 
+
+            .. math::
+                S_{ij} = \int_0^r_cut dr r^2 phi_i phi_j
+
+        The overlap has an analytic solution (see above functions).
+
+        The overlap matrix is the first step to generating an orthonormal basis set of functions (Lodwin Symmetric
+        Orthonormalization). The actual orthonormalization matrix cannot be fully precomputed because each tensor
+        block use a different set of bases. Hence, we precompute the full overlap matrix of dim l_max, and while
+        orthonormalizing each tensor block, we generate the respective orthonormal matrices from slices of the full
+        overlap matrix.
+
+        Returns
+        -------
+        2D array:
+            The overlap matrix
+        """
+        max_deg = np.max(
+            np.arange(self.max_angular + 1) + 2 * np.array(self.num_radial_functions)
+        )
+        n_grid = np.arange(max_deg)
+        S = monomial_overlap(
+            n_grid[:, np.newaxis], n_grid[np.newaxis, :], self.cutoff_radius
+        )
+        return S
+
+    def orthonormalize_basis(self, features: TensorMap):
+        """
+        Apply an in-place orthonormalization on the features, using Lodwin Symmetric Orthonormalization.
+        Each block in the features TensorMap uses a basis set of l + 2n, so we must take the appropriate slices of
+        the overlap matrix to compute the orthonormalization matrix.
+        An instructive example of Lodwin Symmetric Orthonormalization of a 2-element basis set is found here:
+        https://booksite.elsevier.com/9780444594365/downloads/16755_10030.pdf
+
+        Parameters
+        ----------
+        features: TensorMap
+            A TensorMap whose blocks' values we wish to orthonormalize. Note that 
+            `features` is modified in place, so a copy of `features` must be made 
+            before the function if you wish to retain the unnormalized values.
+        radial_basis: _RadialBasis
+
+        Returns
+        -------
+        TensorMap
+            features containing values multiplied by proper normalization factors.
+        """
+        # In-place modification.
+
+        for label, block in features.items():
+            # Each block's `properties` dimension contains radial channels for each neighbor species
+            # Hence we have to iterate through each neighbor species and orthonormalize the block in subblocks
+            # Each subblock is indexed using the neighbor_mask boolean array.
+            neighbors = np.unique(block.properties["neighbor_species"])
+            for neighbor in neighbors:
+                l = label["angular_channel"]
+                neighbor_mask = block.properties["neighbor_species"] == neighbor
+                n_arr = block.properties["n"][neighbor_mask].flatten()
+                l_2n_arr = l + 2 * n_arr
+                # normalize all the GTOs by the appropriate prefactor first, since the overlap matrix is in terms of
+                # normalized GTOs
+                prefactor_arr = monomial_prefactor(l_2n_arr, self.cutoff_radius)
+                block.values[:, :, neighbor_mask] *= prefactor_arr
+
+                overlap_matrix_slice = self.overlap_matrix[l_2n_arr, :][:, l_2n_arr]
+                orthonormalization_matrix = inverse_matrix_sqrt(
+                    overlap_matrix_slice, self.rcond, self.tol
+                )
+                block.values[:, :, neighbor_mask] = np.einsum(
+                    "ijk,kl->ijl",
+                    block.values[:, :, neighbor_mask],
+                    orthonormalization_matrix,
+                )
+
+        return features
+
+    def get_basis(self, rs):
+        """
+        Evaluate orthonormalized monomial basis functions on mesh rs.
+        
+        If lmax and nmax defined, then the number of functions outputted is lmax*(nmax+1)
+        
+        If lmax and nmax coupled, then the number of functions outputted is \sum_{l=0}^{lmax} (number_of_radial_functions_per_l)
+        
+        Parameters
+        ----------
+            rs: np.array
+              a mesh to evaluate the basis functions
+
+        Returns
+        -------
+        np.array
+            a matrix containing orthonormalized monomial basis functions evaluated on rs
+        """
+        all_gs = np.empty(shape=(len(rs), 1))
+        for l in range(0, self.max_angular):
+            n_arr = np.arange(self.num_radial_functions[l])
+            l_2n_arr = l + 2 * n_arr
+
+            gs = np.array([(rs ** (2 * n + l)) for n in n_arr]).T
+
+            prefactor_arr = monomial_prefactor(l_2n_arr, self.cutoff_radius)
+
+            gs *= prefactor_arr
+
+            overlap_matrix_slice = self.overlap_matrix[l_2n_arr, :][:, l_2n_arr]
+            orthonormalization_matrix = inverse_matrix_sqrt(
+                overlap_matrix_slice, self.rcond, self.tol
+            )
+            gs = np.einsum(
+                "jk,kl->jl",
+                gs,
+                orthonormalization_matrix,
+            )
+            if all_gs is None:
+                all_gs = gs.copy()
+
+            all_gs = np.hstack((all_gs, gs))
+        return all_gs[:, 1:]
+
+
+class GTORadialBasis(_RadialBasis):
+    """
+    A subclass of _RadialBasis that contains attributes and methods required for the GTO basis.
+
+    The GTO basis of order n is defined to be :math:`R(r) = r^n * e^(-r^2/(2*sigma^2))`.
+
+    For GTO basis with defined nmax and lmax, our radial basis set consists of GTO of order n=0 to n=lmax + 2nmax.
+
+    For GTO basis with coupled nmax and lmax, our radial basis set consists of GTO of order n=0 to n=max(lmax + 2nmax)
+    """
+
+    def __init__(
+        self,
+        max_angular,
+        cutoff_radius,
+        *,
+        radial_gaussian_width,
+        max_radial=None,
+        rcond=1e-8,
+        tol=1e-3,
+    ):
+        super().__init__("gto", max_angular, cutoff_radius, max_radial, rcond, tol)
+        self.radial_gaussian_width = radial_gaussian_width
+
+        # As part of the initialization, compute the orthonormalization matrix for GTOs
+        # If we are using the monomial basis, set self.overlap_matrix equal to None
+        self.overlap_matrix = self.calc_overlap_matrix()
 
     # For each particle pair (i,j), we are provided with the three quantities
     # that completely define the Gaussian distribution, namely
@@ -220,14 +516,13 @@ class RadialBasis:
         precision = rotation_matrix @ diag @ rotation_matrix.T
 
         # GTO basis with uniform Gaussian width in the basis functions
-        if self.radial_basis == "gto":
-            sigma = self.hypers["radial_gaussian_width"]
-            precision += np.eye(3) / sigma**2
-            center -= 1 / sigma**2 * np.linalg.solve(precision, r_ij)
+        sigma = self.radial_gaussian_width
+        precision += np.eye(3) / sigma**2
+        center -= 1 / sigma**2 * np.linalg.solve(precision, r_ij)
 
         return precision, center
 
-    def calc_gto_overlap_matrix(self):
+    def calc_overlap_matrix(self):
         """Computes the overlap matrix for GTOs.
 
         The overlap matrix is a Gram matrix whose entries are the overlap: 
@@ -256,7 +551,7 @@ class RadialBasis:
             np.arange(self.max_angular + 1) + 2 * np.array(self.num_radial_functions)
         )
         n_grid = np.arange(max_deg)
-        sigma = self.hypers["radial_gaussian_width"]
+        sigma = self.radial_gaussian_width
         sigma_grid = np.ones(max_deg) * sigma
         S = gto_overlap(
             n_grid[:, np.newaxis],
@@ -292,12 +587,7 @@ class RadialBasis:
         """
         # In-place modification.
         radial_basis_name = self.radial_basis
-        if radial_basis_name != "gto":
-            warnings.warn(
-                f"Normalization has not been implemented for the {radial_basis_name} basis, and features will not be normalized.",
-                UserWarning,
-            )
-            return features
+
         for label, block in features.items():
             # Each block's `properties` dimension contains radial channels for each neighbor species
             # Hence we have to iterate through each neighbor species and orthonormalize the block in subblocks
@@ -310,9 +600,7 @@ class RadialBasis:
                 l_2n_arr = l + 2 * n_arr
                 # normalize all the GTOs by the appropriate prefactor first, since the overlap matrix is in terms of
                 # normalized GTOs
-                prefactor_arr = gto_prefactor(
-                    l_2n_arr, self.hypers["radial_gaussian_width"]
-                )
+                prefactor_arr = gto_prefactor(l_2n_arr, self.radial_gaussian_width)
                 block.values[:, :, neighbor_mask] *= prefactor_arr
 
                 gto_overlap_matrix_slice = self.overlap_matrix[l_2n_arr, :][:, l_2n_arr]
@@ -326,3 +614,54 @@ class RadialBasis:
                 )
 
         return features
+
+    def get_basis(self, rs):
+        r"""
+        Evaluate orthonormalized GTO basis functions on mesh rs.
+        
+        If lmax and nmax defined, then the number of functions outputted is lmax*(nmax+1)
+        
+        If lmax and nmax coupled, then the number of functions outputted is 
+        :math:`\sum_{l=0}^{\text{lmax}} (\text{number_of_radial_functions_per_l})`
+        
+        Parameters
+        ----------
+        rs: np.array
+            a mesh to evaluate the basis functions
+
+        Returns
+        -------
+        np.array
+            a matrix containing orthonormalized GTO basis functions evaluated on rs
+        """
+        from matplotlib import pyplot as plt
+
+        all_gs = np.empty(shape=(len(rs), 1))
+        for l in range(0, self.max_angular):
+            n_arr = np.arange(self.num_radial_functions[l])
+            l_2n_arr = l + 2 * n_arr
+
+            gs = np.array(
+                [
+                    (rs ** (2 * n + l))
+                    * np.exp(-(rs**2.0) / (2 * self.radial_gaussian_width**2.0))
+                    for n in n_arr
+                ]
+            ).T
+
+            prefactor_arr = gto_prefactor(l_2n_arr, self.radial_gaussian_width)
+
+            gs *= prefactor_arr
+
+            gto_overlap_matrix_slice = self.overlap_matrix[l_2n_arr, :][:, l_2n_arr]
+            orthonormalization_matrix = inverse_matrix_sqrt(
+                gto_overlap_matrix_slice, self.rcond, self.tol
+            )
+            gs = np.einsum(
+                "jk,kl->jl",
+                gs,
+                orthonormalization_matrix,
+            )
+
+            all_gs = np.hstack((all_gs, gs))
+        return all_gs[:, 1:]

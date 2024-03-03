@@ -12,7 +12,10 @@ from rascaline import NeighborList
 from scipy.spatial.transform import Rotation
 from tqdm.auto import tqdm
 
-from anisoap.representations.radial_basis import RadialBasis
+from anisoap.representations.radial_basis import (
+    GTORadialBasis,
+    MonomialBasis,
+)
 from anisoap.utils.moment_generator import *
 from anisoap.utils.spherical_to_cartesian import spherical_to_cartesian
 
@@ -398,7 +401,7 @@ class EllipsoidalDensityProjection:
         Number of angular functions
     radial_basis : str
         The radial basis. Currently implemented are
-        'GTO_primitive', 'GTO', 'monomial'.
+        'gto', 'monomial'.
     compute_gradients : bool
         Compute gradients
     subtract_center_contribution : bool
@@ -432,6 +435,8 @@ class EllipsoidalDensityProjection:
         max_radial=None,
         rotation_key="quaternion",
         rotation_type="quaternion",
+        basis_rcond=0,
+        basis_tol=1e-8,
     ):
         """Instantiates an object of type EllipsoidalDensityProjection.
 
@@ -474,28 +479,37 @@ class EllipsoidalDensityProjection:
             raise NotImplementedError("Sorry! Gradients have not yet been implemented")
         #
 
-        # Initialize the radial basis class
-        if radial_basis_name not in ["monomial", "gto"]:
-            raise NotImplementedError(
-                f"{self.radial_basis_name} is not an implemented basis"
-                ". Try 'monomial' or 'gto'"
-            )
-        if radial_gaussian_width != None and radial_basis_name != "gto":
-            raise ValueError("Gaussian width can only be provided with GTO basis")
-        elif radial_gaussian_width is None and radial_basis_name == "gto":
-            raise ValueError("Gaussian width must be provided with GTO basis")
-        elif type(radial_gaussian_width) == int:
-            raise ValueError(
-                "radial_gaussian_width is set as an integer, which could cause overflow errors. Pass in float."
-            )
-
         radial_hypers = {}
-        radial_hypers["radial_basis"] = radial_basis_name.lower()  # lower case
         radial_hypers["radial_gaussian_width"] = radial_gaussian_width
         radial_hypers["max_angular"] = max_angular
         radial_hypers["cutoff_radius"] = cutoff_radius
         radial_hypers["max_radial"] = max_radial
-        self.radial_basis = RadialBasis(**radial_hypers)
+        radial_hypers["rcond"] = basis_rcond
+        radial_hypers["tol"] = basis_tol
+
+        # Initialize the radial basis class
+        if type(cutoff_radius) == int:
+            raise ValueError(
+                "r_cut is set as an integer, which could cause overflow errors. Pass in float"
+            )
+        if radial_basis_name == "gto":
+            if radial_hypers.get("radial_gaussian_width") is None:
+                raise ValueError("Gaussian width must be provided with GTO basis")
+            if type(radial_hypers.get("radial_gaussian_width")) == int:
+                raise ValueError(
+                    "radial_gaussian_width is set as an integer, which could cause overflow errors. Pass in float."
+                )
+            self.radial_basis = GTORadialBasis(**radial_hypers)
+        elif radial_basis_name == "monomial":
+            rgw = radial_hypers.pop("radial_gaussian_width")
+            if rgw is not None:
+                raise ValueError("Gaussian width can only be provided with GTO basis")
+            self.radial_basis = MonomialBasis(**radial_hypers)
+        else:
+            raise NotImplementedError(
+                f"{self.radial_basis_name} is not an implemented basis"
+                ". Try 'monomial' or 'gto'"
+            )
 
         self.num_ns = self.radial_basis.get_num_radial_functions()
         self.sph_to_cart = spherical_to_cartesian(self.max_angular, self.num_ns)

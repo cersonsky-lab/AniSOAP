@@ -4,7 +4,7 @@ from numpy.testing import assert_allclose
 from scipy.spatial.transform import Rotation
 
 # internal imports
-from anisoap.representations import RadialBasis, radial_basis
+from anisoap.representations import MonomialBasis, GTORadialBasis, radial_basis
 
 
 class TestNumberOfRadialFunctions:
@@ -12,12 +12,8 @@ class TestNumberOfRadialFunctions:
     Test that the number of radial basis functions is correct.
     """
 
-    def test_notimplemented_basis(self):
-        with pytest.raises(ValueError):
-            basis = RadialBasis(radial_basis="nonsense", max_angular=5, cutoff_radius=5)
-
     def test_radial_functions_n5(self):
-        basis_gto = RadialBasis(radial_basis="monomial", max_angular=5, cutoff_radius=5)
+        basis_gto = MonomialBasis(max_angular=5, cutoff_radius=5)
         num_ns = basis_gto.get_num_radial_functions()
 
         # Compare against exact results
@@ -27,7 +23,7 @@ class TestNumberOfRadialFunctions:
             assert num == num_ns_exact[l]
 
     def test_radial_functions_n6(self):
-        basis_gto = RadialBasis(radial_basis="monomial", max_angular=6, cutoff_radius=5)
+        basis_gto = MonomialBasis(max_angular=6, cutoff_radius=5)
         num_ns = basis_gto.get_num_radial_functions()
 
         # Compare against exact results
@@ -37,9 +33,7 @@ class TestNumberOfRadialFunctions:
             assert num == num_ns_exact[l]
 
     def test_radial_functions_n7(self):
-        basis_gto = RadialBasis(
-            radial_basis="monomial", max_angular=6, max_radial=5, cutoff_radius=5
-        )
+        basis_gto = MonomialBasis(max_angular=6, max_radial=5, cutoff_radius=5)
         num_ns = basis_gto.get_num_radial_functions()
 
         # We specify max_radial so it's decoupled from max_angular.
@@ -49,8 +43,7 @@ class TestNumberOfRadialFunctions:
             assert num == max_ns_exact[l] + 1
 
     def test_radial_functions_n8(self):
-        basis_gto = RadialBasis(
-            radial_basis="monomial",
+        basis_gto = MonomialBasis(
             max_angular=6,
             max_radial=[1, 2, 3, 4, 5, 6, 7],
             cutoff_radius=5,
@@ -71,7 +64,6 @@ class TestBadInputs:
 
     DEFAULT_HYPERS = {
         "max_angular": 10,
-        "radial_basis": "gto",
         "radial_gaussian_width": 5.0,
         "cutoff_radius": 1.0,
     }
@@ -109,7 +101,7 @@ class TestBadInputs:
     @pytest.mark.parametrize("hypers,error_type,expected_message", test_hypers)
     def test_hypers(self, hypers, error_type, expected_message):
         with pytest.raises(error_type) as cm:
-            RadialBasis(**hypers)
+            GTORadialBasis(**hypers)
             assert cm.message == expected_message
 
 
@@ -141,9 +133,8 @@ class TestGaussianParameters:
     @pytest.mark.parametrize("rotation_matrix", rotation_matrices)
     def test_limit_large_sigma(self, sigma, r_ij, lengths, rotation_matrix):
         # Initialize the classes
-        basis_mon = RadialBasis(radial_basis="monomial", max_angular=2, cutoff_radius=5)
-        basis_gto = RadialBasis(
-            radial_basis="gto",
+        basis_mon = MonomialBasis(max_angular=2, cutoff_radius=5)
+        basis_gto = GTORadialBasis(
             radial_gaussian_width=sigma,
             max_angular=2,
             cutoff_radius=5,
@@ -171,8 +162,7 @@ class TestGaussianParameters:
     @pytest.mark.parametrize("rotation_matrix", rotation_matrices)
     def test_limit_small_sigma(self, sigma, r_ij, lengths, rotation_matrix):
         # Initialize the class
-        basis_gto = RadialBasis(
-            radial_basis="gto",
+        basis_gto = GTORadialBasis(
             radial_gaussian_width=sigma,
             max_angular=2,
             cutoff_radius=5,
@@ -210,15 +200,6 @@ class TestGTOUtils:
 
     num_trials = 100
     basis_sizes = np.random.randint(2, 15, num_trials)
-
-    def test_nogto_warning(self):
-        with pytest.warns(UserWarning):
-            lmax = 5
-            non_gto_basis = RadialBasis("monomial", lmax, cutoff_radius=5)
-            # As a proxy for a tensor map, pass in a numpy array for features
-            features = np.random.random((5, 5))
-            non_normalized_features = non_gto_basis.orthonormalize_basis(features)
-            assert_allclose(features, non_normalized_features)
 
     @pytest.mark.parametrize("spd", spd_matrices)
     def test_spd_inverse_sqrt_no_exceptions(self, spd):
