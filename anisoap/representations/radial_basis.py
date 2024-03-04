@@ -176,13 +176,14 @@ def monomial_overlap(n, m, r_cut):
     r"""
     Compute overlap of two *normalized* monomials
 
-    Note that the overlap of two monomials can be modeled as the square norm of one monomial, with an effective
-    n. All we need to do is to calculate those effective parameters, then compute the normalization:
+    Note that the overlap of two monomials can be modeled as the square norm of 
+    one monomial, with an effective n. All we need to do is to calculate those 
+    effective parameters, then compute the normalization:
 
         .. math::
 
-            \langle \phi_n, \phi_m \rangle &= \int_0^\infty dr r^2 r^n r^m
-                                           &= \int_0^r_{cut} dr r^2 |r^{(n+m)/2}|^2
+            \langle \phi_n, \phi_m \rangle &= \int_0^\infty dr r^2 r^n r^m \\
+                                           &= \int_0^r_{cut} dr r^2 |r^{(n+m)/2}|^2 \\
                                            &= \int_0^r_{cut} dr r^2 |r^{n_{eff}}|^2
 
     Parameters
@@ -298,11 +299,12 @@ class MonomialBasis(_RadialBasis):
     The monomial basis of order n is defined to be :math:`R(r) = r^n`.
 
     For monomial basis with defined :math:`n_{\text{max}}` and :math:`l_{\text{max}}`,
-    our radial basis set consists of monomials of order :math:`n=0` to `n=l_{\text{max}} + 2n_{\text{max}}`.
+    our radial basis set consists of monomials of order :math:`n=0` to 
+    :math:`n=l_{\text{max}} + 2n_{\text{max}}`.
 
     For monomial basis with coupled :math:`n_{\text{max}}` and :math:`l_{\text{max}}`, 
     our radial basis set consists of monomials of order :math:`n=0` to 
-    :math:`n=\text{max}{l_{\text{max}} + 2n_{\text{max}}}
+    :math:`n=\text{max}{l_{\text{max}} + 2n_{\text{max}}}`
     
     Monomials are not square-integrable from :math:`[0, \infty]`, so we orthonormalize 
     by integrating up to the cutoff radius
@@ -349,7 +351,7 @@ class MonomialBasis(_RadialBasis):
         The overlap matrix is a Gram matrix whose entries are the overlap: 
 
             .. math::
-                S_{ij} = \int_0^r_cut dr r^2 phi_i phi_j
+                S_{ij} = \int_{0}^{r_{cut} dr r^2 phi_i phi_j
 
         The overlap has an analytic solution (see above functions).
 
@@ -472,7 +474,7 @@ class GTORadialBasis(_RadialBasis):
     """
     A subclass of _RadialBasis that contains attributes and methods required for the GTO basis.
 
-    The GTO basis of order n is defined to be :math:`R(r) = r^n * e^(-r^2/(2*sigma^2))`.
+    The GTO basis of order n is defined to be :math:`R(r) = r^n e^{(-r^2/(2\sigma^2))}`.
 
     For GTO basis with defined nmax and lmax, our radial basis set consists of GTO of order n=0 to n=lmax + 2nmax.
 

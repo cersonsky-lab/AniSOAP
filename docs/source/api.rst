@@ -30,4 +30,15 @@ Utilities
    :members:
    :show-inheritance:
    :inherited-members:
+.. automodule:: anisoap.utils.shortcuts
+   :members:
+   :show-inheritance:
+   :inherited-members:
+
+Reference
+---------
+.. automodule:: anisoap.reference.projection_coefficients
+  :members:
+  :show-inheritance:
+  :inherited-members:
 
