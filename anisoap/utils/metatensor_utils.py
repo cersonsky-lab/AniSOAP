@@ -189,10 +189,10 @@ def cg_combine(
     sparse indices are labeled as ("inversion_sigma", "spherical_harmonics_l", "order_nu"). The automatically-determined
     naming of output features can be overridden by giving a list of "feature_names".
     By defaults, all other key labels are combined in an "outer product" mode, i.e. if there is a key-side
-    neighbor_species in both x_a and x_b, the returned keys will have two neighbor_species labels,
+    neighbor_types in both x_a and x_b, the returned keys will have two neighbor_types labels,
     corresponding to the parent features. By providing a list `other_keys_match` of keys that should match, these are
-    not outer-producted, but combined together. for instance, passing `["species center"]` means that the keys with the
-    same species center will be combined together, but yield a single key with the same species_center in the results.
+    not outer-producted, but combined together. for instance, passing `["types center"]` means that the keys with the
+    same types center will be combined together, but yield a single key with the same types_center in the results.
     """
 
     # determines the cutoff in the new features
