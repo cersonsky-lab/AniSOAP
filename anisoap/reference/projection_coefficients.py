@@ -95,26 +95,26 @@ class DensityProjectionCalculator:
         """
         self.frames = frames
 
-        # Generate a dictionary to map atomic species to array indices
-        # In general, the species are sorted according to atomic number
+        # Generate a dictionary to map atomic types to array indices
+        # In general, the types are sorted according to atomic number
         # and assigned the array indices 0, 1, 2,...
         # Example: for H2O: H is mapped to 0 and O is mapped to 1.
-        species = set()
+        types = set()
         for frame in frames:
             for atom in frame:
-                species.add(atom.number)
-        species = sorted(species)
-        self.species_dict = {}
+                types.add(atom.number)
+        types = sorted(types)
+        self.types_dict = {}
         for frame in frames:
-            # Get atomic species in dataset
-            self.species_dict.update(
-                {atom.symbol: species.index(atom.number) for atom in frame}
+            # Get atomic types in dataset
+            self.types_dict.update(
+                {atom.symbol: types.index(atom.number) for atom in frame}
             )
 
         # Define variables determining size of feature vector coming from frames
         self.num_atoms_per_frame = np.array([len(frame) for frame in frames])
         num_atoms_total = np.sum(self.num_atoms_per_frame)
-        num_particle_types = len(self.species_dict)
+        num_particle_types = len(self.types_dict)
         num_features_total = (self.max_angular + 1) ** 2
 
         # Initialize arrays in which to store all features
@@ -144,10 +144,10 @@ class DensityProjectionCalculator:
         # Define useful shortcuts
         lmax = self.max_angular
         num_atoms = len(frame)
-        num_chem_species = len(self.species_dict)
-        iterator_species = np.zeros(num_atoms, dtype=int)
+        num_chem_types = len(self.types_dict)
+        iterator_types = np.zeros(num_atoms, dtype=int)
         for i, symbol in enumerate(frame.get_chemical_symbols()):
-            iterator_species[i] = self.species_dict[symbol]
+            iterator_types[i] = self.types_dict[symbol]
 
         # Get the arrays with all
         # TODO: update with correct expressions

@@ -23,7 +23,7 @@ from anisoap.utils.spherical_to_cartesian import spherical_to_cartesian
 def pairwise_ellip_expansion(
     lmax,
     neighbor_list,
-    species,
+    types,
     frame_to_global_atom_idx,
     rotation_matrices,
     ellipsoid_lengths,
@@ -40,14 +40,14 @@ def pairwise_ellip_expansion(
         Maximum angular
 
     neighbor_list : Equistore TensorMap
-        Full neighborlist with keys (species_1, species_2) enumerating the possible species pairs.
+        Full neighborlist with keys (types_1, types_2) enumerating the possible types pairs.
         Each block contains as samples, the atom indices of (first_atom, second_atom) that correspond to the key,
         and block.value is a 3D array of the form (num_samples, num_components,properties), with num_components=3
         corresponding to the (x,y,z) components of the vector from first_atom to second_atom.
-        Depending on the cutoff some species pairs may not appear. Self pairs are not present but in PBC,
+        Depending on the cutoff some types pairs may not appear. Self pairs are not present but in PBC,
         pairs between copies of the same atom are accounted for.
 
-    species: list of ints
+    types: list of ints
         List of atomic numbers present across the data frames
 
     frame_to_global_atom_idx: list of ints
@@ -66,7 +66,7 @@ def pairwise_ellip_expansion(
         Show progress bar for frame analysis and feature generation
     -----------------------------------------------------------
     Returns:
-        An Equistore TensorMap with keys (species_1, species_2, l) where ("species_1", "species_2") is key in the
+        An Equistore TensorMap with keys (types_1, types_2, l) where ("types_1", "types_2") is key in the
         neighbor_list and "l" is the angular channel.
         Each block of this tensormap has the same samples as the corresponding block of the neighbor_list.
         block.value is a 3D array of the form (num_samples, num_components, properties) where num_components
@@ -79,13 +79,13 @@ def pairwise_ellip_expansion(
     keys = [tuple(i) + (l,) for i in keys for l in range(lmax + 1)]
     num_ns = radial_basis.get_num_radial_functions()
     maxdeg = np.max(np.arange(lmax + 1) + 2 * np.array(num_ns))
-    for center_species in species:
-        for neighbor_species in species:
-            if (center_species, neighbor_species) in neighbor_list.keys:
+    for center_types in types:
+        for neighbor_types in types:
+            if (center_types, neighbor_types) in neighbor_list.keys:
                 values_ldict = {l: [] for l in range(lmax + 1)}
                 nl_block = neighbor_list.block(
-                    species_first_atom=center_species,
-                    species_second_atom=neighbor_species,
+                    first_atom_type=center_types,
+                    second_atom_type=neighbor_types,
                 )
 
                 for isample, nl_sample in enumerate(
@@ -93,13 +93,13 @@ def pairwise_ellip_expansion(
                         nl_block.samples,
                         disable=(not show_progress),
                         desc="Iterating samples for ({}, {})".format(
-                            center_species, neighbor_species
+                            center_types, neighbor_types
                         ),
                         leave=False,
                     )
                 ):
                     frame_idx, i, j = (
-                        nl_sample["structure"],
+                        nl_sample["system"],
                         nl_sample["first_atom"],
                         nl_sample["second_atom"],
                     )
@@ -158,7 +158,7 @@ def pairwise_ellip_expansion(
 
     pairwise_ellip_feat = TensorMap(
         Labels(
-            ["species_center", "species_neighbor", "angular_channel"],
+            ["types_center", "types_neighbor", "angular_channel"],
             np.asarray(keys, dtype=np.int32),
         ),
         tensorblock_list,
@@ -166,17 +166,17 @@ def pairwise_ellip_expansion(
     return pairwise_ellip_feat
 
 
-def contract_pairwise_feat(pair_ellip_feat, species, show_progress=False):
+def contract_pairwise_feat(pair_ellip_feat, types, show_progress=False):
     """
     Function to sum over the pairwise expansion \sum_{j in a} <anlm|rho_ij> = <anlm|rho_i>
     --------------------------------------------------------
     Parameters:
 
     pair_ellip_feat : Equistore TensorMap
-        TensorMap returned from "pairwise_ellip_expansion()" with keys (species_1, species_2,l) enumerating
-        the possible species pairs and the angular channels.
+        TensorMap returned from "pairwise_ellip_expansion()" with keys (types_1, types_2,l) enumerating
+        the possible types pairs and the angular channels.
 
-    species: list of ints
+    types: list of ints
         List of atomic numbers present across the data frames
 
     show_progress : bool
@@ -184,24 +184,24 @@ def contract_pairwise_feat(pair_ellip_feat, species, show_progress=False):
 
     -----------------------------------------------------------
     Returns:
-        An Equistore TensorMap with keys (species, l) "species" takes the value of the atomic numbers present
+        An Equistore TensorMap with keys (types, l) "types" takes the value of the atomic numbers present
         in the dataset and "l" is the angular channel.
-        Each block of this tensormap has as samples ("structure", "center") yielding the indices of the frames
-        and atoms that correspond to "species" are present.
+        Each block of this tensormap has as samples ("type", "center") yielding the indices of the frames
+        and atoms that correspond to "types" are present.
         block.value is a 3D array of the form (num_samples, num_components, properties) where num_components
         take on the same values as in the pair_ellip_feat_feat.block .  block.properties now has an additional index
-        for neighbor_species that corresponds to "a" in <anlm|rho_i>
+        for neighbor_types that corresponds to "a" in <anlm|rho_i>
 
     """
     ellip_keys = list(
         set([tuple(list(x)[:1] + list(x)[2:]) for x in pair_ellip_feat.keys])
     )
-    # Select the unique combinations of pair_ellip_feat.keys["species_center"] and
+    # Select the unique combinations of pair_ellip_feat.keys["types_center"] and
     # pair_ellip_feat.keys["angular_channel"] to form the keys of the single particle centered feature
     ellip_keys.sort()
     ellip_blocks = []
     property_names = pair_ellip_feat.property_names + [
-        "neighbor_species",
+        "neighbor_types",
     ]
 
     for key in tqdm(
@@ -210,18 +210,18 @@ def contract_pairwise_feat(pair_ellip_feat, species, show_progress=False):
         contract_blocks = []
         contract_properties = []
         contract_samples = []
-        # these collect the values, properties and samples of the blocks when contracted over neighbor_species.
-        # All these lists have as many entries as len(species).
+        # these collect the values, properties and samples of the blocks when contracted over neighbor_types.
+        # All these lists have as many entries as len(types).
 
         for ele in tqdm(
-            species,
+            types,
             disable=(not show_progress),
-            desc="Iterating neighbor species",
+            desc="Iterating neighbor types",
             leave=False,
         ):
-            selection = Labels(names=["species_neighbor"], values=np.array([[ele]]))
+            selection = Labels(names=["types_neighbor"], values=np.array([[ele]]))
             blockidx = pair_ellip_feat.blocks_matching(selection=selection)
-            # indices of the blocks in pair_ellip_feat with neighbor species = ele
+            # indices of the blocks in pair_ellip_feat with neighbor types = ele
             sel_blocks = [
                 pair_ellip_feat.block(i)
                 for i in blockidx
@@ -237,24 +237,24 @@ def contract_pairwise_feat(pair_ellip_feat, species, show_progress=False):
                 continue
             assert len(sel_blocks) == 1
 
-            # sel_blocks is the corresponding block in the pairwise feat with the same (species_center, l) and
-            # species_neighbor = ele thus there can be only one block corresponding to the triplet (species_center, species_neighbor, l)
+            # sel_blocks is the corresponding block in the pairwise feat with the same (types_center, l) and
+            # types_neighbor = ele thus there can be only one block corresponding to the triplet (types_center, types_neighbor, l)
             block = sel_blocks[0]
 
             pair_block_sample = list(
-                zip(block.samples["structure"], block.samples["first_atom"])
+                zip(block.samples["system"], block.samples["first_atom"])
             )
 
-            # Takes the structure and first atom index from the current pair_block sample. There might be repeated
+            # Takes the system and first atom index from the current pair_block sample. There might be repeated
             # entries here because for example (0,0,1) (0,0,2) might be samples of the pair block (the index of the
-            # neighbor atom is changing but for both of these we are keeping (0,0) corresponding to the structure and
+            # neighbor atom is changing but for both of these we are keeping (0,0) corresponding to the system and
             # first atom.
 
-            struct, center = np.unique(block.samples["structure"]), np.unique(
+            struct, center = np.unique(block.samples["system"]), np.unique(
                 block.samples["first_atom"]
             )
             possible_block_samples = list(product(struct, center))
-            # possible block samples contains all *unique* possible pairwise products between structure and atom index
+            # possible block samples contains all *unique* possible pairwise products between system and atom index
             # From here we choose the entries that are actually present in the block to form the final sample
 
             block_samples = []
@@ -290,20 +290,20 @@ def contract_pairwise_feat(pair_ellip_feat, species, show_progress=False):
                         block.values[sample_idx].sum(axis=0)
                     )  # sum over "j"  for given ele
 
-                    # block_values has as many entries as samples satisfying (key, neighbor_species=ele).
-                    # When we iterate over neighbor species, not all (structure, center) would be present
-                    # Example: (0,0,1) might be present in a block with neighbor_species = 1 but no other pair block
+                    # block_values has as many entries as samples satisfying (key, neighbor_types=ele).
+                    # When we iterate over neighbor types, not all (type, center) would be present
+                    # Example: (0,0,1) might be present in a block with neighbor_types = 1 but no other pair block
                     # ever has (0,0,x) present as a sample- so (0,0) doesnt show up in a block_sample for all ele
                     # so in general we have a ragged list of contract_blocks
 
             contract_blocks.append(block_values)
             contract_samples.append(block_samples)
             contract_properties.append([tuple(p) + (ele,) for p in block.properties])
-            # this adds the "ele" (i.e. neighbor_species) to the properties dimension
+            # this adds the "ele" (i.e. neighbor_types) to the properties dimension
 
         #         print(len(contract_samples))
         all_block_samples = sorted(list(set().union(*contract_samples)))
-        # Selects the set of samples from all the block_samples we collected by iterating over the neighbor_species
+        # Selects the set of samples from all the block_samples we collected by iterating over the neighbor_types
         # These form the final samples of the block!
 
         all_block_values = np.zeros(
@@ -316,9 +316,9 @@ def contract_pairwise_feat(pair_ellip_feat, species, show_progress=False):
         # Create storage for the final values - we need as many rows as all_block_samples,
         # block.values.shape[1:] accounts for "components" and "properties" that are already part of the pair blocks
         # and we dont alter these
-        # len(contract_blocks) - adds the additional dimension for the neighbor_species since we accumulated
+        # len(contract_blocks) - adds the additional dimension for the neighbor_types since we accumulated
         # values for each of them as \sum_{j in ele} <|rho_ij>
-        #  Thus - all_block_values.shape = (num_final_samples, components_pair, properties_pair, num_species)
+        #  Thus - all_block_values.shape = (num_final_samples, components_pair, properties_pair, num_types)
 
         indexed_elem_cont_samples = {}
         for i, val in enumerate(all_block_samples):
@@ -337,8 +337,8 @@ def contract_pairwise_feat(pair_ellip_feat, species, show_progress=False):
                 leave=False,
             )
         ):
-            # This effectively loops over the species of the neighbors
-            # Now we just need to add the contributions to the final samples and values from this species to the right
+            # This effectively loops over the types of the neighbors
+            # Now we just need to add the contributions to the final samples and values from this types to the right
             # samples
             nzidx = list(
                 sorted(
@@ -350,7 +350,7 @@ def contract_pairwise_feat(pair_ellip_feat, species, show_progress=False):
                 )
             )
 
-            # identifies where the samples that this species contributes to, are present in the final samples
+            # identifies where the samples that this types contributes to, are present in the final samples
             #             print(apecies[ib],key, bb, all_block_samples)
             all_block_values[nzidx, :, :, iele] = contract_blocks[iele]
 
@@ -358,9 +358,7 @@ def contract_pairwise_feat(pair_ellip_feat, species, show_progress=False):
             values=all_block_values.reshape(
                 all_block_values.shape[0], all_block_values.shape[1], -1
             ),
-            samples=Labels(
-                ["structure", "center"], np.asarray(all_block_samples, np.int32)
-            ),
+            samples=Labels(["type", "center"], np.asarray(all_block_samples, np.int32)),
             components=block.components,
             properties=Labels(
                 list(property_names),
@@ -371,7 +369,7 @@ def contract_pairwise_feat(pair_ellip_feat, species, show_progress=False):
         ellip_blocks.append(new_block)
     ellip = TensorMap(
         Labels(
-            ["species_center", "angular_channel"],
+            ["types_center", "angular_channel"],
             np.asarray(ellip_keys, dtype=np.int32),
         ),
         ellip_blocks,
@@ -495,7 +493,7 @@ class EllipsoidalDensityProjection:
         Parameters
         ----------
         frames : ase.Atoms
-            List containing all ase.Atoms structures
+            List containing all ase.Atoms types
         show_progress : bool
             Show progress bar for frame analysis and feature generation
         normalize: bool
@@ -508,26 +506,26 @@ class EllipsoidalDensityProjection:
         """
         self.frames = frames
 
-        # Generate a dictionary to map atomic species to array indices
-        # In general, the species are sorted according to atomic number
+        # Generate a dictionary to map atomic types to array indices
+        # In general, the types are sorted according to atomic number
         # and assigned the array indices 0, 1, 2,...
         # Example: for H2O: H is mapped to 0 and O is mapped to 1.
         num_frames = len(frames)
-        species = set()
+        types = set()
         self.num_atoms_per_frame = np.zeros((num_frames), int)
 
         for i, f in enumerate(self.frames):
             self.num_atoms_per_frame[i] = len(f)
             for atom in f:
-                species.add(atom.number)
+                types.add(atom.number)
 
         self.num_atoms_total = sum(self.num_atoms_per_frame)
-        species = sorted(species)
+        types = sorted(types)
 
         # Define variables determining size of feature vector coming from frames
         self.num_atoms_per_frame = np.array([len(frame) for frame in frames])
 
-        num_particle_types = len(species)
+        num_particle_types = len(types)
 
         # Initialize arrays in which to store all features
         self.feature_gradients = 0
@@ -570,7 +568,7 @@ class EllipsoidalDensityProjection:
         pairwise_ellip_feat = pairwise_ellip_expansion(
             self.max_angular,
             self.nl,
-            species,
+            types,
             self.frame_to_global_atom_idx,
             rotation_matrices,
             ellipsoid_lengths,
@@ -579,7 +577,7 @@ class EllipsoidalDensityProjection:
             show_progress,
         )
 
-        features = contract_pairwise_feat(pairwise_ellip_feat, species, show_progress)
+        features = contract_pairwise_feat(pairwise_ellip_feat, types, show_progress)
         if normalize:
             normalized_features = self.radial_basis.orthonormalize_basis(features)
             return normalized_features

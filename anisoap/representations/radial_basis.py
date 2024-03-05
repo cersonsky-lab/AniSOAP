@@ -313,13 +313,13 @@ class MonomialBasis(_RadialBasis):
         # In-place modification.
 
         for label, block in features.items():
-            # Each block's `properties` dimension contains radial channels for each neighbor species
-            # Hence we have to iterate through each neighbor species and orthonormalize the block in subblocks
+            # Each block's `properties` dimension contains radial channels for each neighbor types
+            # Hence we have to iterate through each neighbor types and orthonormalize the block in subblocks
             # Each subblock is indexed using the neighbor_mask boolean array.
-            neighbors = np.unique(block.properties["neighbor_species"])
+            neighbors = np.unique(block.properties["neighbor_types"])
             for neighbor in neighbors:
                 l = label["angular_channel"]
-                neighbor_mask = block.properties["neighbor_species"] == neighbor
+                neighbor_mask = block.properties["neighbor_types"] == neighbor
                 n_arr = block.properties["n"][neighbor_mask].flatten()
                 l_2n_arr = l + 2 * n_arr
                 # normalize all the GTOs by the appropriate prefactor first, since the overlap matrix is in terms of
@@ -477,13 +477,13 @@ class GTORadialBasis(_RadialBasis):
         radial_basis_name = self.radial_basis
 
         for label, block in features.items():
-            # Each block's `properties` dimension contains radial channels for each neighbor species
-            # Hence we have to iterate through each neighbor species and orthonormalize the block in subblocks
+            # Each block's `properties` dimension contains radial channels for each neighbor types
+            # Hence we have to iterate through each neighbor types and orthonormalize the block in subblocks
             # Each subblock is indexed using the neighbor_mask boolean array.
-            neighbors = np.unique(block.properties["neighbor_species"])
+            neighbors = np.unique(block.properties["neighbor_types"])
             for neighbor in neighbors:
                 l = label["angular_channel"]
-                neighbor_mask = block.properties["neighbor_species"] == neighbor
+                neighbor_mask = block.properties["neighbor_types"] == neighbor
                 n_arr = block.properties["n"][neighbor_mask].flatten()
                 l_2n_arr = l + 2 * n_arr
                 # normalize all the GTOs by the appropriate prefactor first, since the overlap matrix is in terms of
