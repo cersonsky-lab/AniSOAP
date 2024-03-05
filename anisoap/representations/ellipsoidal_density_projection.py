@@ -87,6 +87,7 @@ def pairwise_ellip_expansion(
     scaled_sph_to_cart = []
     for l in range(lmax + 1):
         scaled_sph_to_cart.append(sph_to_cart[l] / solid_harm_prefact[l])
+
     for center_types in types:
         for neighbor_types in types:
             if (center_types, neighbor_types) in neighbor_list.keys:
