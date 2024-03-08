@@ -138,7 +138,7 @@ def pairwise_ellip_expansion(
                         constant
                     ) = radial_basis.compute_gaussian_parameters(r_ij, lengths, rot)
 
-                    moments = np.exp(constant) * length_norm * compute_moments_inefficient_implementation(
+                    moments = np.exp(-0.5 * constant) * length_norm * compute_moments_inefficient_implementation(
                         precision, center, maxdeg=maxdeg
                     )
                     for l in range(lmax + 1):
