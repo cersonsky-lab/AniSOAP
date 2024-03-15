@@ -436,10 +436,11 @@ class GTORadialBasis(_RadialBasis):
         sigma = self.radial_gaussian_width
         new_precision = precision + np.eye(3) / sigma**2
         new_center = center - 1 / sigma**2 * np.linalg.solve(new_precision, r_ij)
-        constant = 1 / sigma**2 * r_ij @ np.linalg.solve(new_precision, precision@r_ij)
+        constant = (
+            1 / sigma**2 * r_ij @ np.linalg.solve(new_precision, precision @ r_ij)
+        )
 
         return new_precision, new_center, constant
-
 
     def calc_overlap_matrix(self):
         """

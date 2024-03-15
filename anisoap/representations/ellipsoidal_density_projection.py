@@ -135,11 +135,15 @@ def pairwise_ellip_expansion(
                     (
                         precision,
                         center,
-                        constant
+                        constant,
                     ) = radial_basis.compute_gaussian_parameters(r_ij, lengths, rot)
 
-                    moments = np.exp(-0.5 * constant) * length_norm * compute_moments_inefficient_implementation(
-                        precision, center, maxdeg=maxdeg
+                    moments = (
+                        np.exp(-0.5 * constant)
+                        * length_norm
+                        * compute_moments_inefficient_implementation(
+                            precision, center, maxdeg=maxdeg
+                        )
                     )
                     for l in range(lmax + 1):
                         deg = l + 2 * (num_ns[l] - 1)
