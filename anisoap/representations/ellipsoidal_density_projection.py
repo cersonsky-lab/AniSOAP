@@ -126,24 +126,20 @@ def pairwise_ellip_expansion(
 
                     rot = rotation_matrices[j_global]
                     lengths = ellipsoid_lengths[j_global]
-                    volume = 4.0 / 3.0 * np.pi * np.product(lengths / 2.0)
+                    volume = 4.0 / 3.0 * np.pi * np.product(lengths)
 
                     length_norm = (
-                        np.product(lengths) * volume * (2.0 * np.pi) ** (3.0 / 2.0)
+                        np.product(lengths * 2) * volume * (2.0 * np.pi) ** (3.0 / 2.0)
                     ) ** -1.0
 
                     (
                         precision,
                         center,
-                        constant,
+                        constant
                     ) = radial_basis.compute_gaussian_parameters(r_ij, lengths, rot)
 
-                    moments = (
-                        np.exp(-0.5 * constant)
-                        * length_norm
-                        * compute_moments_inefficient_implementation(
-                            precision, center, maxdeg=maxdeg
-                        )
+                    moments = np.exp(-0.5 * constant) * length_norm * compute_moments_inefficient_implementation(
+                        precision, center, maxdeg=maxdeg
                     )
                     for l in range(lmax + 1):
                         deg = l + 2 * (num_ns[l] - 1)
