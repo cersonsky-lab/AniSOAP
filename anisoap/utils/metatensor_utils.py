@@ -229,8 +229,8 @@ def cg_combine(
     other_keys_match : list, optional
         List of keys that should match.  These will not need to have their outer
         product taken, but will instead be merged into a new key.  For instance,
-        passing `["species center"]` will combine the keys with the same species
-        center, yielding a single key with the same species_center in the results.
+        passing `["types center"]` will combine the keys with the same type
+        center, yielding a single key with the same types_center in the results.
         
     Returns
     -------
