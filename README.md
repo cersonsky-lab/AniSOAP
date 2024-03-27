@@ -8,7 +8,7 @@ AniSOAP
 </a>
 
 ## Warning!
-While stable, AniSOAP is in beta mode, and subject to new changes regularly. 
+While technically complete, AniSOAP is in beta mode, and subject to new changes regularly. 
 Please use with caution as we iron out some of the finer details.
 
 ## Installation
