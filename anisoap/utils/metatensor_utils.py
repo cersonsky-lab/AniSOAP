@@ -49,14 +49,14 @@ class ClebschGordanReal:
                 ):
                     complex_cg = _complex_clebsch_gordan_matrix(l1, l2, L)
 
-                    real_cg = (
-                        r2c[l1].T @ complex_cg.reshape(2 * l1 + 1, -1)
-                    ).reshape(complex_cg.shape)
+                    real_cg = (r2c[l1].T @ complex_cg.reshape(2 * l1 + 1, -1)).reshape(
+                        complex_cg.shape
+                    )
 
                     real_cg = real_cg.swapaxes(0, 1)
-                    real_cg = (
-                        r2c[l2].T @ real_cg.reshape(2 * l2 + 1, -1)
-                    ).reshape(real_cg.shape)
+                    real_cg = (r2c[l2].T @ real_cg.reshape(2 * l2 + 1, -1)).reshape(
+                        real_cg.shape
+                    )
                     real_cg = real_cg.swapaxes(0, 1)
 
                     real_cg = real_cg @ c2r[L].T
@@ -100,9 +100,7 @@ class ClebschGordanReal:
             )
 
         # infers the shape of the output using the einsum internals
-        features = np.einsum(
-            combination_string, rho1[:, 0, ...], rho2[:, 0, ...]
-        ).shape
+        features = np.einsum(combination_string, rho1[:, 0, ...], rho2[:, 0, ...]).shape
         rho = np.zeros((n_items, 2 * L + 1) + features[1:])
 
         if (l1, l2, L) in self._cg:
@@ -231,20 +229,14 @@ def cg_combine(
         clebsch_gordan = ClebschGordanReal(lcut)
 
     other_keys_a = tuple(
-        name
-        for name in x_a.keys.names
-        if name not in ["angular_channel", "order_nu"]
+        name for name in x_a.keys.names if name not in ["angular_channel", "order_nu"]
     )
     other_keys_b = tuple(
-        name
-        for name in x_b.keys.names
-        if name not in ["angular_channel", "order_nu"]
+        name for name in x_b.keys.names if name not in ["angular_channel", "order_nu"]
     )
 
     if other_keys_match is None:
-        OTHER_KEYS = [k + "_a" for k in other_keys_a] + [
-            k + "_b" for k in other_keys_b
-        ]
+        OTHER_KEYS = [k + "_a" for k in other_keys_a] + [k + "_b" for k in other_keys_b]
     else:
         OTHER_KEYS = (
             other_keys_match
@@ -305,23 +297,17 @@ def cg_combine(
                 )
             else:
                 OTHERS = tuple(
-                    index_a[k]
-                    for k in other_keys_match
-                    if index_a[k] == index_b[k]
+                    index_a[k] for k in other_keys_match if index_a[k] == index_b[k]
                 )
                 # skip combinations without matching key
                 if len(OTHERS) < len(other_keys_match):
                     continue
                 # adds non-matching keys to build outer product
                 OTHERS = OTHERS + tuple(
-                    index_a[k]
-                    for k in other_keys_a
-                    if k not in other_keys_match
+                    index_a[k] for k in other_keys_a if k not in other_keys_match
                 )
                 OTHERS = OTHERS + tuple(
-                    index_b[k]
-                    for k in other_keys_b
-                    if k not in other_keys_match
+                    index_b[k] for k in other_keys_b if k not in other_keys_match
                 )
 
             neighbor_slice = slice(None)
@@ -330,9 +316,7 @@ def cg_combine(
             sel_feats = []
             sel_idx = []
             sel_feats = (
-                np.indices((len(properties_a), len(properties_b)))
-                .reshape(2, -1)
-                .T
+                np.indices((len(properties_a), len(properties_b))).reshape(2, -1).T
             )
 
             prop_ids_a = []
@@ -363,9 +347,7 @@ def cg_combine(
                     X_samples[KEY] = block_b.samples
                     if grad_components is not None:
                         X_grads[KEY] = []
-                        X_grad_samples[KEY] = block_b.gradient(
-                            "positions"
-                        ).samples
+                        X_grad_samples[KEY] = block_b.gradient("positions").samples
 
                 # builds all products in one go
                 one_shot_blocks = clebsch_gordan.combine_einsum(
@@ -388,9 +370,7 @@ def cg_combine(
                         L=L,
                         combination_string="iq,iaq->iaq",
                     ) + clebsch_gordan.combine_einsum(
-                        block_b.values[grad_b.samples["sample"]][
-                            :, :, sel_feats[:, 1]
-                        ],
+                        block_b.values[grad_b.samples["sample"]][:, :, sel_feats[:, 1]],
                         grad_a_data[neighbor_slice, ..., sel_feats[:, 0]],
                         L=L,
                         combination_string="iq,iaq->iaq",
