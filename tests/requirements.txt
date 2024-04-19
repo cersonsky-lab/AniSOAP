@@ -4,3 +4,4 @@ pytest
 scipy
 tqdm
 git+https://github.com/Luthaf/rascaline.git
+metatensor
