@@ -79,6 +79,7 @@ def pairwise_ellip_expansion(
     keys = [tuple(i) + (l,) for i in keys for l in range(lmax + 1)]
     num_ns = radial_basis.get_num_radial_functions()
     maxdeg = np.max(np.arange(lmax + 1) + 2 * np.array(num_ns))
+    solid_harm_prefact = np.sqrt((np.arange(lmax + 1) * 2 + 1) / (4 * np.pi))
     for center_types in types:
         for neighbor_types in types:
             if (center_types, neighbor_types) in neighbor_list.keys:
@@ -129,7 +130,11 @@ def pairwise_ellip_expansion(
                         deg = l + 2 * (num_ns[l] - 1)
                         moments_l = moments[: deg + 1, : deg + 1, : deg + 1]
                         values_ldict[l].append(
-                            np.einsum("mnpqr, pqr->mn", sph_to_cart[l], moments_l)
+                            np.einsum(
+                                "mnpqr, pqr->mn",
+                                sph_to_cart[l] * solid_harm_prefact[l],
+                                moments_l,
+                            )
                         )
 
                 for l in tqdm(
