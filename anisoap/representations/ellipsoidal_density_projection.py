@@ -79,7 +79,10 @@ def pairwise_ellip_expansion(
     keys = [tuple(i) + (l,) for i in keys for l in range(lmax + 1)]
     num_ns = radial_basis.get_num_radial_functions()
     maxdeg = np.max(np.arange(lmax + 1) + 2 * np.array(num_ns))
-    solid_harm_prefact = np.sqrt((np.arange(lmax + 1) * 2 + 1) / (4 * np.pi))
+    # This prefactor is the solid harmonics prefactor, that we need to divide by later.
+    # This is needed because spherical_to_cartesian calculates solid harmonics Rlm = sqrt((4pi)/(2l+1)) * r^l*Ylm
+    # Our expansion coefficients from the inner product does not have this prefactor included, so we divide it later.
+    solid_harm_prefact = np.sqrt((4 * np.pi) / (np.arange(lmax + 1) * 2 + 1))
     for center_types in types:
         for neighbor_types in types:
             if (center_types, neighbor_types) in neighbor_list.keys:
@@ -132,7 +135,7 @@ def pairwise_ellip_expansion(
                         values_ldict[l].append(
                             np.einsum(
                                 "mnpqr, pqr->mn",
-                                sph_to_cart[l] * solid_harm_prefact[l],
+                                sph_to_cart[l] / solid_harm_prefact[l],
                                 moments_l,
                             )
                         )
