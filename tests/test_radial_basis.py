@@ -13,7 +13,7 @@ class TestNumberOfRadialFunctions:
     """
 
     def test_radial_functions_n5(self):
-        basis_gto = MonomialBasis(max_angular=5, cutoff_radius=5)
+        basis_gto = MonomialBasis(max_angular=5, cutoff_radius=5.0)
         num_ns = basis_gto.get_num_radial_functions()
 
         # Compare against exact results
@@ -23,7 +23,7 @@ class TestNumberOfRadialFunctions:
             assert num == num_ns_exact[l]
 
     def test_radial_functions_n6(self):
-        basis_gto = MonomialBasis(max_angular=6, cutoff_radius=5)
+        basis_gto = MonomialBasis(max_angular=6, cutoff_radius=5.0)
         num_ns = basis_gto.get_num_radial_functions()
 
         # Compare against exact results
@@ -33,7 +33,7 @@ class TestNumberOfRadialFunctions:
             assert num == num_ns_exact[l]
 
     def test_radial_functions_n7(self):
-        basis_gto = MonomialBasis(max_angular=6, max_radial=5, cutoff_radius=5)
+        basis_gto = MonomialBasis(max_angular=6, max_radial=5, cutoff_radius=5.0)
         num_ns = basis_gto.get_num_radial_functions()
 
         # We specify max_radial so it's decoupled from max_angular.
@@ -46,7 +46,7 @@ class TestNumberOfRadialFunctions:
         basis_gto = MonomialBasis(
             max_angular=6,
             max_radial=[1, 2, 3, 4, 5, 6, 7],
-            cutoff_radius=5,
+            cutoff_radius=5.0,
         )
         num_ns = basis_gto.get_num_radial_functions()
 
@@ -133,11 +133,11 @@ class TestGaussianParameters:
     @pytest.mark.parametrize("rotation_matrix", rotation_matrices)
     def test_limit_large_sigma(self, sigma, r_ij, lengths, rotation_matrix):
         # Initialize the classes
-        basis_mon = MonomialBasis(max_angular=2, cutoff_radius=5)
+        basis_mon = MonomialBasis(max_angular=2, cutoff_radius=5.0)
         basis_gto = GTORadialBasis(
             radial_gaussian_width=sigma,
             max_angular=2,
-            cutoff_radius=5,
+            cutoff_radius=5.0,
         )
 
         # Get the center and precision matrix
@@ -165,7 +165,7 @@ class TestGaussianParameters:
         basis_gto = GTORadialBasis(
             radial_gaussian_width=sigma,
             max_angular=2,
-            cutoff_radius=5,
+            cutoff_radius=5.0,
         )
 
         # Get the center and precision matrix
