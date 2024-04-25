@@ -176,6 +176,12 @@ class _RadialBasis:
         self.rcond = rcond
         self.tol = tol
 
+        # Initialize the radial basis class; informs that overflow errors occur if cutoff_radius is in int
+
+        if type(cutoff_radius) == int:
+            raise ValueError(
+                "r_cut is set as an integer, which could cause overflow errors. Pass in float"
+            )
         # As part of the initialization, compute the number of radial basis
         # functions, num_n, for each angular frequency l.
         # If nmax is given, num_n = nmax + 1 (n ranges from 0 to nmax)
@@ -198,6 +204,12 @@ class _RadialBasis:
                 self.num_radial_functions.append(max_radial + 1)
             else:
                 raise ValueError("`max_radial` must be None, int, or list of int")
+            # Initialize the radial basis class
+            if type(cutoff_radius) == int:
+                raise ValueError(
+                    "r_cut is set as an integer, which could cause overflow errors. Pass in float"
+                )
+
 
     # Get number of radial functions
     def get_num_radial_functions(self):
