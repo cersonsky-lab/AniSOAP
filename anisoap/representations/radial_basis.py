@@ -210,7 +210,6 @@ class _RadialBasis:
                     "r_cut is set as an integer, which could cause overflow errors. Pass in float"
                 )
 
-
     # Get number of radial functions
     def get_num_radial_functions(self):
         """
