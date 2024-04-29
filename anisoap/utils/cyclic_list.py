@@ -1,3 +1,4 @@
+from typing import List
 class CGRCacheList:
     """
     This is a simple class that only exists to be used as a "private" cache
@@ -30,7 +31,7 @@ class CGRCacheList:
         self._size = size
         self.clear_cache()
 
-    def keys(self) -> list[int]:
+    def keys(self) -> List[int]:
         """
         Return list of keys, with keys
         """
