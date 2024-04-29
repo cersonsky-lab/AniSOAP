@@ -1,4 +1,6 @@
 from typing import List
+
+
 class CGRCacheList:
     """
     This is a simple class that only exists to be used as a "private" cache
