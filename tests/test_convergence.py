@@ -96,6 +96,5 @@ class TestGaussianConvergence:
         # we should get a better and better approximation.
         assert np.all(errs[:-1] >= errs[1:])
 
-        # as long as each element differs by a small absolute amount, we're good.
-        # rtol defaults for allclose are hard to satisfy since tails of gaussian approach 0, so we set it to inf.
-        assert_allclose(approx, actual, atol=1e-03, rtol=np.inf)
+        # as long as each element differs by a (somewhat) small absolute amount, we're good.
+        assert_allclose(approx, actual, atol=1e-03)
