@@ -79,7 +79,7 @@ def pairwise_ellip_expansion(
     keys = [tuple(i) + (l,) for i in keys for l in range(lmax + 1)]
     num_ns = radial_basis.get_num_radial_functions()
     maxdeg = np.max(np.arange(lmax + 1) + 2 * np.array(num_ns))
-    
+
     # This prefactor is the solid harmonics prefactor, that we need to divide by later.
     # This is needed because spherical_to_cartesian calculates solid harmonics Rlm = sqrt((4pi)/(2l+1)) * r^l*Ylm
     # Our expansion coefficients from the inner product does not have this prefactor included, so we divide it later.
