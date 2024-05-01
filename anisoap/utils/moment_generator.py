@@ -129,8 +129,11 @@ def compute_moments_inefficient_implementation(A, a, maxdeg):
         <x^{n_0} * y^{n_1} * z^{n_2}> = \int(x^{n_0} * y^{n_1} * z^{n_2}) * \exp(-0.5*(r-a).T@cov@(r-a)) dxdydz
         \sum_{i=1}^{\\infty} x_{i}
 
-        Note that the term "moments" in probability theory are defined for normalized Gaussian distributions.
-        Here, we take the Gaussian
+        Note that the term "moments" in probability theory are defined for normalized Gaussian distributions. These
+        recursive relations find the moments of a normalized Gaussian, but we actually want to find the moments of
+        the unnormalized underlying gaussian (as seen in the equation above) because calculating expansion
+        coefficients of any density should not involve normalization. Therefore, we scale the end-result by
+        global_factor, which is the reciprocal of the normalizing constant in front of any gaussian.
     """
     # Make sure that the provided arrays have the correct dimensions and properties
     assert A.shape == (3, 3), "Dilation matrix needs to be 3x3"
