@@ -87,6 +87,7 @@ def pairwise_ellip_expansion(
     scaled_sph_to_cart = []
     for l in range(lmax + 1):
         scaled_sph_to_cart.append(sph_to_cart[l] / solid_harm_prefact[l])
+
     for center_types in types:
         for neighbor_types in types:
             if (center_types, neighbor_types) in neighbor_list.keys:
@@ -126,12 +127,22 @@ def pairwise_ellip_expansion(
 
                     rot = rotation_matrices[j_global]
                     lengths = ellipsoid_lengths[j_global]
-                    precision, center = radial_basis.compute_gaussian_parameters(
-                        r_ij, lengths, rot
-                    )
+                    length_norm = (
+                        np.product(lengths) * (2.0 * np.pi) ** (3.0 / 2.0)
+                    ) ** -1.0
 
-                    moments = compute_moments_inefficient_implementation(
-                        precision, center, maxdeg=maxdeg
+                    (
+                        precision,
+                        center,
+                        constant,
+                    ) = radial_basis.compute_gaussian_parameters(r_ij, lengths, rot)
+
+                    moments = (
+                        np.exp(-0.5 * constant)
+                        * length_norm
+                        * compute_moments_inefficient_implementation(
+                            precision, center, maxdeg=maxdeg
+                        )
                     )
                     for l in range(lmax + 1):
                         deg = l + 2 * (num_ns[l] - 1)

@@ -279,8 +279,8 @@ class MonomialBasis(_RadialBasis):
         center = r_ij
         diag = np.diag(1 / lengths**2)
         precision = rotation_matrix @ diag @ rotation_matrix.T
-
-        return precision, center
+        constant = 0
+        return precision, center, constant
 
     def calc_overlap_matrix(self):
         """
@@ -432,13 +432,15 @@ class GTORadialBasis(_RadialBasis):
         center = r_ij
         diag = np.diag(1 / lengths**2)
         precision = rotation_matrix @ diag @ rotation_matrix.T
-
         # GTO basis with uniform Gaussian width in the basis functions
         sigma = self.radial_gaussian_width
-        precision += np.eye(3) / sigma**2
-        center -= 1 / sigma**2 * np.linalg.solve(precision, r_ij)
+        new_precision = precision + np.eye(3) / sigma**2
+        new_center = center - 1 / sigma**2 * np.linalg.solve(new_precision, r_ij)
+        constant = (
+            1 / sigma**2 * r_ij @ np.linalg.solve(new_precision, precision @ r_ij)
+        )
 
-        return precision, center
+        return new_precision, new_center, constant
 
     def calc_overlap_matrix(self):
         """

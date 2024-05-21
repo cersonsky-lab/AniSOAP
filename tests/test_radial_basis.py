@@ -145,8 +145,12 @@ class TestGaussianParameters:
         hypers["r_ij"] = r_ij
         hypers["lengths"] = lengths
         hypers["rotation_matrix"] = rotation_matrix
-        prec_mon, center_mon = basis_mon.compute_gaussian_parameters(**hypers)
-        prec_gto, center_gto = basis_gto.compute_gaussian_parameters(**hypers)
+        prec_mon, center_mon, constant_mon = basis_mon.compute_gaussian_parameters(
+            **hypers
+        )
+        prec_gto, center_gto, constant_gto = basis_gto.compute_gaussian_parameters(
+            **hypers
+        )
 
         # Check that for large sigma, the two are close
         assert_allclose(center_mon, center_gto, rtol=1e-10, atol=1e-15)
@@ -173,7 +177,9 @@ class TestGaussianParameters:
         hypers["r_ij"] = r_ij
         hypers["lengths"] = lengths
         hypers["rotation_matrix"] = rotation_matrix
-        prec_gto, center_gto = basis_gto.compute_gaussian_parameters(**hypers)
+        prec_gto, center_gto, constant_gto = basis_gto.compute_gaussian_parameters(
+            **hypers
+        )
 
         # Check that for large sigma, the two are close
         prec_ref = np.eye(3) / sigma**2

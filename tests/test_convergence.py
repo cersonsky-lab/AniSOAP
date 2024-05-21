@@ -83,7 +83,8 @@ class TestGaussianConvergence:
         # Now, we perform our reconstruction
         approx = []
         r_mesh = np.linspace(0, 5, 100)
-        actual = np.exp(-(r_mesh**2) / (2 * sigma**2))
+        length_norm = (sigma**3 * (2.0 * np.pi) ** (3.0 / 2.0)) ** -1.0
+        actual = length_norm * np.exp(-(r_mesh**2) / (2 * sigma**2))
 
         for r in r_mesh:
             # For now, have to do an inefficient pointwise evaluation, unfortunately.
