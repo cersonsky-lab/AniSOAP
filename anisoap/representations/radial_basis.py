@@ -279,7 +279,7 @@ class MonomialBasis(_RadialBasis):
         center = r_ij
         diag = np.diag(1 / lengths**2)
         precision = rotation_matrix @ diag @ rotation_matrix.T
-        constant = 1
+        constant = 0
         return precision, center, constant
 
     def calc_overlap_matrix(self):
