@@ -1,31 +1,25 @@
 import numpy as np
-from ase import Atoms
+from anisoap.utils import ClebschGordanReal
 from time import perf_counter
 
 
-a = 3
-b = c = 1
-
-def generate_frame(l1, l2, l3):
-    n_tot = l1 * l2 * l3
-    positions = np.asarray(
-        [[i, j, 3 * k] for i in range(l1) for j in range(l2) for k in range(l3)]
-    )
-
-    frame = Atoms(positions=positions, numbers=[0] * n_tot)
-    frame.arrays["quaternions"] = np.array([[1, 0, 0, 0]] * n_tot)
-    frame.arrays[r"c_diameter\[1\]"] = a * np.ones(n_tot)
-    frame.arrays[r"c_diameter\[2\]"] = b * np.ones(n_tot)
-    frame.arrays[r"c_diameter\[3\]"] = c * np.ones(n_tot)
-
-    frame.arrays[r"c_diameter[1]"] = a * np.ones(n_tot)
-    frame.arrays[r"c_diameter[2]"] = b * np.ones(n_tot)
-    frame.arrays[r"c_diameter[3]"] = c * np.ones(n_tot)
-
-    return [frame]
-
-
 class TestCGRCache:
-
     def test_cgr(self):
-        pass 
+        """
+        Tests that the CGR cache is correct, and that using the CGR cache results
+        in a performance boost.
+        """
+        lmax = 5
+        start = perf_counter()
+        mycg1 = ClebschGordanReal(lmax)
+        end = perf_counter()
+        time_nocache = end - start
+        start = perf_counter()
+        mycg2 = ClebschGordanReal(lmax)  # we should expect these to be cached!
+        end = perf_counter()
+        time_cache = end - start
+        assert time_cache < time_nocache
+        assert mycg1.get_cg().keys() == mycg2.get_cg().keys()
+        for key1, key2 in zip(mycg1.get_cg(), mycg2.get_cg()):
+            for entry1, entry2 in zip(mycg1.get_cg()[key1], mycg2.get_cg()[key2]):
+                assert np.all(entry1 == entry2)
