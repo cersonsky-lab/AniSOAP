@@ -33,7 +33,7 @@ def pairwise_ellip_expansion(
 ):
     r"""Computes pairwise expansion
 
-    Function to compute the pairwise expansion :math:`\langle anlm|\rho_{ij} \rangle` 
+    Function to compute the pairwise expansion :math:`\langle anlm|\rho_{ij} \rangle`
     by combining the moments and the spherical to Cartesian transformation.
 
     Parameters
@@ -42,22 +42,22 @@ def pairwise_ellip_expansion(
         Maximum angular
     neighbor_list : Equistore TensorMap
         Full neighborlist with keys (types_1, types_2) enumerating the possible
-        species pairs. Each block contains as samples, the atom indices of 
-        (first_atom, second_atom) that correspond to the key, and block.value is 
-        a 3D array of the form (num_samples, num_components,properties), with 
-        num_components=3 corresponding to the (x,y,z) components of the vector 
-        from first_atom to second_atom. Depending on the cutoff some species 
-        pairs may not appear. Self pairs are not present but in PBC, pairs between 
+        species pairs. Each block contains as samples, the atom indices of
+        (first_atom, second_atom) that correspond to the key, and block.value is
+        a 3D array of the form (num_samples, num_components,properties), with
+        num_components=3 corresponding to the (x,y,z) components of the vector
+        from first_atom to second_atom. Depending on the cutoff some species
+        pairs may not appear. Self pairs are not present but in PBC, pairs between
         copies of the same atom are accounted for.
     types : list of ints
         List of atomic numbers present across the data frames
     frame_to_global_atom_idx : list of ints
-        The length of the list equals the number of frames, each entry enumerating 
+        The length of the list equals the number of frames, each entry enumerating
         the number of atoms in corresponding frame
     rotation_matrices : np.array of dimension ((num_atoms,3,3))
     ellipsoid_lengths : np.array of dimension ((num_atoms,3))
     radial_basis : Instance of the RadialBasis Class
-        anisoap.representations.radial_basis.RadialBasis that has been instantiated 
+        anisoap.representations.radial_basis.RadialBasis that has been instantiated
         appropriately with the cutoff radius, radial basis type.
     show_progress : bool
         Show progress bar for frame analysis and feature generation
@@ -67,10 +67,10 @@ def pairwise_ellip_expansion(
     TensorMap
         An Equistore TensorMap with keys (types_1, types_2, l) where
         ("types_1", "types_2") is key in the neighbor_list and "l" is the
-        angular channel. Each block of this tensormap has the same samples as the 
-        corresponding block of the neighbor_list. block.value is a 3D array of 
-        the form (num_samples, num_components, properties) where num_components 
-        form the 2*l+1 values for the corresponding angular channel and the 
+        angular channel. Each block of this tensormap has the same samples as the
+        corresponding block of the neighbor_list. block.value is a 3D array of
+        the form (num_samples, num_components, properties) where num_components
+        form the 2*l+1 values for the corresponding angular channel and the
         properties dimension corresponds to the radial channel.
     """
     tensorblock_list = []
@@ -194,11 +194,11 @@ def contract_pairwise_feat(pair_ellip_feat, types, show_progress=False):
     --------------------------------------------------------
     Parameters:
 
-    Function to sum over the pairwise expansion 
+    Function to sum over the pairwise expansion
 
     .. math::
 
-        \\sum_{j \\in a} \\langle anlm|\\rho_{ij} \\rangle 
+        \\sum_{j \\in a} \\langle anlm|\\rho_{ij} \\rangle
             = \\langle anlm|\\rho_i \\rangle
 
     Parameters
@@ -216,12 +216,12 @@ def contract_pairwise_feat(pair_ellip_feat, types, show_progress=False):
     -------
     TensorMap
         An Equistore TensorMap with keys (types, l) "types" takes the value
-        of the atomic numbers present in the dataset and "l" is the angular 
+        of the atomic numbers present in the dataset and "l" is the angular
         channel. Each block of this tensormap has as samples ("type", "center"),
-        yielding the indices of the frames and atoms that correspond to "species" 
-        are present. block.value is a 3D array of the form (num_samples, num_components, properties) 
-        where num_components take on the same values as in the pair_ellip_feat_feat.block. 
-        block.properties now has an additional index for neighbor_species that 
+        yielding the indices of the frames and atoms that correspond to "species"
+        are present. block.value is a 3D array of the form (num_samples, num_components, properties)
+        where num_components take on the same values as in the pair_ellip_feat_feat.block.
+        block.properties now has an additional index for neighbor_species that
         corresponds to "a" in :math:`\\langle anlm|rho_i \\rangle`
     """
     ellip_keys = list(
@@ -414,7 +414,7 @@ class EllipsoidalDensityProjection:
 
     Compute the spherical projection coefficients for a system of ellipsoids
     assuming a multivariate Gaussian density.
-       
+
     Initialize the calculator using the hyperparameters.
 
     Parameters
@@ -467,7 +467,7 @@ class EllipsoidalDensityProjection:
         max_angular : int
             Number of angular functions
         radial_basis_name : str
-            The radial basis. Currently implemented are 'GTO_primitive', 'GTO', 
+            The radial basis. Currently implemented are 'GTO_primitive', 'GTO',
             and 'monomial'.
         cutoff_radius
             Cutoff radius of the projection
@@ -564,7 +564,7 @@ class EllipsoidalDensityProjection:
         show_progress : bool
             Show progress bar for frame analysis and feature generation
         normalize: bool
-            Whether to perform Lowdin Symmetric Orthonormalization or not. 
+            Whether to perform Lowdin Symmetric Orthonormalization or not.
 
         Returns
         -------

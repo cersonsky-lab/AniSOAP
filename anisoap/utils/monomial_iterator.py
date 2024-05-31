@@ -4,7 +4,7 @@ import numpy as np
 class TrivariateMonomialIndices:
     """Class for generating an iterator object over trivariate monomials.
 
-    Generates an iterator object over trivariate monomials of the form 
+    Generates an iterator object over trivariate monomials of the form
     :math:`f(x,y,z) = x^{n_0} y^{n_1} z^{n_2}` sorted in lexicographical order.
 
     Without this class, iterating over all monomials at some fixed degree

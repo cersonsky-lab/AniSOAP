@@ -116,7 +116,7 @@ def _real2complex(L):
 
     .. math::
 
-        \mathbf{R} \dot \left[-L..L\right] 
+        \mathbf{R} \dot \left[-L..L\right]
 
     """
     result = np.zeros((2 * L + 1, 2 * L + 1), dtype=np.complex128)
@@ -158,9 +158,7 @@ def _remove_suffix(names, new_suffix=""):
 
 
 def standardize_keys(descriptor):
-    """Standardize the naming scheme of density expansion coefficient blocks (nu=1)
-
-    """
+    """Standardize the naming scheme of density expansion coefficient blocks (nu=1)"""
 
     key_names = descriptor.keys.names
     if not "angular_channel" in key_names:
@@ -206,10 +204,10 @@ def cg_combine(
     lcut=None,
     other_keys_match=None,
 ):
-    """Performs a CG product of two sets of equivariants. 
+    """Performs a CG product of two sets of equivariants.
 
-    The only requirement is that sparse indices are labeled as 
-    ("inversion_sigma", "spherical_harmonics_l", "order_nu"). 
+    The only requirement is that sparse indices are labeled as
+    ("inversion_sigma", "spherical_harmonics_l", "order_nu").
 
     Parameters
     ----------
@@ -231,7 +229,7 @@ def cg_combine(
         product taken, but will instead be merged into a new key.  For instance,
         passing `["types center"]` will combine the keys with the same type
         center, yielding a single key with the same types_center in the results.
-        
+
     Returns
     -------
     TensorMap

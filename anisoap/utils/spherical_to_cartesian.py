@@ -17,11 +17,11 @@ from anisoap.utils import monomial_iterator
 def prefact_minus1(l):
     r"""Computes the prefactor that multiplies the :math:`T_{l-1}^\text{th}` term in the iteration.
 
-    For :math:`m \in \left[-l, -l+2, ..., l \right]`, compute the factor as 
+    For :math:`m \in \left[-l, -l+2, ..., l \right]`, compute the factor as
 
     .. math::
 
-        \left( \frac{\sqrt{(l+1-m)!}}{(l+1+m)!} \right) \left( \frac{\sqrt{(l+m)!}}{(l-m)!} \right) 
+        \left( \frac{\sqrt{(l+1-m)!}}{(l+1+m)!} \right) \left( \frac{\sqrt{(l+m)!}}{(l-m)!} \right)
             \left( \frac{2l+1}{l+1-m} \right)
 
     Parameters
@@ -32,7 +32,7 @@ def prefact_minus1(l):
     Returns
     -------
     list of size (2l + 1)
-        corresponds to the prefactor that multiplies the :math:`T_{l-1}^\text{th}` 
+        corresponds to the prefactor that multiplies the :math:`T_{l-1}^\text{th}`
         term in the iteration
 
     """
@@ -52,7 +52,7 @@ def prefact_minus2(l):
 
     .. math::
 
-        \left( \frac{\sqrt{(l+1-m)!}}{(l+1+m)!} \right) \left(\frac{\sqrt{(l-1+m)!}}{(l-1-m)!} \right) 
+        \left( \frac{\sqrt{(l+1-m)!}}{(l+1+m)!} \right) \left(\frac{\sqrt{(l-1+m)!}}{(l-1-m)!} \right)
             \left( \frac{l+m}{l-m+1} \right)
 
     Parameters
@@ -62,7 +62,7 @@ def prefact_minus2(l):
 
     Returns
     -------
-    list of size (2l - 1) 
+    list of size (2l - 1)
         Corresponds to the prefactor that multiplies the term in question
 
     """
