@@ -11,7 +11,6 @@ from ..utils import (
     compute_moments_diagonal_inefficient_implementation,
     compute_moments_inefficient_implementation,
 )
-
 # quaternion_to_rotation_matrix no longer exists
 from .radial_basis import RadialBasis
 
