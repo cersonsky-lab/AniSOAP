@@ -234,6 +234,12 @@ class _RadialBasis:
         self.rcond = rcond
         self.tol = tol
 
+        # Initialize the radial basis class; informs that overflow errors occur if cutoff_radius is in int
+
+        if type(cutoff_radius) == int:
+            raise ValueError(
+                "r_cut is set as an integer, which could cause overflow errors. Pass in float"
+            )
         # As part of the initialization, compute the number of radial basis
         # functions, num_n, for each angular frequency l.
         # If nmax is given, num_n = nmax + 1 (n ranges from 0 to nmax)
@@ -256,6 +262,11 @@ class _RadialBasis:
                 self.num_radial_functions.append(max_radial + 1)
             else:
                 raise ValueError("`max_radial` must be None, int, or list of int")
+            # Initialize the radial basis class
+            if type(cutoff_radius) == int:
+                raise ValueError(
+                    "r_cut is set as an integer, which could cause overflow errors. Pass in float"
+                )
 
     # Get number of radial functions
     def get_num_radial_functions(self):
@@ -341,8 +352,8 @@ class MonomialBasis(_RadialBasis):
         center = r_ij
         diag = np.diag(1 / lengths**2)
         precision = rotation_matrix @ diag @ rotation_matrix.T
-
-        return precision, center
+        constant = 0
+        return precision, center, constant
 
     def calc_overlap_matrix(self):
         """
@@ -516,13 +527,15 @@ class GTORadialBasis(_RadialBasis):
         center = r_ij
         diag = np.diag(1 / lengths**2)
         precision = rotation_matrix @ diag @ rotation_matrix.T
-
         # GTO basis with uniform Gaussian width in the basis functions
         sigma = self.radial_gaussian_width
-        precision += np.eye(3) / sigma**2
-        center -= 1 / sigma**2 * np.linalg.solve(precision, r_ij)
+        new_precision = precision + np.eye(3) / sigma**2
+        new_center = center - 1 / sigma**2 * np.linalg.solve(new_precision, r_ij)
+        constant = (
+            1 / sigma**2 * r_ij @ np.linalg.solve(new_precision, precision @ r_ij)
+        )
 
-        return precision, center
+        return new_precision, new_center, constant
 
     def calc_overlap_matrix(self):
         """Computes the overlap matrix for GTOs.

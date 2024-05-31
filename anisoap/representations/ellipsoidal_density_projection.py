@@ -41,8 +41,7 @@ def pairwise_ellip_expansion(
     lmax : int
         Maximum angular
     neighbor_list : Equistore TensorMap
-<<<<<<< HEAD
-        Full neighborlist with keys (species_1, species_2) enumerating the possible 
+        Full neighborlist with keys (types_1, types_2) enumerating the possible
         species pairs. Each block contains as samples, the atom indices of 
         (first_atom, second_atom) that correspond to the key, and block.value is 
         a 3D array of the form (num_samples, num_components,properties), with 
@@ -50,17 +49,7 @@ def pairwise_ellip_expansion(
         from first_atom to second_atom. Depending on the cutoff some species 
         pairs may not appear. Self pairs are not present but in PBC, pairs between 
         copies of the same atom are accounted for.
-    species : list of ints
-=======
-        Full neighborlist with keys (types_1, types_2) enumerating the possible types pairs.
-        Each block contains as samples, the atom indices of (first_atom, second_atom) that correspond to the key,
-        and block.value is a 3D array of the form (num_samples, num_components,properties), with num_components=3
-        corresponding to the (x,y,z) components of the vector from first_atom to second_atom.
-        Depending on the cutoff some types pairs may not appear. Self pairs are not present but in PBC,
-        pairs between copies of the same atom are accounted for.
-
-    types: list of ints
->>>>>>> f2f1bccf639cea93851e7b54f1f90cc58874de70
+    types : list of ints
         List of atomic numbers present across the data frames
     frame_to_global_atom_idx : list of ints
         The length of the list equals the number of frames, each entry enumerating 
@@ -72,35 +61,32 @@ def pairwise_ellip_expansion(
         appropriately with the cutoff radius, radial basis type.
     show_progress : bool
         Show progress bar for frame analysis and feature generation
-<<<<<<< HEAD
 
     Returns
     -------
     TensorMap
-        An Equistore TensorMap with keys (species_1, species_2, l) where 
-        ("species_1", "species_2") is key in the neighbor_list and "l" is the 
+        An Equistore TensorMap with keys (types_1, types_2, l) where
+        ("types_1", "types_2") is key in the neighbor_list and "l" is the
         angular channel. Each block of this tensormap has the same samples as the 
         corresponding block of the neighbor_list. block.value is a 3D array of 
         the form (num_samples, num_components, properties) where num_components 
         form the 2*l+1 values for the corresponding angular channel and the 
         properties dimension corresponds to the radial channel.
-=======
-    -----------------------------------------------------------
-    Returns:
-        An Equistore TensorMap with keys (types_1, types_2, l) where ("types_1", "types_2") is key in the
-        neighbor_list and "l" is the angular channel.
-        Each block of this tensormap has the same samples as the corresponding block of the neighbor_list.
-        block.value is a 3D array of the form (num_samples, num_components, properties) where num_components
-        form the 2*l+1 values for the corresponding angular channel and the properties dimension corresponds to
-        the radial channel.
->>>>>>> f2f1bccf639cea93851e7b54f1f90cc58874de70
-
     """
     tensorblock_list = []
     keys = np.asarray(neighbor_list.keys, dtype=int)
     keys = [tuple(i) + (l,) for i in keys for l in range(lmax + 1)]
     num_ns = radial_basis.get_num_radial_functions()
     maxdeg = np.max(np.arange(lmax + 1) + 2 * np.array(num_ns))
+
+    # This prefactor is the solid harmonics prefactor, that we need to divide by later.
+    # This is needed because spherical_to_cartesian calculates solid harmonics Rlm = sqrt((4pi)/(2l+1)) * r^l*Ylm
+    # Our expansion coefficients from the inner product does not have this prefactor included, so we divide it later.
+    solid_harm_prefact = np.sqrt((4 * np.pi) / (np.arange(lmax + 1) * 2 + 1))
+    scaled_sph_to_cart = []
+    for l in range(lmax + 1):
+        scaled_sph_to_cart.append(sph_to_cart[l] / solid_harm_prefact[l])
+
     for center_types in types:
         for neighbor_types in types:
             if (center_types, neighbor_types) in neighbor_list.keys:
@@ -140,18 +126,32 @@ def pairwise_ellip_expansion(
 
                     rot = rotation_matrices[j_global]
                     lengths = ellipsoid_lengths[j_global]
-                    precision, center = radial_basis.compute_gaussian_parameters(
-                        r_ij, lengths, rot
-                    )
+                    length_norm = (
+                        np.product(lengths) * (2.0 * np.pi) ** (3.0 / 2.0)
+                    ) ** -1.0
 
-                    moments = compute_moments_inefficient_implementation(
-                        precision, center, maxdeg=maxdeg
+                    (
+                        precision,
+                        center,
+                        constant,
+                    ) = radial_basis.compute_gaussian_parameters(r_ij, lengths, rot)
+
+                    moments = (
+                        np.exp(-0.5 * constant)
+                        * length_norm
+                        * compute_moments_inefficient_implementation(
+                            precision, center, maxdeg=maxdeg
+                        )
                     )
                     for l in range(lmax + 1):
                         deg = l + 2 * (num_ns[l] - 1)
                         moments_l = moments[: deg + 1, : deg + 1, : deg + 1]
                         values_ldict[l].append(
-                            np.einsum("mnpqr, pqr->mn", sph_to_cart[l], moments_l)
+                            np.einsum(
+                                "mnpqr, pqr->mn",
+                                scaled_sph_to_cart[l],
+                                moments_l,
+                            )
                         )
 
                 for l in tqdm(
@@ -188,16 +188,11 @@ def pairwise_ellip_expansion(
     return pairwise_ellip_feat
 
 
-<<<<<<< HEAD
-def contract_pairwise_feat(pair_ellip_feat, species, show_progress=False):
-    """Sums over pairwise expansion
-=======
 def contract_pairwise_feat(pair_ellip_feat, types, show_progress=False):
     """
     Function to sum over the pairwise expansion \sum_{j in a} <anlm|rho_ij> = <anlm|rho_i>
     --------------------------------------------------------
     Parameters:
->>>>>>> f2f1bccf639cea93851e7b54f1f90cc58874de70
 
     Function to sum over the pairwise expansion 
 
@@ -209,45 +204,25 @@ def contract_pairwise_feat(pair_ellip_feat, types, show_progress=False):
     Parameters
     ----------
     pair_ellip_feat : Equistore TensorMap
-<<<<<<< HEAD
-        TensorMap returned from "pairwise_ellip_expansion()" with keys 
-        (species_1, species_2,l) enumerating the possible species pairs and the 
+        TensorMap returned from "pairwise_ellip_expansion()" with keys
+        (types_1, types_2,l) enumerating the possible species pairs and the
         angular channels.
-    species : list of ints
-=======
-        TensorMap returned from "pairwise_ellip_expansion()" with keys (types_1, types_2,l) enumerating
-        the possible types pairs and the angular channels.
-
     types: list of ints
->>>>>>> f2f1bccf639cea93851e7b54f1f90cc58874de70
         List of atomic numbers present across the data frames
     show_progress : bool
         Show progress bar for frame analysis and feature generation
 
-<<<<<<< HEAD
     Returns
     -------
     TensorMap
-        An Equistore TensorMap with keys (species, l) "species" takes the value 
+        An Equistore TensorMap with keys (types, l) "types" takes the value
         of the atomic numbers present in the dataset and "l" is the angular 
-        channel. Each block of this tensormap has as samples ("structure", "center"), 
+        channel. Each block of this tensormap has as samples ("type", "center"),
         yielding the indices of the frames and atoms that correspond to "species" 
         are present. block.value is a 3D array of the form (num_samples, num_components, properties) 
         where num_components take on the same values as in the pair_ellip_feat_feat.block. 
         block.properties now has an additional index for neighbor_species that 
         corresponds to "a" in :math:`\\langle anlm|rho_i \\rangle`
-=======
-    -----------------------------------------------------------
-    Returns:
-        An Equistore TensorMap with keys (types, l) "types" takes the value of the atomic numbers present
-        in the dataset and "l" is the angular channel.
-        Each block of this tensormap has as samples ("type", "center") yielding the indices of the frames
-        and atoms that correspond to "types" are present.
-        block.value is a 3D array of the form (num_samples, num_components, properties) where num_components
-        take on the same values as in the pair_ellip_feat_feat.block .  block.properties now has an additional index
-        for neighbor_types that corresponds to "a" in <anlm|rho_i>
->>>>>>> f2f1bccf639cea93851e7b54f1f90cc58874de70
-
     """
     ellip_keys = list(
         set([tuple(list(x)[:1] + list(x)[2:]) for x in pair_ellip_feat.keys])
@@ -446,7 +421,7 @@ class EllipsoidalDensityProjection:
     ----------
     max_angular : int
         Number of angular functions
-    radial_basis : str
+    radial_basis : _RadialBasis
         The radial basis. Currently implemented are
         'gto', 'monomial'.
     compute_gradients : bool

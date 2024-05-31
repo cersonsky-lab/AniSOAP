@@ -14,12 +14,10 @@ commands =
 
 [tool.coverage.run]
 branch = true
-data_file = 'tests/.coverage'
+data_file = "tests/.coverage"
 
 [tool.coverage.report]
-include = [
-    "anisoap/*"
-]
+include = ["anisoap/*"]
 
 [tool.coverage.xml]
-output = 'tests/coverage.xml'
+output = "tests/coverage.xml"

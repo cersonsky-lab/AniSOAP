@@ -7,6 +7,10 @@ AniSOAP
   <img src="https://codecov.io/gh/cersonsky-lab/anisoap/branch/main/graph/badge.svg?token=UZJPJG34SM" />
 </a>
 
+## Warning!
+While technically complete, AniSOAP is in beta mode, and subject to new changes regularly. 
+Please use with caution as we iron out some of the finer details.
+
 ## Installation
 
 The installation of the library for python use can be done simply with
