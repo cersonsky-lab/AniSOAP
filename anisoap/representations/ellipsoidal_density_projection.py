@@ -189,12 +189,7 @@ def pairwise_ellip_expansion(
 
 
 def contract_pairwise_feat(pair_ellip_feat, types, show_progress=False):
-    """
-    Function to sum over the pairwise expansion \sum_{j in a} <anlm|rho_ij> = <anlm|rho_i>
-    --------------------------------------------------------
-    Parameters:
-
-    Function to sum over the pairwise expansion
+    """Function to sum over the pairwise expansion
 
     .. math::
 
