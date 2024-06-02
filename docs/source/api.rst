@@ -35,10 +35,3 @@ Utilities
    :show-inheritance:
    :inherited-members:
 
-Reference
----------
-.. automodule:: anisoap.reference.projection_coefficients
-  :members:
-  :show-inheritance:
-  :inherited-members:
-
