@@ -198,7 +198,7 @@ def contract_pairwise_feat(pair_ellip_feat, types, show_progress=False):
 
     Parameters
     ----------
-    pair_ellip_feat : metatensor TensorMap
+    pair_ellip_feat : metatensor.TensorMap
         TensorMap returned from "pairwise_ellip_expansion()" with keys
         (types_1, types_2,l) enumerating the possible species pairs and the
         angular channels.
