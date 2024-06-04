@@ -40,7 +40,7 @@ def pairwise_ellip_expansion(
     ----------
     lmax : int
         Maximum angular
-    neighbor_list : Equistore TensorMap
+    neighbor_list : metatensor.TensorMap
         Full neighborlist with keys (types_1, types_2) enumerating the possible
         species pairs. Each block contains as samples, the atom indices of
         (first_atom, second_atom) that correspond to the key, and block.value is
@@ -65,7 +65,7 @@ def pairwise_ellip_expansion(
     Returns
     -------
     TensorMap
-        An Equistore TensorMap with keys (types_1, types_2, l) where
+        A metatensor TensorMap with keys (types_1, types_2, l) where
         ("types_1", "types_2") is key in the neighbor_list and "l" is the
         angular channel. Each block of this tensormap has the same samples as the
         corresponding block of the neighbor_list. block.value is a 3D array of
@@ -198,7 +198,7 @@ def contract_pairwise_feat(pair_ellip_feat, types, show_progress=False):
 
     Parameters
     ----------
-    pair_ellip_feat : Equistore TensorMap
+    pair_ellip_feat : metatensor TensorMap
         TensorMap returned from "pairwise_ellip_expansion()" with keys
         (types_1, types_2,l) enumerating the possible species pairs and the
         angular channels.
@@ -210,7 +210,7 @@ def contract_pairwise_feat(pair_ellip_feat, types, show_progress=False):
     Returns
     -------
     TensorMap
-        An Equistore TensorMap with keys (types, l) "types" takes the value
+        A metatensor TensorMap with keys (types, l) "types" takes the value
         of the atomic numbers present in the dataset and "l" is the angular
         channel. Each block of this tensormap has as samples ("type", "center"),
         yielding the indices of the frames and atoms that correspond to "species"
