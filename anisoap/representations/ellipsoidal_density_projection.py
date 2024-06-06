@@ -31,48 +31,47 @@ def pairwise_ellip_expansion(
     radial_basis,
     show_progress=False,
 ):
-    """
-    Function to compute the pairwise expansion <anlm|rho_ij> by combining the moments and the spherical to Cartesian
-    transformation
-    --------------------------------------------------------
-    Parameters:
+    r"""Computes pairwise expansion
+
+    Function to compute the pairwise expansion :math:`\langle anlm|\rho_{ij} \rangle`
+    by combining the moments and the spherical to Cartesian transformation.
+
+    Parameters
+    ----------
     lmax : int
         Maximum angular
-
-    neighbor_list : Equistore TensorMap
-        Full neighborlist with keys (types_1, types_2) enumerating the possible types pairs.
-        Each block contains as samples, the atom indices of (first_atom, second_atom) that correspond to the key,
-        and block.value is a 3D array of the form (num_samples, num_components,properties), with num_components=3
-        corresponding to the (x,y,z) components of the vector from first_atom to second_atom.
-        Depending on the cutoff some types pairs may not appear. Self pairs are not present but in PBC,
-        pairs between copies of the same atom are accounted for.
-
-    types: list of ints
+    neighbor_list : metatensor.TensorMap
+        Full neighborlist with keys (types_1, types_2) enumerating the possible
+        species pairs. Each block contains as samples, the atom indices of
+        (first_atom, second_atom) that correspond to the key, and block.value is
+        a 3D array of the form (num_samples, num_components,properties), with
+        num_components=3 corresponding to the (x,y,z) components of the vector
+        from first_atom to second_atom. Depending on the cutoff some species
+        pairs may not appear. Self pairs are not present but in PBC, pairs between
+        copies of the same atom are accounted for.
+    types : list of ints
         List of atomic numbers present across the data frames
-
-    frame_to_global_atom_idx: list of ints
-        The length of the list equals the number of frames, each entry enumerating the number of atoms in
-        corresponding frame
-
-    rotation_matrices: np.array of dimension ((num_atoms,3,3))
-
-    ellipsoid_lengths: np.array of dimension ((num_atoms,3))
-
+    frame_to_global_atom_idx : list of ints
+        The length of the list equals the number of frames, each entry enumerating
+        the number of atoms in corresponding frame
+    rotation_matrices : np.array of dimension ((num_atoms,3,3))
+    ellipsoid_lengths : np.array of dimension ((num_atoms,3))
     radial_basis : Instance of the RadialBasis Class
-        anisoap.representations.radial_basis.RadialBasis that has been instantiated appropriately with the
-        cutoff radius, radial basis type.
-
+        anisoap.representations.radial_basis.RadialBasis that has been instantiated
+        appropriately with the cutoff radius, radial basis type.
     show_progress : bool
         Show progress bar for frame analysis and feature generation
-    -----------------------------------------------------------
-    Returns:
-        An Equistore TensorMap with keys (types_1, types_2, l) where ("types_1", "types_2") is key in the
-        neighbor_list and "l" is the angular channel.
-        Each block of this tensormap has the same samples as the corresponding block of the neighbor_list.
-        block.value is a 3D array of the form (num_samples, num_components, properties) where num_components
-        form the 2*l+1 values for the corresponding angular channel and the properties dimension corresponds to
-        the radial channel.
 
+    Returns
+    -------
+    TensorMap
+        A metatensor TensorMap with keys (types_1, types_2, l) where
+        ("types_1", "types_2") is key in the neighbor_list and "l" is the
+        angular channel. Each block of this tensormap has the same samples as the
+        corresponding block of the neighbor_list. block.value is a 3D array of
+        the form (num_samples, num_components, properties) where num_components
+        form the 2*l+1 values for the corresponding angular channel and the
+        properties dimension corresponds to the radial channel.
     """
     tensorblock_list = []
     keys = np.asarray(neighbor_list.keys, dtype=int)
@@ -190,31 +189,35 @@ def pairwise_ellip_expansion(
 
 
 def contract_pairwise_feat(pair_ellip_feat, types, show_progress=False):
-    """
-    Function to sum over the pairwise expansion \sum_{j in a} <anlm|rho_ij> = <anlm|rho_i>
-    --------------------------------------------------------
-    Parameters:
+    """Function to sum over the pairwise expansion
 
-    pair_ellip_feat : Equistore TensorMap
-        TensorMap returned from "pairwise_ellip_expansion()" with keys (types_1, types_2,l) enumerating
-        the possible types pairs and the angular channels.
+    .. math::
 
+        \\sum_{j \\in a} \\langle anlm|\\rho_{ij} \\rangle
+            = \\langle anlm|\\rho_i \\rangle
+
+    Parameters
+    ----------
+    pair_ellip_feat : metatensor.TensorMap
+        TensorMap returned from "pairwise_ellip_expansion()" with keys
+        (types_1, types_2,l) enumerating the possible species pairs and the
+        angular channels.
     types: list of ints
         List of atomic numbers present across the data frames
-
     show_progress : bool
         Show progress bar for frame analysis and feature generation
 
-    -----------------------------------------------------------
-    Returns:
-        An Equistore TensorMap with keys (types, l) "types" takes the value of the atomic numbers present
-        in the dataset and "l" is the angular channel.
-        Each block of this tensormap has as samples ("type", "center") yielding the indices of the frames
-        and atoms that correspond to "types" are present.
-        block.value is a 3D array of the form (num_samples, num_components, properties) where num_components
-        take on the same values as in the pair_ellip_feat_feat.block .  block.properties now has an additional index
-        for neighbor_types that corresponds to "a" in <anlm|rho_i>
-
+    Returns
+    -------
+    TensorMap
+        A metatensor TensorMap with keys (types, l) "types" takes the value
+        of the atomic numbers present in the dataset and "l" is the angular
+        channel. Each block of this tensormap has as samples ("type", "center"),
+        yielding the indices of the frames and atoms that correspond to "species"
+        are present. block.value is a 3D array of the form (num_samples, num_components, properties)
+        where num_components take on the same values as in the pair_ellip_feat_feat.block.
+        block.properties now has an additional index for neighbor_species that
+        corresponds to "a" in :math:`\\langle anlm|rho_i \\rangle`
     """
     ellip_keys = list(
         set([tuple(list(x)[:1] + list(x)[2:]) for x in pair_ellip_feat.keys])
@@ -402,14 +405,18 @@ def contract_pairwise_feat(pair_ellip_feat, types, show_progress=False):
 
 
 class EllipsoidalDensityProjection:
-    """
+    """Class for computing spherical projection coefficients.
+
     Compute the spherical projection coefficients for a system of ellipsoids
     assuming a multivariate Gaussian density.
+
     Initialize the calculator using the hyperparameters.
+
+    Parameters
     ----------
     max_angular : int
         Number of angular functions
-    radial_basis : str
+    radial_basis : _RadialBasis
         The radial basis. Currently implemented are
         'gto', 'monomial'.
     compute_gradients : bool
@@ -431,6 +438,7 @@ class EllipsoidalDensityProjection:
     ----------
     features : numpy.ndarray
     feature_gradients : numpy.ndarray
+
     """
 
     def __init__(
@@ -447,6 +455,35 @@ class EllipsoidalDensityProjection:
         basis_rcond=0,
         basis_tol=1e-8,
     ):
+        """Instantiates an object of type EllipsoidalDensityProjection.
+
+        Parameters
+        ----------
+        max_angular : int
+            Number of angular functions
+        radial_basis_name : str
+            The radial basis. Currently implemented are 'GTO_primitive', 'GTO',
+            and 'monomial'.
+        cutoff_radius
+            Cutoff radius of the projection
+        compute_gradients : bool, optional
+            Compute gradients; defaults to 'False'
+        subtract_center_contribution : bool, optional
+            Subtract contribution from the central atom.  Defaults to 'False'
+        radial_gaussian_width : float, optional
+            Width of the Gaussian
+        max_radial : int, list of int
+            Number of radial bases to use. Can either correspond to number of
+            bases per spherical harmonic or a value to use with every harmonic.
+            If `None`, then for every `l`, `(max_angular - l) // 2 + 1` will
+            be used.
+        rotation_key : string
+            Key under which rotations are stored in ase frames arrays
+        rotation_type : string
+            Type of rotation object being passed. Currently implemented
+            are 'quaternion' and 'matrix'
+
+        """
         # Store the input variables
         self.max_angular = max_angular
         self.cutoff_radius = cutoff_radius
@@ -509,10 +546,12 @@ class EllipsoidalDensityProjection:
         self.rotation_key = rotation_key
 
     def transform(self, frames, show_progress=False, normalize=True):
-        """
+        """Computes features and gradients for frames
+
         Computes the features and (if compute_gradients == True) gradients
         for all the provided frames. The features and gradients are stored in
         features and feature_gradients attribute.
+
         Parameters
         ----------
         frames : ase.Atoms
@@ -520,12 +559,13 @@ class EllipsoidalDensityProjection:
         show_progress : bool
             Show progress bar for frame analysis and feature generation
         normalize: bool
-            Whether to perform Lowdin Symmetric Orthonormalization or not. Orthonormalization generally
-            leads to better performance. Default: True.
+            Whether to perform Lowdin Symmetric Orthonormalization or not.
+
         Returns
         -------
         None, but stores the projection coefficients and (if desired)
         gradients as arrays as `features` and `features_gradients`.
+
         """
         self.frames = frames
 

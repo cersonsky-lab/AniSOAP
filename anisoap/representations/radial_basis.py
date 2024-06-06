@@ -6,23 +6,25 @@ from scipy.special import gamma
 
 
 def inverse_matrix_sqrt(matrix: np.array, rcond=1e-8, tol=1e-3):
-    """
-    Returns the inverse matrix square root.
-    The inverse square root of the overlap matrix (or slices of the overlap matrix) yields the
-    orthonormalization matrix
-    Args:
-        matrix: np.array
-            Symmetric square matrix to find the inverse square root of
+    r"""Returns the inverse matrix square root.
 
-        rcond: float
-            Lower bound for eigenvalues for inverse square root
+    The inverse square root of the overlap matrix (or slices of the overlap matrix)
+    yields the orthonormalization matrix
 
-        tol: float
-            Tolerance for differences between original matrix and reconstruction via
-            inverse square root
+    Parameters
+    ----------
+    matrix : np.array
+        Symmetric square matrix to find the inverse square root of
+    rcond: float
+        Lower bound for eigenvalues for inverse square root
+    tol: float
+        Tolerance for differences between original matrix and reconstruction via
+        inverse square root
 
-    Returns:
-        inverse_sqrt_matrix: S^{-1/2}
+    Returns
+    -------
+    inverse_sqrt_matrix
+        :math:`S^{-1/2}`
 
     """
     if not np.allclose(matrix, matrix.conjugate().T):
@@ -44,53 +46,87 @@ def inverse_matrix_sqrt(matrix: np.array, rcond=1e-8, tol=1e-3):
 
 
 def gto_square_norm(n, sigma):
-    """
-    Compute the square norm of GTOs (inner product of itself over R^3).
-    An unnormalized GTO of order n is \phi_n = r^n * e^{-r^2/(2*\sigma^2)}
-    The square norm of the unnormalized GTO has an analytic solution:
-    <\phi_n | \phi_n> = \int_0^\infty dr r^2 |\phi_n|^2 = 1/2 * \sigma^{2n+3} * \Gamma(n+3/2)
-    Args:
-        n: order of the GTO
-        sigma: width of the GTO
+    r"""Compute the square norm of GTOs (inner product of itself over :math:`R^3`).
 
-    Returns:
-        square norm: The square norm of the unnormalized GTO
+    An unnormalized GTO of order n is :math:`\phi_n = r^n  e^{-r^2/(2*\sigma^2)}`
+    The square norm of the unnormalized GTO has an analytic solution:
+
+    .. math:: 
+
+        \braket{\phi_n | \phi_n} &= \int_0^\infty dr \, r^2 \lvert\phi_n\rvert^2 \\
+                                 &=  \frac{1}{2} \sigma^{2n+3} \Gamma(n+\frac{3}{2})
+
+    This function uses the above expression.
+
+    Parameters
+    ----------
+    n 
+        order of the GTO
+    sigma 
+        width of the GTO
+
+    Returns
+    -------
+    float 
+        The square norm of the unnormalized GTO
+
     """
     return 0.5 * sigma ** (2 * n + 3) * gamma(n + 1.5)
 
 
 def gto_prefactor(n, sigma):
-    """
-    Computes the normalization prefactor of an unnormalized GTO.
-    This prefactor is simply 1/sqrt(square_norm_area).
-    Scaling a GTO by this prefactor will ensure that the GTO has square norm equal to 1.
-    Args:
-        n: order of GTO
-        sigma: width of GTO
+    """Computes the normalization prefactor of an unnormalized GTO.
 
-    Returns:
-        N: normalization constant
+    This prefactor is simply :math:`\\frac{1}{\\sqrt(\\text{square_norm_area)}}`.
+    Scaling a GTO by this prefactor will ensure that the GTO has square norm
+    equal to 1.
+
+    Parameters
+    ----------
+    n
+        order of GTO
+    sigma
+        width of GTO
+
+    Returns
+    -------
+    float
+        The normalization constant
 
     """
     return np.sqrt(1 / gto_square_norm(n, sigma))
 
 
 def gto_overlap(n, m, sigma_n, sigma_m):
-    """
-    Compute overlap of two *normalized* GTOs
-    Note that the overlap of two GTOs can be modeled as the square norm of one GTO, with an effective
-    n and sigma. All we need to do is to calculate those effective parameters, then compute the normalization.
-    <\phi_n, \phi_m> = \int_0^\infty dr r^2 r^n * e^{-r^2/(2*\sigma_n^2) * r^m * e^{-r^2/(2*\sigma_m^2)
-    = \int_0^\infty dr r^2 |r^{(n+m)/2} * e^{-r^2/4 * (1/\sigma_n^2 + 1/\sigma_m^2)}|^2
-    = \int_0^\infty dr r^2 |r^{n_{eff}} * e^{-r^2/(2*\sigma_{eff}^2)|^2
-    ---Arguments---
-    n: order of the first GTO
-    m: order of the second GTO
-    sigma_n: sigma parameter of the first GTO
-    sigma_m: sigma parameter of the second GTO
+    r"""Compute overlap of two *normalized* GTOs
 
-    ---Returns---
-    S: overlap of the two normalized GTOs
+    Note that the overlap of two GTOs can be modeled as the square norm of one 
+    GTO, with an effective :math:`n` and :math:`\sigma`. All we need to do is to 
+    calculate those effective parameters, then compute the normalization prefactor.
+    
+    .. math::
+
+        \langle \phi_n, \phi_m \rangle &= \int_0^\infty dr \, r^2 r^n e^{-r^2/(2\sigma_n^2)} \, r^m  e^{-r^2/(2\sigma_m^2)} \\
+                                       &= \int_0^\infty dr \, r^2 \lvert r^{(n+m)/2} e^{-r^2/4 (1/\sigma_n^2 + 1/\sigma_m^2)}\rvert^2 \\
+                                       &= \int_0^\infty dr \, r^2 r^n_\text{eff} e^{-r^2/(2\sigma_\text{eff}^2)}
+
+
+    Parameters
+    ----------
+    n 
+        order of the first GTO
+    m 
+        order of the second GTO
+    sigma_n 
+        sigma parameter of the first GTO
+    sigma_m 
+        sigma parameter of the second GTO
+
+    Returns
+    -------
+    float 
+        overlap of the two normalized GTOs
+
     """
     N_n = gto_prefactor(n, sigma_n)
     N_m = gto_prefactor(m, sigma_m)
@@ -103,11 +139,15 @@ def monomial_square_norm(n, r_cut):
     """
     Compute the square norm of monomials (inner product of itself over R^3).
 
-    Args:
-        n: order of the basis
+    Parameters
+    ----------
+    n
+        order of the basis
 
-    Returns:
-        square norm: The square norm of the unnormalized basis
+    Returns
+    -------
+    float
+        The square norm of the unnormalized basis
     """
     return r_cut ** (2 * n + 3) / (2 * n + 3)
 
@@ -115,33 +155,50 @@ def monomial_square_norm(n, r_cut):
 def monomial_prefactor(n, r_cut):
     """
     Computes the normalization prefactor of an unnormalized monomial basis.
-    This prefactor is simply 1/sqrt(square_norm_area).
+    This prefactor is simply :math:`1/sqrt{square_norm_area}`.
     Scaling a basis by this prefactor will ensure that the basis has square norm equal to 1.
-    Args:
-        n: order of basis
 
-    Returns:
-        N: normalization constant
+    Parameters
+    ----------
+    n
+        order of the basis
+
+    Returns
+    -------
+    float
+        normalization constant
 
     """
     return np.sqrt(1 / monomial_square_norm(n, r_cut))
 
 
 def monomial_overlap(n, m, r_cut):
-    """
+    r"""
     Compute overlap of two *normalized* monomials
-    Note that the overlap of two monomials can be modeled as the square norm of one monomial, with an effective
-    n. All we need to do is to calculate those effective parameters, then compute the normalization.
-    <\phi_n, \phi_m> = \int_0^\infty dr r^2 r^n r^m
-    = \int_0^r_{cut} dr r^2 |r^{(n+m)/2}|^2
-    = \int_0^r_{cut} dr r^2 |r^{n_{eff}}|^2
 
-    ---Arguments---
-    n: order of the first monomial
-    m: order of the second monomial
-    r_cut: float. cutoff radius
-    ---Returns---
-    S: overlap of the two normalized monomial
+    Note that the overlap of two monomials can be modeled as the square norm of 
+    one monomial, with an effective n. All we need to do is to calculate those 
+    effective parameters, then compute the normalization:
+
+        .. math::
+
+            \langle \phi_n, \phi_m \rangle &= \int_0^\infty dr r^2 r^n r^m \\
+                                           &= \int_0^r_{cut} dr r^2 |r^{(n+m)/2}|^2 \\
+                                           &= \int_0^r_{cut} dr r^2 |r^{n_{eff}}|^2
+
+    Parameters
+    ----------
+    n
+        order of the first monomial
+    m
+        order of the second monomial
+    r_cut: float
+        cutoff radius
+    Returns
+    -------
+    float
+        overlap of the two normalized monomial
+
     """
     N_n = monomial_prefactor(n, r_cut)
     N_m = monomial_prefactor(m, r_cut)
@@ -155,8 +212,9 @@ class _RadialBasis:
     This helps to keep a cleaner main code by avoiding if-else clauses
     related to the radial basis.
 
-    Code relating to GTO orthonormalization is heavily inspired by work done in librascal, specifically this
-    codebase here: https://github.com/lab-cosmo/librascal/blob/8405cbdc0b5c72a5f0b0c93593100dde348bb95f/bindings/rascal/utils/radial_basis.py
+    Code relating to GTO orthonormalization is heavily inspired by work done in
+    librascal, specifically the codebase found
+    `here <https://github.com/lab-cosmo/librascal/blob/8405cbdc0b5c72a5f0b0c93593100dde348bb95f/bindings/rascal/utils/radial_basis.py>`_
 
     """
 
@@ -218,20 +276,25 @@ class _RadialBasis:
         Otherwise, the outputted list will specify the number of radial basis functions per l, which may be automatically
         calculated if max_radial=None. If a custom list of max_radial is specified when initializing, then it will
         return the same inputted list.
-        Returns:
-            self.num_radial_functions: list containing the number of radial basis functions considered per l.
+
+        Returns
+        -------
+        array_like
+            The attribute `self.num_radial_functions`, which is a list containing
+            the number of radial basis functions considered per `l`.
         """
         return self.num_radial_functions
 
     def plot_basis(self, n_r=100):
         """
-        Plot the normalized basis functions used in calculating the expansion coefficients
-        Args:
-            n_r: int
-             number of mesh points. Default: 100
+        Plot the normalized basis functions used in calculating the expansion
+        coefficients
 
-        Returns:
-            None
+        Parameters
+        ----------
+        n_r: int
+            number of mesh points. Default: 100
+
         """
         from matplotlib import pyplot as plt
 
@@ -240,12 +303,22 @@ class _RadialBasis:
 
 
 class MonomialBasis(_RadialBasis):
-    """
-    A subclass of _RadialBasis that contains attributes and methods required for the Monomial basis.
-    The monomial basis of order n is defined to be R(r) = r^n.
-    For monomial basis with defined nmax and lmax, our radial basis set consists of monomials of order n=0 to n=lmax + 2nmax.
-    For monomial basis with coupled nmax and lmax, our radial basis set consists of monomials of order n=0 to n=max(lmax + 2nmax)
-    Monomials are not square-integrable from [0, ∞], so we orthonormalize by integrating up to the cutoff radius
+    r"""
+    A subclass of _RadialBasis that contains attributes and methods required for
+    the Monomial basis.
+
+    The monomial basis of order n is defined to be :math:`R(r) = r^n`.
+
+    For monomial basis with defined :math:`n_{\text{max}}` and :math:`l_{\text{max}}`,
+    our radial basis set consists of monomials of order :math:`n=0` to
+    :math:`n=l_{\text{max}} + 2n_{\text{max}}`.
+
+    For monomial basis with coupled :math:`n_{\text{max}}` and :math:`l_{\text{max}}`,
+    our radial basis set consists of monomials of order :math:`n=0` to
+    :math:`n=\text{max}{l_{\text{max}} + 2n_{\text{max}}}`
+
+    Monomials are not square-integrable from :math:`[0, \infty]`, so we orthonormalize
+    by integrating up to the cutoff radius
     """
 
     def __init__(
@@ -285,16 +358,24 @@ class MonomialBasis(_RadialBasis):
     def calc_overlap_matrix(self):
         """
         Computes the overlap matrix for Monomnials over a fixed interval.
-        The overlap matrix is a Gram matrix whose entries are the overlap: S_{ij} = \int_0^r_cut dr r^2 phi_i phi_j
+
+        The overlap matrix is a Gram matrix whose entries are the overlap:
+
+            .. math::
+                S_{ij} = \int_{0}^{r_{cut} dr r^2 phi_i phi_j
+
         The overlap has an analytic solution (see above functions).
+
         The overlap matrix is the first step to generating an orthonormal basis set of functions (Lodwin Symmetric
         Orthonormalization). The actual orthonormalization matrix cannot be fully precomputed because each tensor
         block use a different set of bases. Hence, we precompute the full overlap matrix of dim l_max, and while
         orthonormalizing each tensor block, we generate the respective orthonormal matrices from slices of the full
         overlap matrix.
 
-        Returns:
-            S: 2D array. The overlap matrix
+        Returns
+        -------
+        2D array:
+            The overlap matrix
         """
         max_deg = np.max(
             np.arange(self.max_angular + 1) + 2 * np.array(self.num_radial_functions)
@@ -313,13 +394,18 @@ class MonomialBasis(_RadialBasis):
         An instructive example of Lodwin Symmetric Orthonormalization of a 2-element basis set is found here:
         https://booksite.elsevier.com/9780444594365/downloads/16755_10030.pdf
 
-        Parameters:
-            features: A TensorMap whose blocks' values we wish to orthonormalize. Note that features is modified in place, so a
-            copy of features must be made before the function if you wish to retain the unnormalized values.
-            radial_basis: An instance of _RadialBasis
+        Parameters
+        ----------
+        features: TensorMap
+            A TensorMap whose blocks' values we wish to orthonormalize. Note that
+            `features` is modified in place, so a copy of `features` must be made
+            before the function if you wish to retain the unnormalized values.
+        radial_basis: _RadialBasis
 
-        Returns:
-            normalized_features: features containing values multiplied by proper normalization factors.
+        Returns
+        -------
+        TensorMap
+            features containing values multiplied by proper normalization factors.
         """
         # In-place modification.
 
@@ -353,14 +439,20 @@ class MonomialBasis(_RadialBasis):
     def get_basis(self, rs):
         """
         Evaluate orthonormalized monomial basis functions on mesh rs.
+
         If lmax and nmax defined, then the number of functions outputted is lmax*(nmax+1)
+
         If lmax and nmax coupled, then the number of functions outputted is \sum_{l=0}^{lmax} (number_of_radial_functions_per_l)
-        Args:
+
+        Parameters
+        ----------
             rs: np.array
               a mesh to evaluate the basis functions
 
-        Returns:
-            S: a matrix containing orthonormalized monomial basis functions evaluated on rs
+        Returns
+        -------
+        np.array
+            a matrix containing orthonormalized monomial basis functions evaluated on rs
         """
         all_gs = np.empty(shape=(len(rs), 1))
         for l in range(0, self.max_angular):
@@ -392,8 +484,11 @@ class MonomialBasis(_RadialBasis):
 class GTORadialBasis(_RadialBasis):
     """
     A subclass of _RadialBasis that contains attributes and methods required for the GTO basis.
-    The GTO basis of order n is defined to be R(r) = r^n * e^(-r^2/(2*sigma^2)).
+
+    The GTO basis of order n is defined to be :math:`R(r) = r^n e^{(-r^2/(2\sigma^2))}`.
+
     For GTO basis with defined nmax and lmax, our radial basis set consists of GTO of order n=0 to n=lmax + 2nmax.
+
     For GTO basis with coupled nmax and lmax, our radial basis set consists of GTO of order n=0 to n=max(lmax + 2nmax)
     """
 
@@ -443,18 +538,29 @@ class GTORadialBasis(_RadialBasis):
         return new_precision, new_center, constant
 
     def calc_overlap_matrix(self):
-        """
-        Computes the overlap matrix for GTOs.
-        The overlap matrix is a Gram matrix whose entries are the overlap: S_{ij} = \int_0^\infty dr r^2 phi_i phi_j
+        """Computes the overlap matrix for GTOs.
+
+        The overlap matrix is a Gram matrix whose entries are the overlap:
+
+        .. math::
+
+            S_{ij} = \\int_0^\\infty dr \\, r^2 \\phi_i \\phi_j
+
         The overlap has an analytic solution (see above functions).
-        The overlap matrix is the first step to generating an orthonormal basis set of functions (Lodwin Symmetric
-        Orthonormalization). The actual orthonormalization matrix cannot be fully precomputed because each tensor
-        block use a different set of GTOs. Hence, we precompute the full overlap matrix of dim l_max, and while
-        orthonormalizing each tensor block, we generate the respective orthonormal matrices from slices of the full
+
+        The overlap matrix is the first step to generating an orthonormal basis
+        set of functions (Lodwin Symmetric Orthonormalization). The actual
+        orthonormalization matrix cannot be fully precomputed because each tensor
+        block uses a different set of GTOs. Hence, we precompute the full overlap
+        matrix of dim l_max, and while orthonormalizing each tensor block, we
+        generate the respective orthonormal matrices from slices of the full
         overlap matrix.
 
-        Returns:
-            S: 2D array. The overlap matrix
+        Returns
+        -------
+        2D array
+            The overlap matrix
+
         """
         max_deg = np.max(
             np.arange(self.max_angular + 1) + 2 * np.array(self.num_radial_functions)
@@ -471,20 +577,28 @@ class GTORadialBasis(_RadialBasis):
         return S
 
     def orthonormalize_basis(self, features: TensorMap):
-        """
-        Apply an in-place orthonormalization on the features, using Lodwin Symmetric Orthonormalization.
-        Each block in the features TensorMap uses a GTO set of l + 2n, so we must take the appropriate slices of
-        the overlap matrix to compute the orthonormalization matrix.
-        An instructive example of Lodwin Symmetric Orthonormalization of a 2-element basis set is found here:
+        """Applies in-place orthonormalization on the features.
+
+        Apply an in-place orthonormalization on the features, using Lodwin Symmetric
+        Orthonormalization. Each block in the features TensorMap uses a GTO set
+        of l + 2n, so we must take the appropriate slices of the overlap matrix
+        to compute the orthonormalization matrix. An instructive example of Lodwin
+        Symmetric Orthonormalization of a 2-element basis set is found here:
         https://booksite.elsevier.com/9780444594365/downloads/16755_10030.pdf
 
-        Parameters:
-            features: A TensorMap whose blocks' values we wish to orthonormalize. Note that features is modified in place, so a
-            copy of features must be made before the function if you wish to retain the unnormalized values.
-            radial_basis: An instance of _RadialBasis
+        Parameters
+        ----------
+        features : TensorMap
+            contains blocks whose values we wish to orthonormalize. Note that
+            features is modified in place, so a copy of features must be made
+            before the function if you wish to retain the unnormalized values.
+        radial_basis : RadialBasis
 
-        Returns:
-            normalized_features: features containing values multiplied by proper normalization factors.
+        Returns
+        -------
+        TensorMap
+            features containing values multiplied by normalization factors.
+
         """
         # In-place modification.
         radial_basis_name = self.radial_basis
@@ -517,16 +631,23 @@ class GTORadialBasis(_RadialBasis):
         return features
 
     def get_basis(self, rs):
-        """
+        r"""
         Evaluate orthonormalized GTO basis functions on mesh rs.
-        If lmax and nmax defined, then the number of functions outputted is lmax*(nmax+1)
-        If lmax and nmax coupled, then the number of functions outputted is \sum_{l=0}^{lmax} (number_of_radial_functions_per_l)
-        Args:
-            rs: np.array
-              a mesh to evaluate the basis functions
 
-        Returns:
-            S: a matrix containing orthonormalized GTO basis functions evaluated on rs
+        If lmax and nmax defined, then the number of functions outputted is lmax*(nmax+1)
+
+        If lmax and nmax coupled, then the number of functions outputted is
+        :math:`\sum_{l=0}^{\text{lmax}} (\text{number_of_radial_functions_per_l})`
+
+        Parameters
+        ----------
+        rs: np.array
+            a mesh to evaluate the basis functions
+
+        Returns
+        -------
+        np.array
+            a matrix containing orthonormalized GTO basis functions evaluated on rs
         """
         from matplotlib import pyplot as plt
 

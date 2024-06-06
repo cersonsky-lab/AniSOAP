@@ -15,15 +15,25 @@ from anisoap.utils import monomial_iterator
 
 
 def prefact_minus1(l):
-    """
-    Parameters:
-    - l: int
+    r"""Computes the prefactor that multiplies the :math:`T_{l-1}^\text{th}` term in the iteration.
 
-    Returns:
-    - A list of size (2*l +1) corresponding to the prefactor that multiplies the T_{l-1} term in the iteration
+    For :math:`m \in \left[-l, -l+2, ..., l \right]`, compute the factor as
 
-    For m in [-l, -l+2, ..., l], compute the factor as :
-    sqrt(factorial(l+1-m)/ factorial(l+1+m)) sqrt(factorial(l+m)/ factorial(l-m)) (2*l+1)/(l+1-m)
+    .. math::
+
+        \left( \frac{\sqrt{(l+1-m)!}}{(l+1+m)!} \right) \left( \frac{\sqrt{(l+m)!}}{(l-m)!} \right)
+            \left( \frac{2l+1}{l+1-m} \right)
+
+    Parameters
+    ----------
+    l : int
+        Term immediately proceeding the term for which the prefactor is computed.
+
+    Returns
+    -------
+    list of size (2l + 1)
+        corresponds to the prefactor that multiplies the :math:`T_{l-1}^\text{th}`
+        term in the iteration
 
     """
     m = np.arange(-l, l + 1)
@@ -36,15 +46,25 @@ def prefact_minus1(l):
 
 
 def prefact_minus2(l):
-    """
-    Parameters:
-    - l: int
+    r"""Computes the prefactor that multiplies the :math:`T_{l-2}^\text{th}` term in the iteration.
 
-    Returns:
-    - A list of size (2*l -1) corresponding to the prefactor that multiplies the T_{l-2} term in the iteration
+    For :math:`m \in \left[-l+1, -l+2, ..., l-1\right]`, compute the factor as
 
-    For m in [-l+1, -l+2, ..., l-1], compute the factor as :
-    sqrt(factorial(l+1-m)/ factorial(l+1+m)) sqrt(factorial(l-1+m)/ factorial(l-1-m)) (l+m)/(l-m+1)
+    .. math::
+
+        \left( \frac{\sqrt{(l+1-m)!}}{(l+1+m)!} \right) \left(\frac{\sqrt{(l-1+m)!}}{(l-1-m)!} \right)
+            \left( \frac{l+m}{l-m+1} \right)
+
+    Parameters
+    ----------
+    l : int
+        Term two places after the term for which the prefactor is computed
+
+    Returns
+    -------
+    list of size (2l - 1)
+        Corresponds to the prefactor that multiplies the term in question
+
     """
     m = np.arange(-l + 1, l)
     return (
@@ -65,14 +85,16 @@ def binom(n, k):
 
 def spherical_to_cartesian(lmax, num_ns):
     """
-    Finds the coefficients for the cartesian polynomial form of solid harmonics R_{lm} = sqrt((4pi)/(2l+1))*r^l*Y_{lm}.
-    Note that our AniSOAP expansion does not contain the sqrt((4pi)/(2l+1)), so in calculating expansion coefficients,
-    we need to divide by that coefficient.
-    Args:
-        lmax:
-        num_ns:
+    Finds the coefficients for the cartesian polynomial form of solid harmonics
+    :math:`R_{lm} = sqrt((4pi)/(2l+1))*r^l*Y_{lm}`.  Note that our AniSOAP
+    expansion does not contain the sqrt((4pi)/(2l+1)), so in calculating
+    expansion coefficients, we need to divide by that coefficient.
 
-    Returns:
+    Parameters
+    ----------
+    lmax : int
+
+    num_ns : int
 
     """
     assert len(num_ns) == lmax + 1
