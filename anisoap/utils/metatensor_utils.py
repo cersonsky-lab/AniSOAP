@@ -8,12 +8,33 @@ from metatensor import (
     TensorMap,
 )
 
+from .cyclic_list import CGRCacheList
+
 
 class ClebschGordanReal:
+    # Size of 5 is an arbitrary choice -- it can be changed to any number.
+    # Set to None to disable caching.
+    cache_list = CGRCacheList(5)
+
     def __init__(self, l_max):
         self._l_max = l_max
-        self._cg = {}
+        self._cg = dict()
 
+        # Check if the caching feature is activated.
+        if ClebschGordanReal.cache_list is not None:
+            # Check if the given l_max is already in the cache.
+            if self._l_max in ClebschGordanReal.cache_list.keys():
+                # If so, load from the cache.
+                self._cg = ClebschGordanReal.cache_list.get_val(self._l_max)
+            else:
+                # Otherwise, compute the matrices and store it to the cache.
+                self._init_cg()
+                ClebschGordanReal.cache_list.insert(self._l_max, self._cg)
+        else:
+            # If caching is deactivated, then just compute the matrices normally.
+            self._init_cg()
+
+    def _init_cg(self):
         # real-to-complex and complex-to-real transformations as matrices
         r2c = {}
         c2r = {}
@@ -86,7 +107,9 @@ class ClebschGordanReal:
             for M in range(2 * L + 1):
                 for m1, m2, cg in self._cg[(l1, l2, L)][M]:
                     rho[:, M, ...] += np.einsum(
-                        combination_string, rho1[:, m1, ...], rho2[:, m2, ...] * cg
+                        combination_string,
+                        rho1[:, m1, ...],
+                        rho2[:, m2, ...] * cg,
                     )
 
         return rho

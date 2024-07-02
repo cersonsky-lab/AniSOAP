@@ -18,8 +18,8 @@ Before installing AniSOAP, please make sure you have the following installed\:
 Installing AniSOAP
 ------------------
 
-Navigate to the directory where you would like the AniSOAP package to be located, 
-then copy and paste the following into your shell::
+Navigate to the directory where you would like the AniSOAP package to be located, then copy and paste the 
+following into your shell::
 
   git clone https://github.com/cersonsky-lab/AniSOAP
 
