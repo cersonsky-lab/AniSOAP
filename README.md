@@ -15,6 +15,10 @@ Please use with caution as we iron out some of the finer details.
 
 The installation of the library for python use can be done simply with
 
+    pip install -r requirements.txt
+
+and then
+
     pip install .
 
 The code is currently still being developed. To make sure that your version behaves properly, please run the internal tests from the main directory with
