@@ -19,6 +19,8 @@ from anisoap.representations.radial_basis import (
 from anisoap.utils.moment_generator import *
 from anisoap.utils.spherical_to_cartesian import spherical_to_cartesian
 
+from anisoap.utils import cg_combine, standardize_keys
+
 
 def pairwise_ellip_expansion(
     lmax,
@@ -646,3 +648,15 @@ class EllipsoidalDensityProjection:
             return normalized_features
         else:
             return features
+    def power_spectrum(self, AniSOAP_HYPERS, ell_frames_reduced=None, mycg=None):
+        calculator = EllipsoidalDensityProjection(**AniSOAP_HYPERS)
+        mvg_coeffs = calculator.transform(ell_frames_reduced, show_progress=True)
+        mvg_nu1 = standardize_keys(mvg_coeffs)
+        mvg_nu2 = cg_combine(
+            mvg_nu1,
+            mvg_nu1,
+            clebsch_gordan=mycg,
+            lcut=0,
+            other_keys_match=["types_center"]
+        )
+        return calculator

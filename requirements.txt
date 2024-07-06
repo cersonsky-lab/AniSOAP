@@ -26,7 +26,6 @@ pyparsing==3.1.2
 pytest==8.2.2
 python-dateutil==2.9.0.post0
 
-rascaline @ https://luthaf.fr/nightly-wheels/rascaline/rascaline-0.1.0.dev556-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl#sha256=61f22fe0fb2408ebbbd1bf20da945576cd1249be5f66da1cb56548d67ca5a34c
 
 scipy==1.13.1
 six==1.16.0
