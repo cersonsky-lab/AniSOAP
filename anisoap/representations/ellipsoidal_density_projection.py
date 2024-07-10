@@ -648,9 +648,24 @@ class EllipsoidalDensityProjection:
             return normalized_features
         else:
             return features
-    def power_spectrum(self, AniSOAP_HYPERS, ell_frames_reduced=None, mycg=None):
+    def power_spectrum(self, ell_frames, AniSOAP_HYPERS=None, mycg=None):
         calculator = EllipsoidalDensityProjection(**AniSOAP_HYPERS)
-        mvg_coeffs = calculator.transform(ell_frames_reduced, show_progress=True)
+        if ell_frames is None:
+            raise ValueError("ell_frames cannot be none")
+        required_attributes = [
+            'c_diameter[1]',
+            'c_diameter[2]',
+            'c_diameter[3]',
+            'c_q',
+            'positions',
+            'species'
+        ]
+        for index, frame in enumerate(ell_frames):
+            for attr in required_attributes:
+                if attr not in frame:
+                    raise ValueError(f"ell_frame at index {index} is missing a required attribute '{attr}'")
+
+        mvg_coeffs = calculator.transform(ell_frames, show_progress=True)
         mvg_nu1 = standardize_keys(mvg_coeffs)
         mvg_nu2 = cg_combine(
             mvg_nu1,
@@ -659,4 +674,5 @@ class EllipsoidalDensityProjection:
             lcut=0,
             other_keys_match=["types_center"]
         )
-        return calculator
+        return mvg_nu2
+
