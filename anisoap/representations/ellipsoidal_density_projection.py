@@ -1,5 +1,6 @@
 import sys
 import warnings
+import metatensor
 from itertools import product
 
 import numpy as np
@@ -11,6 +12,7 @@ from metatensor import (
 from rascaline import NeighborList
 from scipy.spatial.transform import Rotation
 from tqdm.auto import tqdm
+from skmatter.preprocessing import StandardFlexibleScaler
 
 from anisoap.representations.radial_basis import (
     GTORadialBasis,
@@ -18,7 +20,11 @@ from anisoap.representations.radial_basis import (
 )
 from anisoap.utils.moment_generator import *
 from anisoap.utils.spherical_to_cartesian import spherical_to_cartesian
-
+from anisoap.utils.metatensor_utils import (
+    cg_combine,
+    standardize_keys,
+    ClebschGordanReal
+)
 
 def pairwise_ellip_expansion(
     lmax,
@@ -656,7 +662,8 @@ class EllipsoidalDensityProjection:
             'c_diameter[3]',
             'c_q',
             'positions',
-            'species'
+            'species',
+            'quaternion'
         ]
         for index, frame in enumerate(ell_frames):
             for attr in required_attributes:
@@ -672,4 +679,10 @@ class EllipsoidalDensityProjection:
             lcut=0,
             other_keys_match=["types_center"]
         )
-        return mvg_nu2
+
+        x_asoap_raw = metatensor.sum_over_samples(mvg_nu2, sample_names="center")
+        x_asoap_raw = x_asoap_raw.block().values.squeeze()
+        x_asoap_scaler = StandardFlexibleScaler(column_wise=False).fit(x_asoap_raw)
+        x_asoap = x_asoap_scaler.transform(x_asoap_raw)
+
+        return x_asoap
