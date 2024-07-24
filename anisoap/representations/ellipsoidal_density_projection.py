@@ -1,8 +1,8 @@
 import sys
 import warnings
-import metatensor
 from itertools import product
 
+import metatensor
 import numpy as np
 from anisoap_rust_lib import compute_moments
 from metatensor import (
@@ -12,20 +12,20 @@ from metatensor import (
 )
 from rascaline import NeighborList
 from scipy.spatial.transform import Rotation
-from tqdm.auto import tqdm
 from skmatter.preprocessing import StandardFlexibleScaler
+from tqdm.auto import tqdm
 
 from anisoap.representations.radial_basis import (
     GTORadialBasis,
     MonomialBasis,
 )
-from anisoap.utils.moment_generator import *
-from anisoap.utils.spherical_to_cartesian import spherical_to_cartesian
 from anisoap.utils.metatensor_utils import (
+    ClebschGordanReal,
     cg_combine,
     standardize_keys,
-    ClebschGordanReal,
 )
+from anisoap.utils.moment_generator import *
+from anisoap.utils.spherical_to_cartesian import spherical_to_cartesian
 
 
 def pairwise_ellip_expansion(
@@ -679,7 +679,7 @@ class EllipsoidalDensityProjection:
             "positions",
             "numbers",
         ]
-        
+
         for index, frame in enumerate(ell_frames):
             array = frame.arrays
             for attr in required_attributes:
