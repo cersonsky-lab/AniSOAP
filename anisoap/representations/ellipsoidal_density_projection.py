@@ -23,8 +23,9 @@ from anisoap.utils.spherical_to_cartesian import spherical_to_cartesian
 from anisoap.utils.metatensor_utils import (
     cg_combine,
     standardize_keys,
-    ClebschGordanReal
+    ClebschGordanReal,
 )
+
 
 def pairwise_ellip_expansion(
     lmax,
@@ -652,23 +653,32 @@ class EllipsoidalDensityProjection:
             return normalized_features
         else:
             return features
-    def power_spectrum(self, ell_frames, AniSOAP_HYPERS=None, mycg=None):
+
+    def power_spectrum(self, ell_frames, AniSOAP_HYPERS=None):
+        mycg = ClebschGordanReal(AniSOAP_HYPERS["max_angular"])
         calculator = EllipsoidalDensityProjection(**AniSOAP_HYPERS)
-        if ell_frames is None:
+        if ell_frames[0].arrays is None:
             raise ValueError("ell_frames cannot be none")
         required_attributes = [
-            'c_diameter[1]',
-            'c_diameter[2]',
-            'c_diameter[3]',
-            'c_q',
-            'positions',
-            'species',
-            'quaternion'
+            "c_diameter[1]",
+            "c_diameter[2]",
+            "c_diameter[3]",
+            "c_q",
+            "positions",
+            "numbers",
         ]
+        
         for index, frame in enumerate(ell_frames):
+            array = frame.arrays
             for attr in required_attributes:
-                if attr not in frame:
-                    raise ValueError(f"ell_frame at index {index} is missing a required attribute '{attr}'")
+                if attr not in array:
+                    raise ValueError(
+                        f"ell_frame at index {index} is missing a required attribute '{attr}'"
+                    )
+                if "quaternion" in array:
+                    raise ValueError(
+                        f"ell_frame should contain c_q rather than quaternion"
+                    )
 
         mvg_coeffs = calculator.transform(ell_frames, show_progress=True)
         mvg_nu1 = standardize_keys(mvg_coeffs)
@@ -677,7 +687,7 @@ class EllipsoidalDensityProjection:
             mvg_nu1,
             clebsch_gordan=mycg,
             lcut=0,
-            other_keys_match=["types_center"]
+            other_keys_match=["types_center"],
         )
 
         x_asoap_raw = metatensor.sum_over_samples(mvg_nu2, sample_names="center")

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-from setuptools import setup
 import re
+
+from setuptools import setup
 
 __version__ = re.search(
     r'__version__\s*=\s*[\'"]([^\'"]*)[\'"]', open("anisoap/__init__.py").read()
