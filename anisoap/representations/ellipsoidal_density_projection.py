@@ -127,7 +127,7 @@ def pairwise_ellip_expansion(
                     rot = rotation_matrices[j_global]
                     lengths = ellipsoid_lengths[j_global]
                     length_norm = (
-                        np.product(lengths) * (2.0 * np.pi) ** (3.0 / 2.0)
+                        np.prod(lengths) * (2.0 * np.pi) ** (3.0 / 2.0)
                     ) ** -1.0
 
                     (
