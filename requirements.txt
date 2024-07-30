@@ -30,6 +30,10 @@ rascaline @ https://luthaf.fr/nightly-wheels/rascaline/rascaline-0.1.0.dev558-py
 
 rascaline @ https://luthaf.fr/nightly-wheels/rascaline/rascaline-0.1.0.dev558-py3-none-macosx_11_0_arm64.whl; sys_platform=="darwin" and platform_machine=="arm64"
 
+rascaline @ https://luthaf.fr/nightly-wheels/rascaline/rascaline-0.1.0.dev558-py3-none-macosx_10_9_x86_64.whl; sys_platform=="darwin" and platform_machine=="x86_64"
+
+rascaline @ https://luthaf.fr/nightly-wheels/rascaline/rascaline-0.1.0.dev558-py3-none-win_amd64.whl; platform_system=="Windows"
+
 scipy>=1.4.0
 six>=1.16.0
 tomli>=2.0.0
