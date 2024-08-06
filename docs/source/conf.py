@@ -18,6 +18,7 @@ release = "0.0.1"
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
+    "sphinx_rtd_theme",
     "sphinx.ext.duration",
     "sphinx.ext.doctest",
     "sphinx.ext.autosummary",
