@@ -30,14 +30,14 @@ Please contact the developers if some tests fail.
 ### Dependencies
 
 Before installing anisoap, please make sure you have at least the
-following packages installed:
-* python (3.6 or higher)
+following packages installed (they should be automatically installed with the above installation requirements):
+* python (3.10 or higher)
 * numpy (1.13 or higher)
 * scipy (1.4.0 or higher)
-* ASE (3.18 or higher)
+* ase (3.18 or higher)
 * math
-* Equistore
-* Rascaline 
+* metatensor
+* rascaline 
 
 ## For developers:
 Please run pytest and check that all tests pass before pushing new changes to the main branch with
