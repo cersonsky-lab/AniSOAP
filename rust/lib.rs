@@ -11,7 +11,7 @@ fn fib(n: u64) -> u64 {
 
 /// A Python module implemented in Rust.
 #[pymodule]
-fn anisoap(m: &Bound<'_, PyModule>) -> PyResult<()> {
+fn fibbers(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(fib, m)?)?;
     Ok(())
 }
