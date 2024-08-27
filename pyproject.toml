@@ -26,7 +26,7 @@ find = { where = ["."] }
 
 [[tool.setuptools-rust.ext-modules]]
 # Private Rust extension module to be nested into the Python package
-target = "anisoap_rust.fibbers"  # The last part of the name (e.g. "_lib") has to match lib.name in Cargo.toml,
+target = "anisoap_rust_lib"  # The last part of the name (e.g. "_lib") has to match lib.name in Cargo.toml,
                              # but you can add a prefix to nest it inside of a Python package.
 path = "Cargo.toml"      # Default value, can be omitted
 binding = "PyO3"         # Default value, can be omitted

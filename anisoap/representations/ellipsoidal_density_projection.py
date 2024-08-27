@@ -18,6 +18,7 @@ from anisoap.representations.radial_basis import (
 )
 from anisoap.utils.moment_generator import *
 from anisoap.utils.spherical_to_cartesian import spherical_to_cartesian
+from anisoap_rust_lib import compute_moments
 
 
 def pairwise_ellip_expansion(
@@ -30,6 +31,7 @@ def pairwise_ellip_expansion(
     sph_to_cart,
     radial_basis,
     show_progress=False,
+    rust_moments=True,
 ):
     r"""Computes pairwise expansion
 
@@ -136,13 +138,14 @@ def pairwise_ellip_expansion(
                         constant,
                     ) = radial_basis.compute_gaussian_parameters(r_ij, lengths, rot)
 
-                    moments = (
-                        np.exp(-0.5 * constant)
-                        * length_norm
-                        * compute_moments_inefficient_implementation(
+                    if rust_moments:
+                        moments = compute_moments(precision, center, maxdeg)
+                    else:
+                        moments = compute_moments_inefficient_implementation(
                             precision, center, maxdeg=maxdeg
                         )
-                    )
+                    moments *= np.exp(-0.5 * constant) * length_norm
+
                     for l in range(lmax + 1):
                         deg = l + 2 * (num_ns[l] - 1)
                         moments_l = moments[: deg + 1, : deg + 1, : deg + 1]

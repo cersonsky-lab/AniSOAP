@@ -1,17 +1,18 @@
 # Cargo.toml
 [package]
-name = "fibrust"
-version = "0.1.0"
+name = "anisoap_rust"
+version = "0.0.0"
 edition = "2021"
 
 [dependencies]
-pyo3 = "0.22.0"
+pyo3 = "0.21.0"
+numpy = "0.21.0"
 
 [lib]
-name = "fibbers"  # private module to be nested into Python package,
+name = "anisoap_rust_lib"  # private module to be nested into Python package,
                # needs to match the name of the function with the `[#pymodule]` attribute
 
-path = "rust/lib.rs"
+path = "src/lib.rs"
 crate-type = ["cdylib"]  # required for shared library for Python to import from.
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
