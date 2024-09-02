@@ -3,6 +3,7 @@ import warnings
 from itertools import product
 
 import numpy as np
+from anisoap_rust_lib import compute_moments
 from metatensor import (
     Labels,
     TensorBlock,
@@ -18,7 +19,6 @@ from anisoap.representations.radial_basis import (
 )
 from anisoap.utils.moment_generator import *
 from anisoap.utils.spherical_to_cartesian import spherical_to_cartesian
-from anisoap_rust_lib import compute_moments
 
 
 def pairwise_ellip_expansion(
