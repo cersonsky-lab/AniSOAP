@@ -40,15 +40,13 @@ class TestComputeMoments:
         for i in range(15):
             compute_moments_inefficient_implementation(mat, cen, lmax)
         time_ori = timeit.default_timer() - start
-        
+
         start = timeit.default_timer()
         for i in range(15):
             compute_moments(mat, cen, lmax)
-        time_ffi = timeit.default_timer() - start 
+        time_ffi = timeit.default_timer() - start
 
         assert time_ffi < time_ori
-
-
 
     def test_random_inputs(self):
         rem_tests = 10_000
