@@ -1,3 +1,31 @@
+[project]
+name = "anisoap"
+version = "0.0.0"
+requires-python = ">=3.8"
+authors = [
+  {name = "Arthur Lin", email = "alin62@wisc.edu"},
+  {name = "Kevin Kazuki Huguenin-Dumittan"},
+  {name = "Jigyasa Nigam"},
+  {name = "Yong-Cheol Cho"},
+  {name = "Lucas Ortengren"},
+  {name = "Seonwoo Hwang"},
+  {name = "Rose K. Cersonsky"}
+]
+description = "A package for computing anisotropic extensions to the SOAP formalism"
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Science/Research",
+  "Topic :: Scientific/Engineering",
+  "License :: OSI Approved :: BSD License",
+  "Natural Language :: English",
+
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",  
+]
+
+
 [tool.tox]
 legacy_tox_ini = """
 [tox]
@@ -15,10 +43,6 @@ commands =
 [build-system]
 requires = ["setuptools", "setuptools-rust"]
 build-backend = "setuptools.build_meta"
-
-[project]
-name = "anisoap"
-version = "0.0.0"
 
 [tool.setuptools.packages]
 # Pure Python packages/modules
