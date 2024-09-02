@@ -2,6 +2,7 @@ import numpy
 import pytest
 from anisoap_rust_lib import compute_moments
 from anisoap.utils.moment_generator import compute_moments_inefficient_implementation
+import timeit
 
 
 TEST_CEN = [
@@ -23,11 +24,31 @@ class TestComputeMoments:
     @pytest.mark.parametrize("mat", TEST_MAT)
     @pytest.mark.parametrize("lmax", TEST_LMAX)
     def test_fixed_input(self, cen, mat, lmax):
-        res_ori: numpy.ndarray[
-            numpy.float64
-        ] = compute_moments_inefficient_implementation(mat, cen, lmax)
+        res_ori: numpy.ndarray[numpy.float64] = (
+            compute_moments_inefficient_implementation(mat, cen, lmax)
+        )
         res_ffi: numpy.ndarray[numpy.float64] = compute_moments(mat, cen, lmax)
         assert numpy.allclose(res_ffi, res_ori, 1e-8)
+
+    @pytest.mark.parametrize("cen", TEST_CEN)
+    @pytest.mark.parametrize("mat", TEST_MAT)
+    @pytest.mark.parametrize("lmax", TEST_LMAX)
+    def test_speedup(self, cen, mat, lmax):
+        # Prime the compute_moments rust function, since initial startup can be long.
+        compute_moments(mat, cen, lmax)
+        start = timeit.default_timer()
+        for i in range(15):
+            compute_moments_inefficient_implementation(mat, cen, lmax)
+        time_ori = timeit.default_timer() - start
+        
+        start = timeit.default_timer()
+        for i in range(15):
+            compute_moments(mat, cen, lmax)
+        time_ffi = timeit.default_timer() - start 
+
+        assert time_ffi < time_ori
+
+
 
     def test_random_inputs(self):
         rem_tests = 10_000
@@ -47,10 +68,10 @@ class TestComputeMoments:
             if rand_mat_det < 1e-14:
                 continue
             else:
-                res_ori: numpy.ndarray[
-                    numpy.float64
-                ] = compute_moments_inefficient_implementation(
-                    random_mat, random_cen, rand_lmax
+                res_ori: numpy.ndarray[numpy.float64] = (
+                    compute_moments_inefficient_implementation(
+                        random_mat, random_cen, rand_lmax
+                    )
                 )
                 res_ffi: numpy.ndarray[numpy.float64] = compute_moments(
                     random_mat, random_cen, rand_lmax
