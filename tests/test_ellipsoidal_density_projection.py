@@ -22,9 +22,7 @@ TEST_SINGLE_FRAME = add_default_params(
     ase.Atoms(symbols=["X"], positions=np.zeros((1, 3)), cell=(0, 0, 0), pbc=False)
 )
 TEST_QUAT_FRAME = add_default_params(
-    ase.Atoms(
-        symbols=["X", "O"], positions=[np.zeros(3), np.ones(3)], cell=(0, 0, 0)
-    )
+    ase.Atoms(symbols=["X", "O"], positions=[np.zeros(3), np.ones(3)], cell=(0, 0, 0))
 )
 TEST_MATRIX_FRAME = TEST_SINGLE_FRAME.copy()
 TEST_MATRIX_FRAME.arrays["matrix"] = [np.eye(3)]
