@@ -76,4 +76,5 @@ class TestComputeMoments:
                 )
 
                 rem_tests -= 1
-                assert numpy.allclose(res_ori, res_ffi, rtol=1e-4)    # match up to 4 decimal places (in sci. notation)
+                # match up to 4 decimal places (in sci. notation)
+                assert numpy.allclose(res_ori, res_ffi, rtol=1e-4)
