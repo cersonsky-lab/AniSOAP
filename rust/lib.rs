@@ -10,20 +10,6 @@ use pyo3::wrap_pyfunction;
 
 #[pymodule]
 fn anisoap_rust_lib(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(count_doubles, m)?)?;
-
-    #[pyfn(m)]
-    fn mat_inverse_2<'py>(
-        py: Python<'py>,
-        mat: PyReadonlyArray2<'_, f64>,
-    ) -> PyResult<&'py PyArray2<f64>> {
-        if mat.shape() != &[2, 2] {
-            Err(PyErr::new::<PyTypeError, _>("Matrix must be size 2x2"))
-        } else {
-            Ok(mat_inverse_2_rust(mat.as_array()).into_pyarray(py))
-        }
-    }
-
     #[pyfn(m)]
     fn compute_moments<'py>(
         py: Python<'py>,
