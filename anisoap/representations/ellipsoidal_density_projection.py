@@ -649,7 +649,7 @@ class EllipsoidalDensityProjection:
             self.sph_to_cart,
             self.radial_basis,
             show_progress,
-            rust_moments=rust_moments
+            rust_moments=rust_moments,
         )
 
         features = contract_pairwise_feat(pairwise_ellip_feat, types, show_progress)
