@@ -63,6 +63,10 @@ def pairwise_ellip_expansion(
         appropriately with the cutoff radius, radial basis type.
     show_progress : bool
         Show progress bar for frame analysis and feature generation
+    rust_moments : bool
+        Use the ported rust code, which should result in increased speed. Default = True.
+        In the future, once we ensure integrity checks with the original python code,
+        this kwarg will be deprecated, and the rust version will always be used.
 
     Returns
     -------
@@ -548,7 +552,7 @@ class EllipsoidalDensityProjection:
 
         self.rotation_key = rotation_key
 
-    def transform(self, frames, show_progress=False, normalize=True):
+    def transform(self, frames, show_progress=False, normalize=True, rust_moments=True):
         """Computes features and gradients for frames
 
         Computes the features and (if compute_gradients == True) gradients
@@ -561,8 +565,12 @@ class EllipsoidalDensityProjection:
             List containing all ase.Atoms types
         show_progress : bool
             Show progress bar for frame analysis and feature generation
-        normalize: bool
+        normalize : bool
             Whether to perform Lowdin Symmetric Orthonormalization or not.
+        rust_moments : bool
+            Use the ported rust code, which should result in increased speed. Default = True.
+            In the future, once we ensure integrity checks with the original python code,
+            this kwarg will be deprecated, and the rust version will always be used.
 
         Returns
         -------
@@ -641,6 +649,7 @@ class EllipsoidalDensityProjection:
             self.sph_to_cart,
             self.radial_basis,
             show_progress,
+            rust_moments=rust_moments
         )
 
         features = contract_pairwise_feat(pairwise_ellip_feat, types, show_progress)
