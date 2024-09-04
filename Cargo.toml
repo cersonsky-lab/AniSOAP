@@ -12,7 +12,7 @@ numpy = "0.21.0"
 name = "anisoap_rust_lib"  # private module to be nested into Python package,
                # needs to match the name of the function with the `[#pymodule]` attribute
 
-path = "src/lib.rs"
+path = "rust/lib.rs"
 crate-type = ["cdylib"]  # required for shared library for Python to import from.
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
