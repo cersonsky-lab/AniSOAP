@@ -7,35 +7,6 @@ use pyo3::exceptions::PyTypeError;
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 
-/// TODO: This is an example function. Delete later.
-#[pyfunction]
-fn count_doubles(val: &str) -> PyResult<u64> {
-    let mut total: u64 = 0;
-
-    for (c1, c2) in val.chars().zip(val.chars().skip(1)) {
-        if c1 == c2 {
-            total += 1;
-        }
-    }
-    Ok(total)
-}
-
-/// TODO: This is an example function. Delete later.
-/// Returns zero-matrix for singular matrices
-fn mat_inverse_2_rust(mat: ArrayView2<'_, f64>) -> Array2<f64> {
-    let det = mat[[0, 0]] * mat[[1, 1]] - mat[[0, 1]] * mat[[1, 0]];
-    if det.abs() < 1e-14 {
-        Array2::<f64>::zeros((2, 2))
-    } else {
-        Array2::<f64>::from_shape_fn((2, 2), |(i, j)| {
-            if i == j {
-                mat[[(i + 1) % 2, (j + 1) % 2]] / det
-            } else {
-                -mat[[i, j]] / det
-            }
-        })
-    }
-}
 
 #[pymodule]
 fn anisoap_rust_lib(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
