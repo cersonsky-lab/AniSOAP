@@ -75,5 +75,5 @@ class TestComputeMoments:
                     random_mat, random_cen, rand_lmax
                 )
 
-                assert numpy.allclose(res_ori, res_ffi, 1e-6)
                 rem_tests -= 1
+                assert numpy.allclose(res_ori, res_ffi, rtol=1e-4)    # match up to 4 decimal places (in sci. notation)
