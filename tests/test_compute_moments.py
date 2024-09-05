@@ -34,17 +34,19 @@ class TestComputeMoments:
     @pytest.mark.parametrize("mat", TEST_MAT)
     @pytest.mark.parametrize("lmax", TEST_LMAX)
     def test_speedup(self, cen, mat, lmax):
+        # Times the average time for function call over num_iter iterations.
         # Prime the compute_moments rust function, since initial startup can be long.
         compute_moments(mat, cen, lmax)
         start = timeit.default_timer()
-        for i in range(15):
+        num_iter = 15
+        for i in range(num_iter):
             compute_moments_inefficient_implementation(mat, cen, lmax)
-        time_ori = timeit.default_timer() - start
+        time_ori = (timeit.default_timer() - start) / num_iter
 
         start = timeit.default_timer()
-        for i in range(15):
+        for i in range(num_iter):
             compute_moments(mat, cen, lmax)
-        time_ffi = timeit.default_timer() - start
+        time_ffi = (timeit.default_timer() - start) / num_iter
 
         assert time_ffi < time_ori
 
