@@ -654,7 +654,36 @@ class EllipsoidalDensityProjection:
         else:
             return features
 
-    def power_spectrum(self, ell_frames, AniSOAP_HYPERS=None):
+    def power_spectrum(self, ell_frames, AniSOAP_HYPERS=None, sum_over_samples=True):
+
+        """Function to compute the power spectrum of AniSOAP
+
+        computes the power spectrum of AniSOAP with the inputs of AniSOAP hyperparameters
+        and ellipsoidal frames using ellipsoidal density projection. It checks if
+        each ellipsoidal frame contains all required attributes and processes
+        Clebsch-Gordan coefficients for the angular component of the AniSOAP descriptors.
+
+        Parameters
+        ----------
+
+        ell_frames: list
+        a list of ellipsoidal frames, where each frame contains attributes:
+        'c_diameter[1]', 'c_diameter[2]', 'c_diameter[3]', 'c_q', 'positions', and 'numbers'.
+        It only accepts c_q for the angular attribute of each frame.
+
+        AniSOAP_HYPERS : keyword arguments
+        A dictionary of hyperparameters for the power spectrum calculation, including 'max_angular'
+        'max_radial', 'radial_basis_name', 'rotation_type', 'rotation_key', 'cutoff_radius', 'radial_gaussian_width',
+        'basis_rcond', and 'basis_tol'.
+
+        sum_over_sample: bool
+        A function that returns the sum of coefficients of all the samples (frames)
+
+        Returns
+        -------
+        x_asoap_raw, a power spectrum that can be visualized using jupyter notebook.
+
+        """
         mycg = ClebschGordanReal(AniSOAP_HYPERS["max_angular"])
         calculator = EllipsoidalDensityProjection(**AniSOAP_HYPERS)
         if ell_frames[0].arrays is None:
@@ -689,10 +718,10 @@ class EllipsoidalDensityProjection:
             lcut=0,
             other_keys_match=["types_center"],
         )
+        if sum_over_samples:
+            x_asoap_raw = metatensor.sum_over_samples(mvg_nu2, sample_names="center")
+            x_asoap_raw = x_asoap_raw.block().values.squeeze()
+            return x_asoap_raw
+        else:
+            mvg_nu2.block().values
 
-        x_asoap_raw = metatensor.sum_over_samples(mvg_nu2, sample_names="center")
-        x_asoap_raw = x_asoap_raw.block().values.squeeze()
-        x_asoap_scaler = StandardFlexibleScaler(column_wise=False).fit(x_asoap_raw)
-        x_asoap = x_asoap_scaler.transform(x_asoap_raw)
-
-        return x_asoap
