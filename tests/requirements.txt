@@ -1,7 +1,12 @@
+--extra-index-url https://luthaf.fr/nightly-wheels/
+rascaline
 ase
 coverage[toml]
 pytest
 scipy
+setuptools-rust
 tqdm
-git+https://github.com/Luthaf/rascaline.git
 metatensor
+wigners
+matplotlib
+Sphinx

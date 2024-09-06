@@ -1,23 +1,44 @@
-[tool.tox]
-legacy_tox_ini = """
-[tox]
+[project]
+name = "anisoap"
+version = "0.0.0"
+requires-python = ">=3.8"
+authors = [
+  {name = "Arthur Lin", email = "alin62@wisc.edu"},
+  {name = "Kevin Kazuki Huguenin-Dumittan"},
+  {name = "Jigyasa Nigam"},
+  {name = "Yong-Cheol Cho"},
+  {name = "Lucas Ortengren"},
+  {name = "Seonwoo Hwang"},
+  {name = "Rose K. Cersonsky"}
+]
+description = "A package for computing anisotropic extensions to the SOAP formalism"
+readme = "README.md"
+license = {file = "LICENSE"}
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Science/Research",
+  "Topic :: Scientific/Engineering",
+  "License :: OSI Approved :: Apache License 2.0",
+  "Natural Language :: English",
 
-[testenv:tests]
-changedir = tests
-deps = -rtests/requirements.txt
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",  
+]
 
-commands =
-    coverage run -m unittest discover -p "*.py"
-    coverage xml
+[build-system]
+requires = ["setuptools", "setuptools-rust"]
+build-backend = "setuptools.build_meta"
 
-"""
+[tool.setuptools.packages]
+# Pure Python packages/modules
+find = { where = ["."] }
 
-[tool.coverage.run]
-branch = true
-data_file = "tests/.coverage"
+[[tool.setuptools-rust.ext-modules]]
+# Private Rust extension module to be nested into the Python package
+target = "anisoap_rust_lib"  # The last part of the name (e.g. "_lib") has to match lib.name in Cargo.toml,
+                             # but you can add a prefix to nest it inside of a Python package.
+path = "Cargo.toml"      # Default value, can be omitted
+binding = "PyO3"         # Default value, can be omitted
 
-[tool.coverage.report]
-include = ["anisoap/*"]
-
-[tool.coverage.xml]
-output = "tests/coverage.xml"
