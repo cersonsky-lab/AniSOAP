@@ -27,9 +27,6 @@ TEST_QUAT_FRAME = add_default_params(
 TEST_MATRIX_FRAME = TEST_SINGLE_FRAME.copy()
 TEST_MATRIX_FRAME.arrays["matrix"] = [np.eye(3)]
 
-print(TEST_SINGLE_FRAME.arrays)
-print(TEST_QUAT_FRAME.arrays)
-
 TEST_FRAMES = [
     [TEST_SINGLE_FRAME],
     [TEST_QUAT_FRAME],
