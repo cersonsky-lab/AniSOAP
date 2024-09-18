@@ -655,7 +655,6 @@ class EllipsoidalDensityProjection:
             return features
 
     def power_spectrum(self, ell_frames, AniSOAP_HYPERS=None, sum_over_samples=True):
-
         """Function to compute the power spectrum of AniSOAP
 
         computes the power spectrum of AniSOAP with the inputs of AniSOAP hyperparameters
@@ -737,4 +736,3 @@ class EllipsoidalDensityProjection:
             return x_asoap_raw
         else:
             mvg_nu2.block().values
-
