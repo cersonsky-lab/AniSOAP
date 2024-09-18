@@ -677,15 +677,21 @@ class EllipsoidalDensityProjection:
         'basis_rcond', and 'basis_tol'.
 
         sum_over_sample: bool
-        A function that returns the sum of coefficients of all the samples (frames)
+        A function that returns the sum of coefficients of the frames in the sample.
 
         Returns
         -------
-        x_asoap_raw, a power spectrum that can be visualized using jupyter notebook.
+        x_asoap_raw, a power spectrum of AniSOAP descriptor that can be visualized using jupyter notebook.
 
         """
+
+        # Initialize the Clebsch Gordan calculator for the angular component.
         mycg = ClebschGordanReal(AniSOAP_HYPERS["max_angular"])
+
+        # Initialize the ellipsoidal density projection calculator using the AniSOAP hyperparameters.
         calculator = EllipsoidalDensityProjection(**AniSOAP_HYPERS)
+
+        # Checks that the sample's first frame is not empty
         if ell_frames[0].arrays is None:
             raise ValueError("ell_frames cannot be none")
         required_attributes = [
@@ -697,6 +703,7 @@ class EllipsoidalDensityProjection:
             "numbers",
         ]
 
+        # Checks if the sample contains all necessary information for computation of power spectrum
         for index, frame in enumerate(ell_frames):
             array = frame.arrays
             for attr in required_attributes:
@@ -709,8 +716,11 @@ class EllipsoidalDensityProjection:
                         f"ell_frame should contain c_q rather than quaternion"
                     )
 
+        # Executes ellipsoidal density projection on the frames of sample using the calculator.
         mvg_coeffs = calculator.transform(ell_frames, show_progress=True)
         mvg_nu1 = standardize_keys(mvg_coeffs)
+
+        # Combines the mvg_nu1 with itself using the Clebsch-Gordan coefficients. This combines the angular and radial components of the sample.
         mvg_nu2 = cg_combine(
             mvg_nu1,
             mvg_nu1,
@@ -718,6 +728,9 @@ class EllipsoidalDensityProjection:
             lcut=0,
             other_keys_match=["types_center"],
         )
+
+        # If sum_over_samples = True, it returns simplified form of coefficients with fewer dimensions in the tensormap for subsequent visualization. If not, it returns raw numerical data of coefficients contained within a specific block of the mvg_nu2 tensor
+
         if sum_over_samples:
             x_asoap_raw = metatensor.sum_over_samples(mvg_nu2, sample_names="center")
             x_asoap_raw = x_asoap_raw.block().values.squeeze()
