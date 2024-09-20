@@ -4,6 +4,7 @@ from itertools import product
 
 import metatensor
 import numpy as np
+from anisoap_rust_lib import compute_moments
 from metatensor import (
     Labels,
     TensorBlock,
@@ -37,6 +38,7 @@ def pairwise_ellip_expansion(
     sph_to_cart,
     radial_basis,
     show_progress=False,
+    rust_moments=True,
 ):
     r"""Computes pairwise expansion
 
@@ -68,6 +70,10 @@ def pairwise_ellip_expansion(
         appropriately with the cutoff radius, radial basis type.
     show_progress : bool
         Show progress bar for frame analysis and feature generation
+    rust_moments : bool
+        Use the ported rust code, which should result in increased speed. Default = True.
+        In the future, once we ensure integrity checks with the original python code,
+        this kwarg will be deprecated, and the rust version will always be used.
 
     Returns
     -------
@@ -143,13 +149,14 @@ def pairwise_ellip_expansion(
                         constant,
                     ) = radial_basis.compute_gaussian_parameters(r_ij, lengths, rot)
 
-                    moments = (
-                        np.exp(-0.5 * constant)
-                        * length_norm
-                        * compute_moments_inefficient_implementation(
+                    if rust_moments:
+                        moments = compute_moments(precision, center, maxdeg)
+                    else:
+                        moments = compute_moments_inefficient_implementation(
                             precision, center, maxdeg=maxdeg
                         )
-                    )
+                    moments *= np.exp(-0.5 * constant) * length_norm
+
                     for l in range(lmax + 1):
                         deg = l + 2 * (num_ns[l] - 1)
                         moments_l = moments[: deg + 1, : deg + 1, : deg + 1]
@@ -552,7 +559,7 @@ class EllipsoidalDensityProjection:
 
         self.rotation_key = rotation_key
 
-    def transform(self, frames, show_progress=False, normalize=True):
+    def transform(self, frames, show_progress=False, normalize=True, rust_moments=True):
         """Computes features and gradients for frames
 
         Computes the features and (if compute_gradients == True) gradients
@@ -565,8 +572,12 @@ class EllipsoidalDensityProjection:
             List containing all ase.Atoms types
         show_progress : bool
             Show progress bar for frame analysis and feature generation
-        normalize: bool
+        normalize : bool
             Whether to perform Lowdin Symmetric Orthonormalization or not.
+        rust_moments : bool
+            Use the ported rust code, which should result in increased speed. Default = True.
+            In the future, once we ensure integrity checks with the original python code,
+            this kwarg will be deprecated, and the rust version will always be used.
 
         Returns
         -------
@@ -645,6 +656,7 @@ class EllipsoidalDensityProjection:
             self.sph_to_cart,
             self.radial_basis,
             show_progress,
+            rust_moments=rust_moments,
         )
 
         features = contract_pairwise_feat(pairwise_ellip_feat, types, show_progress)
@@ -655,6 +667,7 @@ class EllipsoidalDensityProjection:
             return features
 
     def power_spectrum(self, ell_frames, AniSOAP_HYPERS=None, sum_over_samples=True):
+
         """Function to compute the power spectrum of AniSOAP
 
         computes the power spectrum of AniSOAP with the inputs of AniSOAP hyperparameters
@@ -729,10 +742,10 @@ class EllipsoidalDensityProjection:
         )
 
         # If sum_over_samples = True, it returns simplified form of coefficients with fewer dimensions in the tensormap for subsequent visualization. If not, it returns raw numerical data of coefficients contained within a specific block of the mvg_nu2 tensor
-
         if sum_over_samples:
             x_asoap_raw = metatensor.sum_over_samples(mvg_nu2, sample_names="center")
             x_asoap_raw = x_asoap_raw.block().values.squeeze()
             return x_asoap_raw
         else:
             mvg_nu2.block().values
+            
