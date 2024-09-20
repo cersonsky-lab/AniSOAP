@@ -667,7 +667,6 @@ class EllipsoidalDensityProjection:
             return features
 
     def power_spectrum(self, ell_frames, AniSOAP_HYPERS=None, sum_over_samples=True):
-
         """Function to compute the power spectrum of AniSOAP
 
         computes the power spectrum of AniSOAP with the inputs of AniSOAP hyperparameters
@@ -732,7 +731,8 @@ class EllipsoidalDensityProjection:
         mvg_coeffs = calculator.transform(ell_frames, show_progress=True)
         mvg_nu1 = standardize_keys(mvg_coeffs)
 
-        # Combines the mvg_nu1 with itself using the Clebsch-Gordan coefficients. This combines the angular and radial components of the sample.
+        # Combines the mvg_nu1 with itself using the Clebsch-Gordan coefficients.
+        # This combines the angular and radial components of the sample.
         mvg_nu2 = cg_combine(
             mvg_nu1,
             mvg_nu1,
@@ -741,11 +741,11 @@ class EllipsoidalDensityProjection:
             other_keys_match=["types_center"],
         )
 
-        # If sum_over_samples = True, it returns simplified form of coefficients with fewer dimensions in the tensormap for subsequent visualization. If not, it returns raw numerical data of coefficients contained within a specific block of the mvg_nu2 tensor
+        # If sum_over_samples = True, it returns simplified form of coefficients with fewer dimensions in the tensormap for subsequent visualization.
+        # If not, it returns raw numerical data of coefficients contained within a specific block of the mvg_nu2 tensor
         if sum_over_samples:
             x_asoap_raw = metatensor.sum_over_samples(mvg_nu2, sample_names="center")
             x_asoap_raw = x_asoap_raw.block().values.squeeze()
             return x_asoap_raw
         else:
             mvg_nu2.block().values
-            
