@@ -666,7 +666,7 @@ class EllipsoidalDensityProjection:
         else:
             return features
 
-    def power_spectrum(self, ell_frames, AniSOAP_HYPERS=None, sum_over_samples=True):
+    def power_spectrum(self, ell_frames, sum_over_samples=True):
         """Function to compute the power spectrum of AniSOAP
 
         computes the power spectrum of AniSOAP with the inputs of AniSOAP hyperparameters
@@ -678,29 +678,23 @@ class EllipsoidalDensityProjection:
         ----------
 
         ell_frames: list
-        a list of ellipsoidal frames, where each frame contains attributes:
-        'c_diameter[1]', 'c_diameter[2]', 'c_diameter[3]', 'c_q', 'positions', and 'numbers'.
-        It only accepts c_q for the angular attribute of each frame.
-
-        AniSOAP_HYPERS : keyword arguments
-        A dictionary of hyperparameters for the power spectrum calculation, including 'max_angular'
-        'max_radial', 'radial_basis_name', 'rotation_type', 'rotation_key', 'cutoff_radius', 'radial_gaussian_width',
-        'basis_rcond', and 'basis_tol'.
+            A list of ellipsoidal frames, where each frame contains attributes:
+            'c_diameter[1]', 'c_diameter[2]', 'c_diameter[3]', 'c_q', 'positions', and 'numbers'.
+            It only accepts c_q for the angular attribute of each frame.
 
         sum_over_sample: bool
-        A function that returns the sum of coefficients of the frames in the sample.
+            A function that returns the sum of coefficients of the frames in the sample.
 
         Returns
         -------
-        x_asoap_raw, a power spectrum of AniSOAP descriptor that can be visualized using jupyter notebook.
+        x_asoap_raw when kwarg sum_over_samples=True or mvg_nu2 when sum_over_samples=False:
+        x_asoap_raw: A 2-dimensional np.array with shape (n_samples, n_features). This AniSOAP power spectrum aggregates (sums) over each sample.
+        mvg_nu2: a TensorMap of unaggregated power spectrum features.
 
         """
 
         # Initialize the Clebsch Gordan calculator for the angular component.
-        mycg = ClebschGordanReal(AniSOAP_HYPERS["max_angular"])
-
-        # Initialize the ellipsoidal density projection calculator using the AniSOAP hyperparameters.
-        calculator = EllipsoidalDensityProjection(**AniSOAP_HYPERS)
+        mycg = ClebschGordanReal(self.max_angular)
 
         # Checks that the sample's first frame is not empty
         if ell_frames[0].arrays is None:
@@ -727,8 +721,7 @@ class EllipsoidalDensityProjection:
                         f"ell_frame should contain c_q rather than quaternion"
                     )
 
-        # Executes ellipsoidal density projection on the frames of sample using the calculator.
-        mvg_coeffs = calculator.transform(ell_frames, show_progress=True)
+        mvg_coeffs = self.transform(ell_frames, show_progress=True)
         mvg_nu1 = standardize_keys(mvg_coeffs)
 
         # Combines the mvg_nu1 with itself using the Clebsch-Gordan coefficients.
@@ -741,11 +734,11 @@ class EllipsoidalDensityProjection:
             other_keys_match=["types_center"],
         )
 
-        # If sum_over_samples = True, it returns simplified form of coefficients with fewer dimensions in the tensormap for subsequent visualization.
-        # If not, it returns raw numerical data of coefficients contained within a specific block of the mvg_nu2 tensor
+        # If sum_over_samples = True, it returns simplified form of coefficients with fewer dimensions in the TensorMap for subsequent visualization.
+        # If not, it returns raw numerical data of coefficients in mvg_nu2 TensorMap
         if sum_over_samples:
             x_asoap_raw = metatensor.sum_over_samples(mvg_nu2, sample_names="center")
             x_asoap_raw = x_asoap_raw.block().values.squeeze()
             return x_asoap_raw
         else:
-            mvg_nu2.block().values
+            return mvg_nu2
