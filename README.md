@@ -12,7 +12,7 @@ AniSOAP
 While technically complete, AniSOAP is in beta mode, and subject to new changes regularly. 
 Please use with caution as we iron out some of the finer details.
 
-### Dependencies
+## Dependencies
 
 Before installing anisoap, please make sure you have at least the
 following packages installed:
