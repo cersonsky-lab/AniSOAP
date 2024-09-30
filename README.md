@@ -8,20 +8,9 @@ AniSOAP
 </a>
 
 ## Warning!
+
 While technically complete, AniSOAP is in beta mode, and subject to new changes regularly. 
 Please use with caution as we iron out some of the finer details.
-
-## Installation
-
-The installation of the library for python use can be done simply with
-
-    pip install .
-
-The code is currently still being developed. To make sure that your version behaves properly, please run the internal tests from the main directory with
-
-    pytest tests/.
-
-Please contact the developers if some tests fail.
 
 ### Dependencies
 
@@ -35,7 +24,26 @@ following packages installed:
 * Equistore
 * Rascaline 
 
+AniSOAP also requires the Rust language.  If you do not already have Rust installed, we recommend using the rustup tool, available [here](https://rustup.rs).
+
+## Installation
+
+The installation of the library for python use can be done simply with
+
+    pip install -r requirements.txt
+
+and then
+
+    pip install .
+
+The code is currently still being developed. To make sure that your version behaves properly, please run the internal tests from the main directory with
+
+    pytest tests/.
+
+Please contact the developers if some tests fail.
+
 ## For developers:
+
 Please run pytest and check that all tests pass before pushing new changes to the main branch with
 
     pytest tests/.
