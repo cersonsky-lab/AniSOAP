@@ -16,12 +16,12 @@ Please use with caution as we iron out some of the finer details.
 
 Before installing anisoap, please make sure you have at least the
 following packages installed:
-* python (3.6 or higher)
+* python (3.9 or 3.10)
 * numpy (1.13 or higher)
 * scipy (1.4.0 or higher)
 * ASE (3.18 or higher)
 * math
-* Equistore
+* metatensor
 * Rascaline 
 
 AniSOAP also requires the Rust language.  If you do not already have Rust installed, we recommend using the rustup tool, available [here](https://rustup.rs).
