@@ -14,6 +14,10 @@ Representations
 
 Utilities
 ---------
+.. automodule:: anisoap.utils.cyclic_list
+   :members:
+   :show-inheritance:
+   :inherited-members:
 .. automodule:: anisoap.utils.metatensor_utils
    :members:
    :show-inheritance:
@@ -26,11 +30,11 @@ Utilities
    :members:
    :show-inheritance:
    :inherited-members:
-.. automodule:: anisoap.utils.spherical_to_cartesian
+.. automodule:: anisoap.utils.shortcuts
    :members:
    :show-inheritance:
    :inherited-members:
-.. automodule:: anisoap.utils.shortcuts
+.. automodule:: anisoap.utils.spherical_to_cartesian
    :members:
    :show-inheritance:
    :inherited-members:

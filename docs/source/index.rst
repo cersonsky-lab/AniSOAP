@@ -21,8 +21,7 @@ descriptors by computing anisotrophy extensions.
 
    installation
    getting_started
-   tutorials
-   usage
+   examples
    api
 
 
