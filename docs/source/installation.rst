@@ -5,9 +5,9 @@ Installation
 Dependencies
 ------------
 
-Before installing AniSOAP, please make sure you have the following installed\:
+Before installing AniSOAP, please make sure you have the following installed (We recommend using an environment manager like `conda <https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html/>`_):
 
-* `Python: 3.6 or higher <https://www.python.org/downloads/>`_
+* `Python: 3.9 or 3.10 <https://www.python.org/downloads/>`_
 * `numPy: 1.13 or higher <https://numpy.org/install/>`_
 * `sciPy: 1.4.0 or higher <https://scipy.org/install/>`_
 * `Atomic Simulation Environment (ASE): 3.18 or higher <https://wiki.fysik.dtu.dk/ase/install.html>`_
