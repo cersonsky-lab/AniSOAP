@@ -183,8 +183,8 @@ def monomial_overlap(n, m, r_cut):
         .. math::
 
             \langle \phi_n, \phi_m \rangle &= \int_0^\infty dr r^2 r^n r^m \\
-                                           &= \int_0^r_{cut} dr r^2 |r^{(n+m)/2}|^2 \\
-                                           &= \int_0^r_{cut} dr r^2 |r^{n_{eff}}|^2
+                                           &= \int_0^{r_{cut}} dr r^2 |r^{(n+m)/2}|^2 \\
+                                           &= \int_0^{r_{cut}} dr r^2 |r^{n_{eff}}|^2
 
     Parameters
     ----------
