@@ -77,7 +77,7 @@ def gto_square_norm(n, sigma):
 def gto_prefactor(n, sigma):
     """Computes the normalization prefactor of an unnormalized GTO.
 
-    This prefactor is simply :math:`\\frac{1}{\\sqrt(\\text{square_norm_area)}}`.
+    This prefactor is simply :math:`\\frac{1}{\\sqrt{\\text{square_norm_area}}}`.
     Scaling a GTO by this prefactor will ensure that the GTO has square norm
     equal to 1.
 
@@ -155,7 +155,7 @@ def monomial_square_norm(n, r_cut):
 def monomial_prefactor(n, r_cut):
     """
     Computes the normalization prefactor of an unnormalized monomial basis.
-    This prefactor is simply :math:`1/sqrt{square_norm_area}`.
+    This prefactor is simply :math:`1/\sqrt{square\_norm\_area}`.
     Scaling a basis by this prefactor will ensure that the basis has square norm equal to 1.
 
     Parameters
@@ -315,7 +315,7 @@ class MonomialBasis(_RadialBasis):
 
     For monomial basis with coupled :math:`n_{\text{max}}` and :math:`l_{\text{max}}`,
     our radial basis set consists of monomials of order :math:`n=0` to
-    :math:`n=\text{max}{l_{\text{max}} + 2n_{\text{max}}}`
+    :math:`n=\max{l_{\text{max}} + 2n_{\text{max}}}`
 
     Monomials are not square-integrable from :math:`[0, \infty]`, so we orthonormalize
     by integrating up to the cutoff radius
@@ -362,7 +362,7 @@ class MonomialBasis(_RadialBasis):
         The overlap matrix is a Gram matrix whose entries are the overlap:
 
             .. math::
-                S_{ij} = \int_{0}^{r_{cut} dr r^2 phi_i phi_j
+                S_{ij} = \int_{0}^{r_{cut}} dr r^2 \phi_i \phi_j
 
         The overlap has an analytic solution (see above functions).
 
@@ -442,7 +442,7 @@ class MonomialBasis(_RadialBasis):
 
         If lmax and nmax defined, then the number of functions outputted is lmax*(nmax+1)
 
-        If lmax and nmax coupled, then the number of functions outputted is \sum_{l=0}^{lmax} (number_of_radial_functions_per_l)
+        If lmax and nmax coupled, then the number of functions outputted is :math:`\sum_{l=0}^{lmax} (number\_of\_radial\_functions\_per\_l)`
 
         Parameters
         ----------
@@ -543,8 +543,7 @@ class GTORadialBasis(_RadialBasis):
         The overlap matrix is a Gram matrix whose entries are the overlap:
 
         .. math::
-
-            S_{ij} = \\int_0^\\infty dr \\, r^2 \\phi_i \\phi_j
+            S_{ij} = \int_0^\infty dr r^2 \phi_i \phi_j
 
         The overlap has an analytic solution (see above functions).
 
