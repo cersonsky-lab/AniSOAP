@@ -1,23 +1,23 @@
+
+
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html5" lang="en" data-content_root="./">
 <head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>API Reference &mdash; AniSOAP 0.0.1 documentation</title>
-      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-      <link rel="stylesheet" href="_static/custom.css" type="text/css" />
-  <!--[if lt IE 9]>
-    <script src="_static/js/html5shiv.min.js"></script>
-  <![endif]-->
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=341189f5" />
+
   
-        <script src="_static/jquery.js?v=5d32c60e"></script>
-        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="_static/documentation_options.js?v=d45e8c67"></script>
-        <script src="_static/doctools.js?v=888ff710"></script>
-        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
-        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=d45e8c67"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -267,8 +267,8 @@ copies of the same atom are accounted for.</p></li>
 <li><p><strong>types</strong> (<em>list</em><em> of </em><em>ints</em>) – List of atomic numbers present across the data frames</p></li>
 <li><p><strong>frame_to_global_atom_idx</strong> (<em>list</em><em> of </em><em>ints</em>) – The length of the list equals the number of frames, each entry enumerating
 the number of atoms in corresponding frame</p></li>
-<li><p><strong>rotation_matrices</strong> (<em>np.array</em><em> of </em><em>dimension</em><em> (</em><em>(</em><em>num_atoms</em><em>,</em><em>3</em><em>,</em><em>3</em><em>)</em><em>)</em>) – </p></li>
-<li><p><strong>ellipsoid_lengths</strong> (<em>np.array</em><em> of </em><em>dimension</em><em> (</em><em>(</em><em>num_atoms</em><em>,</em><em>3</em><em>)</em><em>)</em>) – </p></li>
+<li><p><strong>rotation_matrices</strong> (<em>np.array</em><em> of </em><em>dimension</em><em> (</em><em>(</em><em>num_atoms</em><em>,</em><em>3</em><em>,</em><em>3</em><em>)</em><em>)</em>)</p></li>
+<li><p><strong>ellipsoid_lengths</strong> (<em>np.array</em><em> of </em><em>dimension</em><em> (</em><em>(</em><em>num_atoms</em><em>,</em><em>3</em><em>)</em><em>)</em>)</p></li>
 <li><p><strong>radial_basis</strong> (<em>Instance</em><em> of </em><em>the RadialBasis Class</em>) – anisoap.representations.radial_basis.RadialBasis that has been instantiated
 appropriately with the cutoff radius, radial basis type.</p></li>
 <li><p><strong>show_progress</strong> (<em>bool</em>) – Show progress bar for frame analysis and feature generation</p></li>
@@ -306,7 +306,7 @@ properties dimension corresponds to the radial channel.</p>
 <dd><p>Computes the overlap matrix for GTOs.</p>
 <p>The overlap matrix is a Gram matrix whose entries are the overlap:</p>
 <div class="math notranslate nohighlight">
-\[S_{ij} = \int_0^\infty dr \, r^2 \phi_i \phi_j\]</div>
+\[S_{ij} = \int_0^\infty dr r^2 \phi_i \phi_j\]</div>
 <p>The overlap has an analytic solution (see above functions).</p>
 <p>The overlap matrix is the first step to generating an orthonormal basis
 set of functions (Lodwin Symmetric Orthonormalization). The actual
@@ -380,7 +380,7 @@ Symmetric Orthonormalization of a 2-element basis set is found here:
 <li><p><strong>features</strong> (<em>TensorMap</em>) – contains blocks whose values we wish to orthonormalize. Note that
 features is modified in place, so a copy of features must be made
 before the function if you wish to retain the unnormalized values.</p></li>
-<li><p><strong>radial_basis</strong> (<em>RadialBasis</em>) – </p></li>
+<li><p><strong>radial_basis</strong> (<em>RadialBasis</em>)</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -428,7 +428,7 @@ by integrating up to the cutoff radius</p>
 <p>The overlap matrix is a Gram matrix whose entries are the overlap:</p>
 <blockquote>
 <div><div class="math notranslate nohighlight">
-\[S_{ij} = \int_{0}^{r_{cut} dr r^2 phi_i phi_j\]</div>
+\[S_{ij} = \int_{0}^{r_{cut}} dr r^2 \phi_i \phi_j\]</div>
 </div></blockquote>
 <p>The overlap has an analytic solution (see above functions).</p>
 <p>The overlap matrix is the first step to generating an orthonormal basis set of functions (Lodwin Symmetric
@@ -451,7 +451,7 @@ overlap matrix.</p>
 <span class="sig-name descname"><span class="pre">get_basis</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#anisoap.representations.radial_basis.MonomialBasis.get_basis" title="Link to this definition"></a></dt>
 <dd><p>Evaluate orthonormalized monomial basis functions on mesh rs.</p>
 <p>If lmax and nmax defined, then the number of functions outputted is lmax*(nmax+1)</p>
-<p>If lmax and nmax coupled, then the number of functions outputted is sum_{l=0}^{lmax} (number_of_radial_functions_per_l)</p>
+<p>If lmax and nmax coupled, then the number of functions outputted is <span class="math notranslate nohighlight">\(\sum_{l=0}^{lmax} (number\_of\_radial\_functions\_per\_l)\)</span></p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>rs</strong> (<em>np.array</em>) – a mesh to evaluate the basis functions</p>
@@ -498,7 +498,7 @@ An instructive example of Lodwin Symmetric Orthonormalization of a 2-element bas
 <li><p><strong>features</strong> (<em>TensorMap</em>) – A TensorMap whose blocks’ values we wish to orthonormalize. Note that
 <cite>features</cite> is modified in place, so a copy of <cite>features</cite> must be made
 before the function if you wish to retain the unnormalized values.</p></li>
-<li><p><strong>radial_basis</strong> (<em>_RadialBasis</em>) – </p></li>
+<li><p><strong>radial_basis</strong> (<em>_RadialBasis</em>)</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -557,7 +557,7 @@ calculate those effective parameters, then compute the normalization prefactor.<
 <dt class="sig sig-object py" id="anisoap.representations.radial_basis.gto_prefactor">
 <span class="sig-prename descclassname"><span class="pre">anisoap.representations.radial_basis.</span></span><span class="sig-name descname"><span class="pre">gto_prefactor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sigma</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#anisoap.representations.radial_basis.gto_prefactor" title="Link to this definition"></a></dt>
 <dd><p>Computes the normalization prefactor of an unnormalized GTO.</p>
-<p>This prefactor is simply <span class="math notranslate nohighlight">\(\frac{1}{\sqrt(\text{square_norm_area)}}\)</span>.
+<p>This prefactor is simply <span class="math notranslate nohighlight">\(\frac{1}{\sqrt{\text{square_norm_area}}}\)</span>.
 Scaling a GTO by this prefactor will ensure that the GTO has square norm
 equal to 1.</p>
 <dl class="field-list simple">
@@ -636,8 +636,8 @@ effective parameters, then compute the normalization:</p>
 <blockquote>
 <div><div class="math notranslate nohighlight">
 \[\begin{split}\langle \phi_n, \phi_m \rangle &amp;= \int_0^\infty dr r^2 r^n r^m \\
-                               &amp;= \int_0^r_{cut} dr r^2 |r^{(n+m)/2}|^2 \\
-                               &amp;= \int_0^r_{cut} dr r^2 |r^{n_{eff}}|^2\end{split}\]</div>
+                               &amp;= \int_0^{r_{cut}} dr r^2 |r^{(n+m)/2}|^2 \\
+                               &amp;= \int_0^{r_{cut}} dr r^2 |r^{n_{eff}}|^2\end{split}\]</div>
 </div></blockquote>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -660,7 +660,7 @@ effective parameters, then compute the normalization:</p>
 <dt class="sig sig-object py" id="anisoap.representations.radial_basis.monomial_prefactor">
 <span class="sig-prename descclassname"><span class="pre">anisoap.representations.radial_basis.</span></span><span class="sig-name descname"><span class="pre">monomial_prefactor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">r_cut</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#anisoap.representations.radial_basis.monomial_prefactor" title="Link to this definition"></a></dt>
 <dd><p>Computes the normalization prefactor of an unnormalized monomial basis.
-This prefactor is simply <span class="math notranslate nohighlight">\(1/sqrt{square_norm_area}\)</span>.
+This prefactor is simply <span class="math notranslate nohighlight">\(1/\sqrt{square\_norm\_area}\)</span>.
 Scaling a basis by this prefactor will ensure that the basis has square norm equal to 1.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -761,7 +761,7 @@ all other key labels are combined via their outer product, i.e. if there
 is a key-side <cite>neighbor-species</cite> in both <cite>x_a</cite> and <cite>x_b</cite>, the returned
 keys will have two <cite>neighbor_species</cite> labels, corresponding to the parent
 features.</p></li>
-<li><p><strong>clebsch_gordan</strong> (<em>ClebschGordanReal</em><em>, </em><em>optional</em>) – </p></li>
+<li><p><strong>clebsch_gordan</strong> (<em>ClebschGordanReal</em><em>, </em><em>optional</em>)</p></li>
 <li><p><strong>lcut</strong> (<em>np.ndarray</em><em>(</em><em>)</em>) – Cutoff in new features</p></li>
 <li><p><strong>other_keys_match</strong> (<em>list</em><em>, </em><em>optional</em>) – List of keys that should match.  These will not need to have their outer
 product taken, but will instead be merged into a new key.  For instance,
@@ -980,14 +980,14 @@ term in the iteration</p>
 <dt class="sig sig-object py" id="anisoap.utils.spherical_to_cartesian.spherical_to_cartesian">
 <span class="sig-prename descclassname"><span class="pre">anisoap.utils.spherical_to_cartesian.</span></span><span class="sig-name descname"><span class="pre">spherical_to_cartesian</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lmax</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_ns</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#anisoap.utils.spherical_to_cartesian.spherical_to_cartesian" title="Link to this definition"></a></dt>
 <dd><p>Finds the coefficients for the cartesian polynomial form of solid harmonics
-<span class="math notranslate nohighlight">\(R_{lm} = sqrt((4pi)/(2l+1))*r^l*Y_{lm}\)</span>.  Note that our AniSOAP
-expansion does not contain the sqrt((4pi)/(2l+1)), so in calculating
+<span class="math notranslate nohighlight">\(R_{lm} = \sqrt{(4\pi)/(2l+1)}*r^l*Y_{lm}\)</span>.  Note that our AniSOAP
+expansion does not contain the <span class="math notranslate nohighlight">\(\sqrt{(4\pi)/(2l+1)}\)</span> prefactor, so in calculating
 expansion coefficients, we need to divide by that coefficient.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>lmax</strong> (<em>int</em>) – </p></li>
-<li><p><strong>num_ns</strong> (<em>int</em>) – </p></li>
+<li><p><strong>lmax</strong> (<em>int</em>)</p></li>
+<li><p><strong>num_ns</strong> (<em>int</em>)</p></li>
 </ul>
 </dd>
 </dl>
