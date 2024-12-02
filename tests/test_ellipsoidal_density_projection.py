@@ -19,12 +19,10 @@ def add_default_params(frame):
 
 
 TEST_SINGLE_FRAME = add_default_params(
-    ase.Atoms(symbols=["X"], positions=np.zeros((1, 3)), cell=(10, 10, 10), pbc=False)
+    ase.Atoms(symbols=["X"], positions=np.zeros((1, 3)), cell=(0, 0, 0), pbc=False)
 )
 TEST_QUAT_FRAME = add_default_params(
-    ase.Atoms(
-        symbols=["X", "O"], positions=[np.zeros(3), np.ones(3)], cell=(10, 10, 10)
-    )
+    ase.Atoms(symbols=["X", "O"], positions=[np.zeros(3), np.ones(3)], cell=(0, 0, 0))
 )
 TEST_MATRIX_FRAME = TEST_SINGLE_FRAME.copy()
 TEST_MATRIX_FRAME.arrays["matrix"] = [np.eye(3)]
@@ -60,13 +58,13 @@ class TestEllipsoidalDensityProjection:
             frames, show_progress=True
         )
 
-    @pytest.mark.parametrize("frames", TEST_FRAMES)
+    @pytest.mark.parametrize("frames", [[TEST_MATRIX_FRAME]])
     def test_frames_matrix_rotation(self, frames):
         EllipsoidalDensityProjection(
             rotation_key="matrix", rotation_type="matrix", **DEFAULT_HYPERS
         ).transform(frames, show_progress=True)
 
-    @pytest.mark.parametrize("frames", TEST_FRAMES)
+    @pytest.mark.parametrize("frames", [[TEST_MATRIX_FRAME]])
     def test_frames_normalization_condition(self, frames):
         edp = EllipsoidalDensityProjection(
             rotation_key="matrix", rotation_type="matrix", **DEFAULT_HYPERS
