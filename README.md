@@ -32,8 +32,8 @@ following packages installed:
 * scipy (1.4.0 or higher)
 * ASE (3.18 or higher)
 * math
-* Equistore
-* Rascaline 
+* metatensor
+* featomic 
 
 ## For developers:
 Please run pytest and check that all tests pass before pushing new changes to the main branch with
