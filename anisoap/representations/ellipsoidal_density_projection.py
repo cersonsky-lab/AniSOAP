@@ -636,7 +636,9 @@ class EllipsoidalDensityProjection:
                 ]
 
         self.nl = NeighborList(
-            self.cutoff_radius, True, (not self.subtract_center_contribution)
+            cutoff=self.cutoff_radius,
+            full_neighbor_list=True,
+            self_pairs=(not self.subtract_center_contribution),
         ).compute(frame_generator)
 
         pairwise_ellip_feat = pairwise_ellip_expansion(
