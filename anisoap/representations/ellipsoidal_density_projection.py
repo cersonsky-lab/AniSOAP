@@ -719,9 +719,7 @@ class EllipsoidalDensityProjection:
                         f"frame at index {index} is missing a required attribute '{attr}'"
                     )
                 if "quaternion" in array:
-                    raise ValueError(
-                        f"frame should contain c_q rather than quaternion"
-                    )
+                    raise ValueError(f"frame should contain c_q rather than quaternion")
 
         mvg_coeffs = self.transform(frames, show_progress=True)
         mvg_nu1 = standardize_keys(mvg_coeffs)
