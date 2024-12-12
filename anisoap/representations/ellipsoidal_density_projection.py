@@ -668,7 +668,7 @@ class EllipsoidalDensityProjection:
         else:
             return features
 
-    def power_spectrum(self, ell_frames, sum_over_samples=True):
+    def power_spectrum(self, frames, sum_over_samples=True):
         """Function to compute the power spectrum of AniSOAP
 
         computes the power spectrum of AniSOAP with the inputs of AniSOAP hyperparameters
@@ -679,7 +679,7 @@ class EllipsoidalDensityProjection:
         Parameters
         ----------
 
-        ell_frames: list
+        frames: list
             A list of ellipsoidal frames, where each frame contains attributes:
             'c_diameter[1]', 'c_diameter[2]', 'c_diameter[3]', 'c_q', 'positions', and 'numbers'.
             It only accepts c_q for the angular attribute of each frame.
@@ -699,8 +699,8 @@ class EllipsoidalDensityProjection:
         mycg = ClebschGordanReal(self.max_angular)
 
         # Checks that the sample's first frame is not empty
-        if ell_frames[0].arrays is None:
-            raise ValueError("ell_frames cannot be none")
+        if frames[0].arrays is None:
+            raise ValueError("frames cannot be none")
         required_attributes = [
             "c_diameter[1]",
             "c_diameter[2]",
@@ -711,19 +711,19 @@ class EllipsoidalDensityProjection:
         ]
 
         # Checks if the sample contains all necessary information for computation of power spectrum
-        for index, frame in enumerate(ell_frames):
+        for index, frame in enumerate(frames):
             array = frame.arrays
             for attr in required_attributes:
                 if attr not in array:
                     raise ValueError(
-                        f"ell_frame at index {index} is missing a required attribute '{attr}'"
+                        f"frame at index {index} is missing a required attribute '{attr}'"
                     )
                 if "quaternion" in array:
                     raise ValueError(
-                        f"ell_frame should contain c_q rather than quaternion"
+                        f"frame should contain c_q rather than quaternion"
                     )
 
-        mvg_coeffs = self.transform(ell_frames, show_progress=True)
+        mvg_coeffs = self.transform(frames, show_progress=True)
         mvg_nu1 = standardize_keys(mvg_coeffs)
 
         # Combines the mvg_nu1 with itself using the Clebsch-Gordan coefficients.
