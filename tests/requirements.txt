@@ -10,3 +10,4 @@ metatensor
 wigners
 matplotlib
 Sphinx
+skmatter

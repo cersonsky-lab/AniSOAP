@@ -2,6 +2,7 @@ import sys
 import warnings
 from itertools import product
 
+import metatensor
 import numpy as np
 from anisoap_rust_lib import compute_moments
 from metatensor import (
@@ -11,11 +12,17 @@ from metatensor import (
 )
 from rascaline import NeighborList
 from scipy.spatial.transform import Rotation
+from skmatter.preprocessing import StandardFlexibleScaler
 from tqdm.auto import tqdm
 
 from anisoap.representations.radial_basis import (
     GTORadialBasis,
     MonomialBasis,
+)
+from anisoap.utils.metatensor_utils import (
+    ClebschGordanReal,
+    cg_combine,
+    standardize_keys,
 )
 from anisoap.utils.moment_generator import *
 from anisoap.utils.spherical_to_cartesian import spherical_to_cartesian
@@ -660,3 +667,78 @@ class EllipsoidalDensityProjection:
             return normalized_features
         else:
             return features
+
+    def power_spectrum(self, frames, sum_over_samples=True):
+        """Function to compute the power spectrum of AniSOAP
+
+        computes the power spectrum of AniSOAP with the inputs of AniSOAP hyperparameters
+        and ellipsoidal frames using ellipsoidal density projection. It checks if
+        each ellipsoidal frame contains all required attributes and processes
+        Clebsch-Gordan coefficients for the angular component of the AniSOAP descriptors.
+
+        Parameters
+        ----------
+
+        frames: list
+            A list of ellipsoidal frames, where each frame contains attributes:
+            'c_diameter[1]', 'c_diameter[2]', 'c_diameter[3]', 'c_q', 'positions', and 'numbers'.
+            It only accepts c_q for the angular attribute of each frame.
+
+        sum_over_sample: bool
+            A function that returns the sum of coefficients of the frames in the sample.
+
+        Returns
+        -------
+        x_asoap_raw when kwarg sum_over_samples=True or mvg_nu2 when sum_over_samples=False:
+        x_asoap_raw: A 2-dimensional np.array with shape (n_samples, n_features). This AniSOAP power spectrum aggregates (sums) over each sample.
+        mvg_nu2: a TensorMap of unaggregated power spectrum features.
+
+        """
+
+        # Initialize the Clebsch Gordan calculator for the angular component.
+        mycg = ClebschGordanReal(self.max_angular)
+
+        # Checks that the sample's first frame is not empty
+        if frames[0].arrays is None:
+            raise ValueError("frames cannot be none")
+        required_attributes = [
+            "c_diameter[1]",
+            "c_diameter[2]",
+            "c_diameter[3]",
+            "c_q",
+            "positions",
+            "numbers",
+        ]
+
+        # Checks if the sample contains all necessary information for computation of power spectrum
+        for index, frame in enumerate(frames):
+            array = frame.arrays
+            for attr in required_attributes:
+                if attr not in array:
+                    raise ValueError(
+                        f"frame at index {index} is missing a required attribute '{attr}'"
+                    )
+                if "quaternion" in array:
+                    raise ValueError(f"frame should contain c_q rather than quaternion")
+
+        mvg_coeffs = self.transform(frames, show_progress=True)
+        mvg_nu1 = standardize_keys(mvg_coeffs)
+
+        # Combines the mvg_nu1 with itself using the Clebsch-Gordan coefficients.
+        # This combines the angular and radial components of the sample.
+        mvg_nu2 = cg_combine(
+            mvg_nu1,
+            mvg_nu1,
+            clebsch_gordan=mycg,
+            lcut=0,
+            other_keys_match=["types_center"],
+        )
+
+        # If sum_over_samples = True, it returns simplified form of coefficients with fewer dimensions in the TensorMap for subsequent visualization.
+        # If not, it returns raw numerical data of coefficients in mvg_nu2 TensorMap
+        if sum_over_samples:
+            x_asoap_raw = metatensor.sum_over_samples(mvg_nu2, sample_names="center")
+            x_asoap_raw = x_asoap_raw.block().values.squeeze()
+            return x_asoap_raw
+        else:
+            return mvg_nu2
