@@ -22,11 +22,7 @@ following packages installed:
 * ASE (3.18 or higher)
 * math
 * metatensor
-<<<<<<< HEAD
 * rascaline 
-=======
-* Rascaline 
->>>>>>> 28fb5c0 (Updating README.md)
 
 AniSOAP also requires the Rust language.  If you do not already have Rust installed, we recommend using the rustup tool, available [here](https://rustup.rs).
 
