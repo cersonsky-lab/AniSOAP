@@ -1,6 +1,9 @@
 # sphinx dependencies
 Sphinx==7.2.6
 sphinx-rtd-theme==2.0.0
+sphinx-gallery  # convert python files into nice documentation
+sphinx-tabs     # tabs for code examples (one tab per language)
+
 
 --find-links https://download.pytorch.org/whl/torch_stable.html
 torch==1.11.0+cpu
