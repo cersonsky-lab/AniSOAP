@@ -9,6 +9,10 @@
   <title>API Reference &mdash; AniSOAP 0.0.1 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/sg_gallery.css?v=d2d258e8" />
+      <link rel="stylesheet" type="text/css" href="_static/sg_gallery-binder.css?v=f4aeca0c" />
+      <link rel="stylesheet" type="text/css" href="_static/sg_gallery-dataframe.css?v=2082cf3c" />
+      <link rel="stylesheet" type="text/css" href="_static/sg_gallery-rendered-html.css?v=1277b6f3" />
       <link rel="stylesheet" type="text/css" href="_static/custom.css?v=341189f5" />
 
   
@@ -53,6 +57,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#anisoap.representations.ellipsoidal_density_projection.EllipsoidalDensityProjection"><code class="docutils literal notranslate"><span class="pre">EllipsoidalDensityProjection</span></code></a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#anisoap.representations.ellipsoidal_density_projection.EllipsoidalDensityProjection.features"><code class="docutils literal notranslate"><span class="pre">EllipsoidalDensityProjection.features</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#anisoap.representations.ellipsoidal_density_projection.EllipsoidalDensityProjection.feature_gradients"><code class="docutils literal notranslate"><span class="pre">EllipsoidalDensityProjection.feature_gradients</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#anisoap.representations.ellipsoidal_density_projection.EllipsoidalDensityProjection.power_spectrum"><code class="docutils literal notranslate"><span class="pre">EllipsoidalDensityProjection.power_spectrum()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#anisoap.representations.ellipsoidal_density_projection.EllipsoidalDensityProjection.transform"><code class="docutils literal notranslate"><span class="pre">EllipsoidalDensityProjection.transform()</span></code></a></li>
 </ul>
 </li>
@@ -179,6 +184,34 @@ be used.</p></li>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>numpy.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="anisoap.representations.ellipsoidal_density_projection.EllipsoidalDensityProjection.power_spectrum">
+<span class="sig-name descname"><span class="pre">power_spectrum</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">frames</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sum_over_samples</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#anisoap.representations.ellipsoidal_density_projection.EllipsoidalDensityProjection.power_spectrum" title="Link to this definition"></a></dt>
+<dd><p>Function to compute the power spectrum of AniSOAP</p>
+<p>computes the power spectrum of AniSOAP with the inputs of AniSOAP hyperparameters
+and ellipsoidal frames using ellipsoidal density projection. It checks if
+each ellipsoidal frame contains all required attributes and processes
+Clebsch-Gordan coefficients for the angular component of the AniSOAP descriptors.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>frames</strong> (<em>list</em>) – A list of ellipsoidal frames, where each frame contains attributes:
+‘c_diameter[1]’, ‘c_diameter[2]’, ‘c_diameter[3]’, ‘c_q’, ‘positions’, and ‘numbers’.
+It only accepts c_q for the angular attribute of each frame.</p></li>
+<li><p><strong>sum_over_sample</strong> (<em>bool</em>) – A function that returns the sum of coefficients of the frames in the sample.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><em>x_asoap_raw when kwarg sum_over_samples=True or mvg_nu2 when sum_over_samples=False</em></p></li>
+<li><p><strong>x_asoap_raw</strong> (<em>A 2-dimensional np.array with shape (n_samples, n_features). This AniSOAP power spectrum aggregates (sums) over each sample.</em>)</p></li>
+<li><p><strong>mvg_nu2</strong> (<em>a TensorMap of unaggregated power spectrum features.</em>)</p></li>
+</ul>
+</p>
 </dd>
 </dl>
 </dd></dl>
