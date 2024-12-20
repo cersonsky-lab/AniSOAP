@@ -1,9 +1,17 @@
 :orphan:
 
-This is my gallery
-==================
+Examples
+========
 
-Below is a gallery of examples
+Here is a collection of examples that may prove useful.
+
+The 1st example is a minimal example demonstrating how to create an AniSOAP vector from an ase.Atoms object. It also demonstrates the rotational and translational invariance.
+
+The 2nd example is an example demonstrating how AniSOAP can be used to coarse-grain benzene and learn benzene crystal energies through linear regression.
+
+.. Note::
+  
+  More tutorials are currently being developed.  Stay tuned!
 
 
 
@@ -13,11 +21,52 @@ Below is a gallery of examples
 
 .. thumbnail-parent-div-open
 
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="1. How to create ellipsoidal frames">
+
+.. only:: html
+
+  .. image:: /auto_examples/images/thumb/sphx_glr_example01_invariances_of_powerspectrum_test_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_auto_examples_example01_invariances_of_powerspectrum_test.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Example 1: Creating AniSOAP vectors from ellipsoidal frames.</div>
+    </div>
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="1. How to import packages">
+
+.. only:: html
+
+  .. image:: /auto_examples/images/thumb/sphx_glr_example02_learn_benzene_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_auto_examples_example02_learn_benzene.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Example 2: Machine-learning benzene energies.</div>
+    </div>
+
+
 .. thumbnail-parent-div-close
 
 .. raw:: html
 
     </div>
+
+
+.. toctree::
+   :hidden:
+
+   /auto_examples/example01_invariances_of_powerspectrum_test
+   /auto_examples/example02_learn_benzene
 
 
 .. only:: html
@@ -27,6 +76,10 @@ Below is a gallery of examples
     .. container:: sphx-glr-download sphx-glr-download-python
 
       :download:`Download all examples in Python source code: auto_examples_python.zip </auto_examples/auto_examples_python.zip>`
+
+    .. container:: sphx-glr-download sphx-glr-download-jupyter
+
+      :download:`Download all examples in Jupyter notebooks: auto_examples_jupyter.zip </auto_examples/auto_examples_jupyter.zip>`
 
 
 .. only:: html
