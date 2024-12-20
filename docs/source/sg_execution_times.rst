@@ -6,7 +6,7 @@
 
 Computation times
 =================
-**00:00.000** total execution time for 0 files **from all galleries**:
+**00:00.126** total execution time for 2 files **from all galleries**:
 
 .. container::
 
@@ -32,6 +32,9 @@ Computation times
    * - Example
      - Time
      - Mem (MB)
-   * - N/A
-     - N/A
-     - N/A
+   * - :ref:`sphx_glr_auto_examples_example01_invariances_of_powerspectrum_test.py` (``../../notebooks/example01_invariances_of_powerspectrum_test.py``)
+     - 00:00.092
+     - 0.0
+   * - :ref:`sphx_glr_auto_examples_example02_learn_benzene.py` (``../../notebooks/example02_learn_benzene.py``)
+     - 00:00.034
+     - 0.0
