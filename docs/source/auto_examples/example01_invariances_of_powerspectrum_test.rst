@@ -22,13 +22,11 @@ Example 1: Creating AniSOAP vectors from ellipsoidal frames.
 ============================================================
 This example demonstrates:
 
-1. How to create ellipsoidal frames
+1. How to read ellipsoidal frame from xyz
+2. How to convert ellipsoidal frames to AniSOAP vectors
+3. How to create ellipsoidal frames
 
-2. How to read ellipsoidal frame from xyz
-
-3. How to convert ellipsoidal frames to AniSOAP vectors
-
-.. GENERATED FROM PYTHON SOURCE LINES 12-40
+.. GENERATED FROM PYTHON SOURCE LINES 11-42
 
 .. code-block:: Python
 
@@ -38,6 +36,7 @@ This example demonstrates:
     import metatensor
     from itertools import product
     from ase.io import read
+    from ase import Atoms
 
     import numpy as np
     from metatensor import (
@@ -67,38 +66,126 @@ This example demonstrates:
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 41-43
 
-This is a section header -- Read Ellipsoidal Frames 
----------------------------------------------------
 
-.. GENERATED FROM PYTHON SOURCE LINES 43-66
+.. GENERATED FROM PYTHON SOURCE LINES 43-44
+
+Read the first two frames of ellipsoids.xyz, which represent coarse-grained benzene molecules.
+
+.. GENERATED FROM PYTHON SOURCE LINES 44-52
 
 .. code-block:: Python
 
 
-    ell_frames = read("ellipsoids.xyz", "0:2")
-    ell_frames_translation = read("ellipsoids.xyz", "0:2")
-    ell_frames_rotation = read("ellipsoids.xyz", "0:2")
+    frames = read("ellipsoids.xyz", "0:2")
+    frames_translation = read("ellipsoids.xyz", "0:2")
+    frames_rotation = read("ellipsoids.xyz", "0:2")
 
-    # This is to make sure the ell_frames list calls c_diameter[] rather than c_diameter and to update the diameters of ellipsoids to be 3,3, and 1.
-
-
-    def update_diameters_and_variablename(frames):
-        for frame in frames:
-            for i in range(1, 4):
-                old = f"c_diameter{i}"
-                new = f"c_diameter[{i}]"
-                if old in frame.arrays:
-                    frame.arrays[new] = frame.arrays[old]
-                frame.arrays[new] = np.ones(len(frame)) * (3.0 if i < 3 else 1.0)
+    print(f"{len(frames)=}")   # a list of atoms objects
+    print(f"{frames[0].arrays=}")
 
 
-    update_diameters_and_variablename(ell_frames)
-    update_diameters_and_variablename(ell_frames_translation)
-    update_diameters_and_variablename(ell_frames_rotation)
-    print("Hello, world!")
-    plt.plot(np.sin(np.linspace(0, 2*np.pi)))
+
+
+
+.. rst-class:: sphx-glr-script-out
+
+ .. code-block:: none
+
+    len(frames)=2
+    frames[0].arrays={'numbers': array([0, 0]), 'positions': array([[-0.        , -0.        ,  3.27355258],
+           [ 2.86203436,  4.88789961,  6.73143792]]), 'c_q': array([[ 0.15965019,  0.67170996, -0.07507814,  0.71950039],
+           [-0.213207  , -0.03290243,  0.26500539,  0.93980442]])}
+
+
+
+
+.. GENERATED FROM PYTHON SOURCE LINES 53-56
+
+In this case, the xyz file did not store ellipsoid dimension information. 
+
+We will add this information here.
+
+.. GENERATED FROM PYTHON SOURCE LINES 56-65
+
+.. code-block:: Python
+
+
+    for frame in frames:
+        frame.arrays["c_diameter[1]"] = np.ones(len(frame)) * 3.
+        frame.arrays["c_diameter[2]"] = np.ones(len(frame)) * 3.
+        frame.arrays["c_diameter[3]"] = np.ones(len(frame)) * 1.
+
+    print(f"{frames[0].arrays=}")
+    print(f"{frames[1].arrays=}")
+
+
+
+
+
+.. rst-class:: sphx-glr-script-out
+
+ .. code-block:: none
+
+    frames[0].arrays={'numbers': array([0, 0]), 'positions': array([[-0.        , -0.        ,  3.27355258],
+           [ 2.86203436,  4.88789961,  6.73143792]]), 'c_q': array([[ 0.15965019,  0.67170996, -0.07507814,  0.71950039],
+           [-0.213207  , -0.03290243,  0.26500539,  0.93980442]]), 'c_diameter[1]': array([3., 3.]), 'c_diameter[2]': array([3., 3.]), 'c_diameter[3]': array([1., 1.])}
+    frames[1].arrays={'numbers': array([0]), 'positions': array([[1.05715855, 3.61232694, 6.89484241]]), 'c_q': array([[ 0.79385889,  0.57747976, -0.17079529,  0.08446388]]), 'c_diameter[1]': array([3.]), 'c_diameter[2]': array([3.]), 'c_diameter[3]': array([1.])}
+
+
+
+
+.. GENERATED FROM PYTHON SOURCE LINES 66-67
+
+Specify the hypers to create AniSOAP vector.
+
+.. GENERATED FROM PYTHON SOURCE LINES 67-84
+
+.. code-block:: Python
+
+
+    lmax = 5
+    nmax = 3
+
+    AniSOAP_HYPERS = {
+        "max_angular": lmax,
+        "max_radial": nmax,
+        "radial_basis_name": "gto",
+        "rotation_type": "quaternion",
+        "rotation_key": "c_q",
+        "cutoff_radius": 7.0,
+        "radial_gaussian_width": 1.5,
+        "basis_rcond": 1e-8,
+        "basis_tol": 1e-4,
+    }
+    calculator = EllipsoidalDensityProjection(**AniSOAP_HYPERS)
+
+
+
+
+
+.. rst-class:: sphx-glr-script-out
+
+ .. code-block:: none
+
+    /Users/alin62/Documents/Research/anisoap/anisoap/representations/ellipsoidal_density_projection.py:554: UserWarning: In quaternion mode, quaternions are assumed to be in (w,x,y,z) format.
+      warnings.warn(
+
+
+
+
+.. GENERATED FROM PYTHON SOURCE LINES 85-86
+
+Create the AniSOAP vector (i.e. the power spectrum).
+
+.. GENERATED FROM PYTHON SOURCE LINES 86-90
+
+.. code-block:: Python
+
+    power_spectrum = calculator.power_spectrum(frames)
+    plt.plot(power_spectrum.T)
+    plt.show()
+
 
 
 
@@ -112,16 +199,283 @@ This is a section header -- Read Ellipsoidal Frames
 
  .. code-block:: none
 
-    Hello, world!
+    Computing neighborlist:   0%|          | 0/2 [00:00<?, ?it/s]    Computing neighborlist: 100%|██████████| 2/2 [00:00<00:00, 540.82it/s]
+    Iterating samples for (0, 0):   0%|          | 0/33 [00:00<?, ?it/s]                                                                        Accruing lmax:   0%|          | 0/6 [00:00<?, ?it/s]                                                        Iterating tensor block keys:   0%|          | 0/6 [00:00<?, ?it/s]
+    Iterating neighbor types:   0%|          | 0/1 [00:00<?, ?it/s]
 
-    [<matplotlib.lines.Line2D object at 0x160822320>]
+    Finding matching block samples:   0%|          | 0/4 [00:00<?, ?it/s]
+
+                                                                         
+                                                                   
+    Contracting features:   0%|          | 0/1 [00:00<?, ?it/s]
+                                                               
+    Iterating neighbor types:   0%|          | 0/1 [00:00<?, ?it/s]
+
+    Finding matching block samples:   0%|          | 0/4 [00:00<?, ?it/s]
+
+                                                                         
+                                                                   
+    Contracting features:   0%|          | 0/1 [00:00<?, ?it/s]
+                                                               
+    Iterating neighbor types:   0%|          | 0/1 [00:00<?, ?it/s]
+
+    Finding matching block samples:   0%|          | 0/4 [00:00<?, ?it/s]
+
+                                                                         
+                                                                   
+    Contracting features:   0%|          | 0/1 [00:00<?, ?it/s]
+                                                               
+    Iterating neighbor types:   0%|          | 0/1 [00:00<?, ?it/s]
+
+    Finding matching block samples:   0%|          | 0/4 [00:00<?, ?it/s]
+
+                                                                         
+                                                                   
+    Contracting features:   0%|          | 0/1 [00:00<?, ?it/s]
+                                                               
+    Iterating neighbor types:   0%|          | 0/1 [00:00<?, ?it/s]
+
+    Finding matching block samples:   0%|          | 0/4 [00:00<?, ?it/s]
+
+                                                                         
+                                                                   
+    Contracting features:   0%|          | 0/1 [00:00<?, ?it/s]
+                                                               
+    Iterating neighbor types:   0%|          | 0/1 [00:00<?, ?it/s]
+
+    Finding matching block samples:   0%|          | 0/4 [00:00<?, ?it/s]
+
+                                                                         
+                                                                   
+    Contracting features:   0%|          | 0/1 [00:00<?, ?it/s]
+                                                                   Iterating tensor block keys: 100%|██████████| 6/6 [00:00<00:00, 1393.15it/s]
 
 
+
+
+.. GENERATED FROM PYTHON SOURCE LINES 91-94
+
+Here we will demonstrate translation invariance.
+
+Translation vector is used to demonstrate the power spectrum of ellipsoidal representations are invariant of translation in positions.
+
+.. GENERATED FROM PYTHON SOURCE LINES 94-102
+
+.. code-block:: Python
+
+    print("Old Positions:", frames[0].get_positions(), frames[1].get_positions())
+    translation_vector = np.array([2.0, 2.0, 2.0])
+    for frame in frames:
+        frame.set_positions(frame.get_positions() + translation_vector)
+    print("New Positions:", frames[0].get_positions(), frames[1].get_positions())
+    power_spectrum_translated = calculator.power_spectrum(frames)
+    print(f"{np.allclose(power_spectrum, power_spectrum_translated)=}")
+
+
+
+
+
+.. rst-class:: sphx-glr-script-out
+
+ .. code-block:: none
+
+    Old Positions: [[-0.         -0.          3.27355258]
+     [ 2.86203436  4.88789961  6.73143792]] [[1.05715855 3.61232694 6.89484241]]
+    New Positions: [[2.         2.         5.27355258]
+     [4.86203436 6.88789961 8.73143792]] [[3.05715855 5.61232694 8.89484241]]
+    Computing neighborlist:   0%|          | 0/2 [00:00<?, ?it/s]    Computing neighborlist: 100%|██████████| 2/2 [00:00<00:00, 12905.55it/s]
+    Iterating samples for (0, 0):   0%|          | 0/33 [00:00<?, ?it/s]                                                                        Accruing lmax:   0%|          | 0/6 [00:00<?, ?it/s]                                                        Iterating tensor block keys:   0%|          | 0/6 [00:00<?, ?it/s]
+    Iterating neighbor types:   0%|          | 0/1 [00:00<?, ?it/s]
+
+    Finding matching block samples:   0%|          | 0/4 [00:00<?, ?it/s]
+
+                                                                         
+                                                                   
+    Contracting features:   0%|          | 0/1 [00:00<?, ?it/s]
+                                                               
+    Iterating neighbor types:   0%|          | 0/1 [00:00<?, ?it/s]
+
+    Finding matching block samples:   0%|          | 0/4 [00:00<?, ?it/s]
+
+                                                                         
+                                                                   
+    Contracting features:   0%|          | 0/1 [00:00<?, ?it/s]
+                                                               
+    Iterating neighbor types:   0%|          | 0/1 [00:00<?, ?it/s]
+
+    Finding matching block samples:   0%|          | 0/4 [00:00<?, ?it/s]
+
+                                                                         
+                                                                   
+    Contracting features:   0%|          | 0/1 [00:00<?, ?it/s]
+                                                               
+    Iterating neighbor types:   0%|          | 0/1 [00:00<?, ?it/s]
+
+    Finding matching block samples:   0%|          | 0/4 [00:00<?, ?it/s]
+
+                                                                         
+                                                                   
+    Contracting features:   0%|          | 0/1 [00:00<?, ?it/s]
+                                                               
+    Iterating neighbor types:   0%|          | 0/1 [00:00<?, ?it/s]
+
+    Finding matching block samples:   0%|          | 0/4 [00:00<?, ?it/s]
+
+                                                                         
+                                                                   
+    Contracting features:   0%|          | 0/1 [00:00<?, ?it/s]
+                                                               
+    Iterating neighbor types:   0%|          | 0/1 [00:00<?, ?it/s]
+
+    Finding matching block samples:   0%|          | 0/4 [00:00<?, ?it/s]
+
+                                                                         
+                                                                   
+    Contracting features:   0%|          | 0/1 [00:00<?, ?it/s]
+                                                                   Iterating tensor block keys: 100%|██████████| 6/6 [00:00<00:00, 1454.59it/s]
+    np.allclose(power_spectrum, power_spectrum_translated)=True
+
+
+
+
+.. GENERATED FROM PYTHON SOURCE LINES 103-104
+
+Here, we demonstrate rotational invariance, rotating all ellipsoids by the same amount.
+
+.. GENERATED FROM PYTHON SOURCE LINES 104-118
+
+.. code-block:: Python
+
+    print("Old Orientations:", frames[0].arrays["c_q"], frames[1].arrays["c_q"])
+
+    quaternion = [1, 2, 0, -3]   # random rotation
+    q_rotation = R.from_quat(quaternion, scalar_first=True)   
+    for frame in frames:
+        frame.arrays["c_q"] = R.as_quat(
+            q_rotation * R.from_quat(frame.arrays["c_q"], scalar_first=True),
+            scalar_first=True,
+        )
+    print("New Orientations:", frames[0].arrays["c_q"], frames[1].arrays["c_q"])
+
+    power_spectrum_rotation = calculator.power_spectrum(frames, AniSOAP_HYPERS)
+    print(f"{np.allclose(power_spectrum, power_spectrum_rotation, rtol=1e-2, atol=1e-2)=}")
+
+
+
+
+
+.. rst-class:: sphx-glr-script-out
+
+ .. code-block:: none
+
+    Old Orientations: [[ 0.15965019  0.67170996 -0.07507814  0.71950039]
+     [-0.213207   -0.03290243  0.26500539  0.93980442]] [[ 0.79385889  0.57747976 -0.17079529  0.08446388]]
+    New Orientations: [[ 0.26050794  0.20466222 -0.94322073  0.02415869]
+     [ 0.71412501  0.08971953 -0.40514029  0.56377054]] [[-0.02878644  0.4417325  -0.55380868 -0.70522314]]
+    Computing neighborlist:   0%|          | 0/2 [00:00<?, ?it/s]    Computing neighborlist: 100%|██████████| 2/2 [00:00<00:00, 16946.68it/s]
+    Iterating samples for (0, 0):   0%|          | 0/33 [00:00<?, ?it/s]                                                                        Accruing lmax:   0%|          | 0/6 [00:00<?, ?it/s]                                                        Iterating tensor block keys:   0%|          | 0/6 [00:00<?, ?it/s]
+    Iterating neighbor types:   0%|          | 0/1 [00:00<?, ?it/s]
+
+    Finding matching block samples:   0%|          | 0/4 [00:00<?, ?it/s]
+
+                                                                         
+                                                                   
+    Contracting features:   0%|          | 0/1 [00:00<?, ?it/s]
+                                                               
+    Iterating neighbor types:   0%|          | 0/1 [00:00<?, ?it/s]
+
+    Finding matching block samples:   0%|          | 0/4 [00:00<?, ?it/s]
+
+                                                                         
+                                                                   
+    Contracting features:   0%|          | 0/1 [00:00<?, ?it/s]
+                                                               
+    Iterating neighbor types:   0%|          | 0/1 [00:00<?, ?it/s]
+
+    Finding matching block samples:   0%|          | 0/4 [00:00<?, ?it/s]
+
+                                                                         
+                                                                   
+    Contracting features:   0%|          | 0/1 [00:00<?, ?it/s]
+                                                               
+    Iterating neighbor types:   0%|          | 0/1 [00:00<?, ?it/s]
+
+    Finding matching block samples:   0%|          | 0/4 [00:00<?, ?it/s]
+
+                                                                         
+                                                                   
+    Contracting features:   0%|          | 0/1 [00:00<?, ?it/s]
+                                                               
+    Iterating neighbor types:   0%|          | 0/1 [00:00<?, ?it/s]
+
+    Finding matching block samples:   0%|          | 0/4 [00:00<?, ?it/s]
+
+                                                                         
+                                                                   
+    Contracting features:   0%|          | 0/1 [00:00<?, ?it/s]
+                                                               
+    Iterating neighbor types:   0%|          | 0/1 [00:00<?, ?it/s]
+
+    Finding matching block samples:   0%|          | 0/4 [00:00<?, ?it/s]
+
+                                                                         
+                                                                   
+    Contracting features:   0%|          | 0/1 [00:00<?, ?it/s]
+                                                                   Iterating tensor block keys: 100%|██████████| 6/6 [00:00<00:00, 1547.90it/s]
+    np.allclose(power_spectrum, power_spectrum_rotation, rtol=1e-2, atol=1e-2)=True
+
+
+
+
+.. GENERATED FROM PYTHON SOURCE LINES 119-126
+
+Here's how to create ellipsoidal frames. In this example:
+
+* Each frame contains 2-3 ellipsoids, with periodic boundary conditions.
+* The quaternions(``c_q``) and particle dimensions(``c_diameter[i]``) cannot be passed into the Atoms constructor.
+* They are attached as data in the Atoms.arrays dictionary.
+* I just made up arbitrary postions and orientations. Quaternions should be in (w,x,y,z) format.
+* In reality you would choose positions and orientations based on some underlying atomistic model.
+
+.. GENERATED FROM PYTHON SOURCE LINES 126-146
+
+.. code-block:: Python
+
+    frame1 = Atoms(symbols='XX', 
+                   positions=np.array([[0., 0., 0.], [2.5, 3., 2.]]),
+                   cell=np.array([5., 5., 5.,]), 
+                   pbc=True)
+    frame1.arrays["c_q"] = np.array([[0., 1., 0., 0.], [0., 0., 1., 0]])
+    frame1.arrays["c_diameter[1]"] = np.array([3., 3.])
+    frame1.arrays["c_diameter[2]"] = np.array([3., 3.])
+    frame1.arrays["c_diameter[3]"] = np.array([1., 1.])
+
+    frame2 = Atoms(symbols='XXX', 
+                   positions = np.array([[0., 1., 2.], [2., 3., 4.], [5., 5., 1.]]),
+                   cell=[10., 10., 10.,], 
+                   pbc=True)
+    frame2.arrays["c_q"] = np.array([[0., 1., 0., 0.], [0., 0., 1., 0], [0., 0., 0.707, 0.707]])
+    frame2.arrays["c_diameter[1]"] = np.array([3., 3., 3.])
+    frame2.arrays["c_diameter[2]"] = np.array([3., 3., 3.])
+    frame2.arrays["c_diameter[3]"] = np.array([1., 1., 1.])
+
+    frames = [frame1, frame2]
+
+
+
+
+
+
+
+
+.. GENERATED FROM PYTHON SOURCE LINES 147-147
+
+You can then use ``ase.io.write()``/``ase.io.read()`` to save/load these frames for later use.
 
 
 .. rst-class:: sphx-glr-timing
 
-   **Total running time of the script:** (0 minutes 0.092 seconds)
+   **Total running time of the script:** (0 minutes 0.176 seconds)
 
 
 .. _sphx_glr_download_auto_examples_example01_invariances_of_powerspectrum_test.py:
