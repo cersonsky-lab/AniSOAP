@@ -85,7 +85,7 @@ Section 1: print hello
  .. code-block:: none
 
 
-    [<matplotlib.lines.Line2D object at 0x10e5b1de0>]
+    [<matplotlib.lines.Line2D object at 0x15e1c85b0>]
 
 
 

@@ -1,5 +1,273 @@
 {
- "ell_frames": [
+ "AniSOAP_HYPERS": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "dict"
+  }
+ ],
+ "Atoms": [
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "ase.atoms",
+   "module_short": "ase",
+   "name": "Atoms"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "ase",
+   "module_short": "ase",
+   "name": "Atoms"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "ase",
+   "module_short": "ase",
+   "name": "Atoms"
+  }
+ ],
+ "EllipsoidalDensityProjection": [
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "anisoap.representations.ellipsoidal_density_projection",
+   "module_short": "anisoap.representations",
+   "name": "EllipsoidalDensityProjection"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "anisoap.representations",
+   "module_short": "anisoap.representations",
+   "name": "EllipsoidalDensityProjection"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "anisoap",
+   "module_short": "anisoap",
+   "name": "EllipsoidalDensityProjection"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "anisoap.representations.ellipsoidal_density_projection",
+   "module_short": "anisoap.representations",
+   "name": "EllipsoidalDensityProjection"
+  }
+ ],
+ "R.as_quat": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "_cython_3_0_11",
+   "module_short": "_cython_3_0_11",
+   "name": "cython_function_or_method"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "scipy.spatial.transform.Rotation",
+   "module_short": "scipy.spatial.transform.Rotation",
+   "name": "as_quat"
+  }
+ ],
+ "R.from_quat": [
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "scipy.spatial.transform._rotation",
+   "module_short": "scipy.spatial.transform",
+   "name": "Rotation.from_quat"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "scipy.spatial.transform",
+   "module_short": "scipy.spatial.transform",
+   "name": "Rotation.from_quat"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "scipy.spatial",
+   "module_short": "scipy.spatial",
+   "name": "Rotation.from_quat"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "scipy",
+   "module_short": "scipy",
+   "name": "Rotation.from_quat"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "scipy.spatial.transform.Rotation",
+   "module_short": "scipy.spatial.transform.Rotation",
+   "name": "from_quat"
+  }
+ ],
+ "calculator": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "anisoap.representations.ellipsoidal_density_projection",
+   "module_short": "anisoap.representations",
+   "name": "EllipsoidalDensityProjection"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "anisoap.representations",
+   "module_short": "anisoap.representations",
+   "name": "EllipsoidalDensityProjection"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "anisoap",
+   "module_short": "anisoap",
+   "name": "EllipsoidalDensityProjection"
+  }
+ ],
+ "calculator.power_spectrum": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "anisoap.representations.ellipsoidal_density_projection",
+   "module_short": "anisoap.representations",
+   "name": "EllipsoidalDensityProjection.power_spectrum"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "anisoap.representations",
+   "module_short": "anisoap.representations",
+   "name": "EllipsoidalDensityProjection.power_spectrum"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "anisoap",
+   "module_short": "anisoap",
+   "name": "EllipsoidalDensityProjection.power_spectrum"
+  }
+ ],
+ "frame": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "ase.atoms",
+   "module_short": "ase",
+   "name": "Atoms"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "ase",
+   "module_short": "ase",
+   "name": "Atoms"
+  }
+ ],
+ "frame.arrays": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "dict"
+  }
+ ],
+ "frame.get_positions": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "ase.atoms",
+   "module_short": "ase",
+   "name": "Atoms.get_positions"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "ase",
+   "module_short": "ase",
+   "name": "Atoms.get_positions"
+  }
+ ],
+ "frame.set_positions": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "ase.atoms",
+   "module_short": "ase",
+   "name": "Atoms.set_positions"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "ase",
+   "module_short": "ase",
+   "name": "Atoms.set_positions"
+  }
+ ],
+ "frame1": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "ase.atoms",
+   "module_short": "ase",
+   "name": "Atoms"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "ase",
+   "module_short": "ase",
+   "name": "Atoms"
+  }
+ ],
+ "frame1.arrays": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "dict"
+  }
+ ],
+ "frame2": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "ase.atoms",
+   "module_short": "ase",
+   "name": "Atoms"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "ase",
+   "module_short": "ase",
+   "name": "Atoms"
+  }
+ ],
+ "frame2.arrays": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "dict"
+  }
+ ],
+ "frames": [
   {
    "is_class": false,
    "is_explicit": false,
@@ -8,7 +276,7 @@
    "name": "list"
   }
  ],
- "ell_frames_rotation": [
+ "frames_rotation": [
   {
    "is_class": false,
    "is_explicit": false,
@@ -17,7 +285,7 @@
    "name": "list"
   }
  ],
- "ell_frames_translation": [
+ "frames_translation": [
   {
    "is_class": false,
    "is_explicit": false,
@@ -26,7 +294,25 @@
    "name": "list"
   }
  ],
- "np.linspace": [
+ "lmax": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "int"
+  }
+ ],
+ "nmax": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "int"
+  }
+ ],
+ "np.allclose": [
   {
    "is_class": false,
    "is_explicit": false,
@@ -39,7 +325,23 @@
    "is_explicit": false,
    "module": "numpy",
    "module_short": "numpy",
-   "name": "linspace"
+   "name": "allclose"
+  }
+ ],
+ "np.array": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "builtin_function_or_method"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "array"
   }
  ],
  "np.ones": [
@@ -58,38 +360,6 @@
    "name": "ones"
   }
  ],
- "np.pi": [
-  {
-   "is_class": false,
-   "is_explicit": false,
-   "module": "builtins",
-   "module_short": "builtins",
-   "name": "float"
-  },
-  {
-   "is_class": false,
-   "is_explicit": false,
-   "module": "numpy",
-   "module_short": "numpy",
-   "name": "pi"
-  }
- ],
- "np.sin": [
-  {
-   "is_class": false,
-   "is_explicit": false,
-   "module": "numpy",
-   "module_short": "numpy",
-   "name": "ufunc"
-  },
-  {
-   "is_class": false,
-   "is_explicit": false,
-   "module": "numpy",
-   "module_short": "numpy",
-   "name": "sin"
-  }
- ],
  "plt.plot": [
   {
    "is_class": false,
@@ -104,6 +374,97 @@
    "module": "matplotlib.pyplot",
    "module_short": "matplotlib.pyplot",
    "name": "plot"
+  }
+ ],
+ "plt.show": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "function"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.pyplot",
+   "module_short": "matplotlib.pyplot",
+   "name": "show"
+  }
+ ],
+ "power_spectrum": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "ndarray"
+  }
+ ],
+ "power_spectrum.T": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "ndarray"
+  }
+ ],
+ "power_spectrum_rotation": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "ndarray"
+  }
+ ],
+ "power_spectrum_translated": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "ndarray"
+  }
+ ],
+ "q_rotation": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "scipy.spatial.transform._rotation",
+   "module_short": "scipy.spatial.transform",
+   "name": "Rotation"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "scipy.spatial.transform",
+   "module_short": "scipy.spatial.transform",
+   "name": "Rotation"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "scipy.spatial",
+   "module_short": "scipy.spatial",
+   "name": "Rotation"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "scipy",
+   "module_short": "scipy",
+   "name": "Rotation"
+  }
+ ],
+ "quaternion": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "list"
   }
  ],
  "read": [
@@ -122,13 +483,13 @@
    "name": "read"
   }
  ],
- "update_diameters_and_variablename": [
+ "translation_vector": [
   {
    "is_class": false,
    "is_explicit": false,
-   "module": "builtins",
-   "module_short": "builtins",
-   "name": "function"
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "ndarray"
   }
  ]
 }
