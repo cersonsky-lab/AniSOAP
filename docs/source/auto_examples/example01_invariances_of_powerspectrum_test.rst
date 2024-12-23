@@ -22,37 +22,24 @@ Example 1: Creating AniSOAP vectors from ellipsoidal frames.
 ============================================================
 This example demonstrates:
 
-1. How to read ellipsoidal frames from ``.xyz`` file
-2. How to convert ellipsoidal frames to AniSOAP vectors
-3. How to create ellipsoidal frames with ``ase.Atoms``
+1. How to read ellipsoidal frames from ``.xyz`` file.
+2. How to convert ellipsoidal frames to AniSOAP vectors.
+3. How to create ellipsoidal frames with ``ase.Atoms``.
 
-.. GENERATED FROM PYTHON SOURCE LINES 11-42
+.. GENERATED FROM PYTHON SOURCE LINES 11-29
 
 .. code-block:: Python
 
 
-    import sys
-    import warnings
-    import metatensor
-    from itertools import product
     from ase.io import read
     from ase import Atoms
 
     import numpy as np
-    from metatensor import (
-        Labels,
-        TensorBlock,
-        TensorMap,
-    )
 
     from scipy.spatial.transform import Rotation as R
     from tqdm.auto import tqdm
     from skmatter.preprocessing import StandardFlexibleScaler
 
-    from anisoap.representations.radial_basis import (
-        GTORadialBasis,
-        MonomialBasis,
-    )
     from anisoap.representations.ellipsoidal_density_projection import (
         EllipsoidalDensityProjection,
     )
@@ -68,11 +55,11 @@ This example demonstrates:
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 43-44
+.. GENERATED FROM PYTHON SOURCE LINES 30-31
 
 Read the first two frames of ellipsoids.xyz, which represent coarse-grained benzene molecules.
 
-.. GENERATED FROM PYTHON SOURCE LINES 44-52
+.. GENERATED FROM PYTHON SOURCE LINES 31-39
 
 .. code-block:: Python
 
@@ -100,13 +87,13 @@ Read the first two frames of ellipsoids.xyz, which represent coarse-grained benz
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 53-56
+.. GENERATED FROM PYTHON SOURCE LINES 40-43
 
 In this case, the xyz file did not store ellipsoid dimension information. 
 
 We will add this information here.
 
-.. GENERATED FROM PYTHON SOURCE LINES 56-65
+.. GENERATED FROM PYTHON SOURCE LINES 43-52
 
 .. code-block:: Python
 
@@ -135,11 +122,11 @@ We will add this information here.
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 66-67
+.. GENERATED FROM PYTHON SOURCE LINES 53-54
 
 Specify the hypers to create AniSOAP vector.
 
-.. GENERATED FROM PYTHON SOURCE LINES 67-84
+.. GENERATED FROM PYTHON SOURCE LINES 54-71
 
 .. code-block:: Python
 
@@ -174,11 +161,11 @@ Specify the hypers to create AniSOAP vector.
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 85-86
+.. GENERATED FROM PYTHON SOURCE LINES 72-73
 
 Create the AniSOAP vector (i.e. the power spectrum).
 
-.. GENERATED FROM PYTHON SOURCE LINES 86-91
+.. GENERATED FROM PYTHON SOURCE LINES 73-78
 
 .. code-block:: Python
 
@@ -199,13 +186,13 @@ Create the AniSOAP vector (i.e. the power spectrum).
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 92-95
+.. GENERATED FROM PYTHON SOURCE LINES 79-82
 
 Here we will demonstrate translation invariance.
 
 Translation vector is used to demonstrate the power spectrum of ellipsoidal representations are invariant of translation in positions.
 
-.. GENERATED FROM PYTHON SOURCE LINES 95-103
+.. GENERATED FROM PYTHON SOURCE LINES 82-90
 
 .. code-block:: Python
 
@@ -234,11 +221,11 @@ Translation vector is used to demonstrate the power spectrum of ellipsoidal repr
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 104-105
+.. GENERATED FROM PYTHON SOURCE LINES 91-92
 
 Here, we demonstrate rotational invariance, rotating all ellipsoids by the same amount.
 
-.. GENERATED FROM PYTHON SOURCE LINES 105-119
+.. GENERATED FROM PYTHON SOURCE LINES 92-106
 
 .. code-block:: Python
 
@@ -273,7 +260,7 @@ Here, we demonstrate rotational invariance, rotating all ellipsoids by the same 
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 120-127
+.. GENERATED FROM PYTHON SOURCE LINES 107-114
 
 Here's how to create ellipsoidal frames. In this example:
 
@@ -283,7 +270,7 @@ Here's how to create ellipsoidal frames. In this example:
 * I just made up arbitrary postions and orientations. Quaternions should be in (w,x,y,z) format.
 * In reality you would choose positions and orientations based on some underlying atomistic model.
 
-.. GENERATED FROM PYTHON SOURCE LINES 127-147
+.. GENERATED FROM PYTHON SOURCE LINES 114-134
 
 .. code-block:: Python
 
@@ -314,14 +301,14 @@ Here's how to create ellipsoidal frames. In this example:
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 148-148
+.. GENERATED FROM PYTHON SOURCE LINES 135-135
 
 You can then use ``ase.io.write()``/``ase.io.read()`` to save/load these frames for later use.
 
 
 .. rst-class:: sphx-glr-timing
 
-   **Total running time of the script:** (0 minutes 0.169 seconds)
+   **Total running time of the script:** (0 minutes 0.173 seconds)
 
 
 .. _sphx_glr_download_auto_examples_example01_invariances_of_powerspectrum_test.py:

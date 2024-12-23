@@ -40,7 +40,8 @@ plt.show()
 
 # %% 
 # Computing the AniSOAP Vectors
-# The ideal semiaxes for the ellipsoid are (4, 4, 0.5)
+# 
+# * The ideal semiaxes for the ellipsoid are (4, 4, 0.5)
 
 a1, a2, a3 = 4., 4., 0.5
 for frame in frames:
@@ -63,11 +64,13 @@ AniSOAP_HYPERS = {
 
 calculator = EllipsoidalDensityProjection(**AniSOAP_HYPERS)
 
-x_anisoap_raw = calculator.power_spectrum(frames, show_progress=True, rust_moments=True)
+x_anisoap_raw = calculator.power_spectrum(frames)
 
 # %%
 # Here, we do standard preparation of the data for machine learning.
-# Perform a train test split and standardization.
+# 
+# * Perform a train test split and standardization.
+# * Note: Warnings below are from StandardFlexibleScaler.
 
 from sklearn.model_selection import train_test_split
 
@@ -89,50 +92,24 @@ from sklearn.linear_model import RidgeCV
 
 lr = RidgeCV(cv=5, alphas=np.logspace(-8, 2, 20), fit_intercept=True)
 lr.fit(x_train, y_train)
+print(f"{lr.alpha_=:.3f}")
 
-#%%
-print(i_train)
-print(x_train.shape)
-print(x_test.shape)
-print(y_train.shape)
-print(y_test.shape)
-print(lr.alpha_)
 # %%
 # Model performance and Parity Plot
+# sphinx_gallery_thumbnail_number = 2
+plt.figure(figsize=(8, 8))
+plt.scatter(y_train_scaler.inverse_transform(y_train), 
+            y_train_scaler.inverse_transform(lr.predict(x_train).reshape(-1,1)),
+            alpha=0.5)
+
+plt.scatter(y_test_scaler.inverse_transform(y_test), 
+            y_test_scaler.inverse_transform(lr.predict(x_test).reshape(-1,1)),
+            alpha=0.5)
+
+plt.plot([np.min(energies), np.max(energies)], [np.min(energies), np.max(energies)], "r--")
+plt.xlabel("Per-atom Energies (eV)")
+plt.ylabel("AniSOAP Predicted Per-atom Energies (eV)")
+plt.legend(["Train", "Test", "y=x"])
+
 print(f"Train R^2: {lr.score(x_train, y_train):.3f}")
 print(f"Test R^2: {lr.score(x_test, y_test):.3f}")
-
-
-# x_train, x_test = x_anisoap[i_train], x_anisoap[i_test]
-# y_train, y_test = y[i_train], y[i_test]
-
-# # Standardize the AniSOAP vector and the energies
-# x_anisoap_scalar = StandardFlexibleScaler(column_wise=False).fit(x_anisoap_raw)
-# x_anisoap = x_anisoap_scalar.transform(x_anisoap_raw)
-
-# # First, reshape energies to be a column vector, then standardize.
-# y_scalar = StandardFlexibleScaler(column_wise=True).fit(energies)
-# y = y_scalar.transform(energies)
-
-#%%
-# We can use the standardized ``x_anisoap`` to as input into a regularized 
-# linear regression model
-# from sklearn.linear_model import RidgeCV
-# from sklearn.model_selection import train_test_split
-
-# i_train, i_test = train_test_split(np.arange(len(x_anisoap)), train_size=0.9)
-
-# x_train, x_test = x_anisoap[i_train], x_anisoap[i_test]
-# y_train, y_test = y[i_train], y[i_test]
-
-# lr = RidgeCV(cv=5, alphas=np.logspace(-8, 2, 20), fit_intercept=False)
-# lr.fit(x_train, y_train)
-
-#%%
-# # Model performance and Parity Plot
-# print(f"Train R^2: {lr.score(x_train, y_train):.3f}")
-# print(f"Test R^2: {lr.score(x_test, y_test):.3f}")
-
-
-# %% 
-# Now, we compute the all-atom SOAP vectors 

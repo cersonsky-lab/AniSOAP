@@ -4,33 +4,20 @@ Example 1: Creating AniSOAP vectors from ellipsoidal frames.
 ============================================================
 This example demonstrates:
 
-1. How to read ellipsoidal frames from ``.xyz`` file
-2. How to convert ellipsoidal frames to AniSOAP vectors
-3. How to create ellipsoidal frames with ``ase.Atoms``
+1. How to read ellipsoidal frames from ``.xyz`` file.
+2. How to convert ellipsoidal frames to AniSOAP vectors.
+3. How to create ellipsoidal frames with ``ase.Atoms``.
 """
 
-import sys
-import warnings
-import metatensor
-from itertools import product
 from ase.io import read
 from ase import Atoms
 
 import numpy as np
-from metatensor import (
-    Labels,
-    TensorBlock,
-    TensorMap,
-)
 
 from scipy.spatial.transform import Rotation as R
 from tqdm.auto import tqdm
 from skmatter.preprocessing import StandardFlexibleScaler
 
-from anisoap.representations.radial_basis import (
-    GTORadialBasis,
-    MonomialBasis,
-)
 from anisoap.representations.ellipsoidal_density_projection import (
     EllipsoidalDensityProjection,
 )

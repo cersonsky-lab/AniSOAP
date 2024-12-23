@@ -191,7 +191,7 @@ be used.</p></li>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="anisoap.representations.ellipsoidal_density_projection.EllipsoidalDensityProjection.power_spectrum">
-<span class="sig-name descname"><span class="pre">power_spectrum</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">frames</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sum_over_samples</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_progress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#anisoap.representations.ellipsoidal_density_projection.EllipsoidalDensityProjection.power_spectrum" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">power_spectrum</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">frames</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mean_over_samples</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_progress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rust_moments</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#anisoap.representations.ellipsoidal_density_projection.EllipsoidalDensityProjection.power_spectrum" title="Link to this definition"></a></dt>
 <dd><p>Function to compute the power spectrum of AniSOAP</p>
 <p>computes the power spectrum of AniSOAP with the inputs of AniSOAP hyperparameters
 and ellipsoidal frames using ellipsoidal density projection. It checks if
@@ -203,7 +203,7 @@ Clebsch-Gordan coefficients for the angular component of the AniSOAP descriptors
 <li><p><strong>frames</strong> (<em>list</em>) – A list of ellipsoidal frames, where each frame contains attributes:
 ‘c_diameter[1]’, ‘c_diameter[2]’, ‘c_diameter[3]’, ‘c_q’, ‘positions’, and ‘numbers’.
 It only accepts c_q for the angular attribute of each frame.</p></li>
-<li><p><strong>sum_over_sample</strong> (<em>bool</em>) – A function that returns the sum of coefficients of the frames in the sample.</p></li>
+<li><p><strong>mean_over_samples</strong> (<em>bool</em>) – A function that returns the sum of coefficients of the frames in the sample.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
