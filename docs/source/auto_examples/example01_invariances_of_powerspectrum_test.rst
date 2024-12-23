@@ -22,9 +22,9 @@ Example 1: Creating AniSOAP vectors from ellipsoidal frames.
 ============================================================
 This example demonstrates:
 
-1. How to read ellipsoidal frame from xyz
+1. How to read ellipsoidal frames from ``.xyz`` file
 2. How to convert ellipsoidal frames to AniSOAP vectors
-3. How to create ellipsoidal frames
+3. How to create ellipsoidal frames with ``ase.Atoms``
 
 .. GENERATED FROM PYTHON SOURCE LINES 11-42
 
@@ -178,12 +178,13 @@ Specify the hypers to create AniSOAP vector.
 
 Create the AniSOAP vector (i.e. the power spectrum).
 
-.. GENERATED FROM PYTHON SOURCE LINES 86-90
+.. GENERATED FROM PYTHON SOURCE LINES 86-91
 
 .. code-block:: Python
 
     power_spectrum = calculator.power_spectrum(frames)
     plt.plot(power_spectrum.T)
+    plt.legend(["frame[0] power spectrum", "frame[1] power spectrum"])
     plt.show()
 
 
@@ -195,71 +196,16 @@ Create the AniSOAP vector (i.e. the power spectrum).
    :class: sphx-glr-single-img
 
 
-.. rst-class:: sphx-glr-script-out
-
- .. code-block:: none
-
-    Computing neighborlist:   0%|          | 0/2 [00:00<?, ?it/s]    Computing neighborlist: 100%|██████████| 2/2 [00:00<00:00, 540.82it/s]
-    Iterating samples for (0, 0):   0%|          | 0/33 [00:00<?, ?it/s]                                                                        Accruing lmax:   0%|          | 0/6 [00:00<?, ?it/s]                                                        Iterating tensor block keys:   0%|          | 0/6 [00:00<?, ?it/s]
-    Iterating neighbor types:   0%|          | 0/1 [00:00<?, ?it/s]
-
-    Finding matching block samples:   0%|          | 0/4 [00:00<?, ?it/s]
-
-                                                                         
-                                                                   
-    Contracting features:   0%|          | 0/1 [00:00<?, ?it/s]
-                                                               
-    Iterating neighbor types:   0%|          | 0/1 [00:00<?, ?it/s]
-
-    Finding matching block samples:   0%|          | 0/4 [00:00<?, ?it/s]
-
-                                                                         
-                                                                   
-    Contracting features:   0%|          | 0/1 [00:00<?, ?it/s]
-                                                               
-    Iterating neighbor types:   0%|          | 0/1 [00:00<?, ?it/s]
-
-    Finding matching block samples:   0%|          | 0/4 [00:00<?, ?it/s]
-
-                                                                         
-                                                                   
-    Contracting features:   0%|          | 0/1 [00:00<?, ?it/s]
-                                                               
-    Iterating neighbor types:   0%|          | 0/1 [00:00<?, ?it/s]
-
-    Finding matching block samples:   0%|          | 0/4 [00:00<?, ?it/s]
-
-                                                                         
-                                                                   
-    Contracting features:   0%|          | 0/1 [00:00<?, ?it/s]
-                                                               
-    Iterating neighbor types:   0%|          | 0/1 [00:00<?, ?it/s]
-
-    Finding matching block samples:   0%|          | 0/4 [00:00<?, ?it/s]
-
-                                                                         
-                                                                   
-    Contracting features:   0%|          | 0/1 [00:00<?, ?it/s]
-                                                               
-    Iterating neighbor types:   0%|          | 0/1 [00:00<?, ?it/s]
-
-    Finding matching block samples:   0%|          | 0/4 [00:00<?, ?it/s]
-
-                                                                         
-                                                                   
-    Contracting features:   0%|          | 0/1 [00:00<?, ?it/s]
-                                                                   Iterating tensor block keys: 100%|██████████| 6/6 [00:00<00:00, 1393.15it/s]
 
 
 
-
-.. GENERATED FROM PYTHON SOURCE LINES 91-94
+.. GENERATED FROM PYTHON SOURCE LINES 92-95
 
 Here we will demonstrate translation invariance.
 
 Translation vector is used to demonstrate the power spectrum of ellipsoidal representations are invariant of translation in positions.
 
-.. GENERATED FROM PYTHON SOURCE LINES 94-102
+.. GENERATED FROM PYTHON SOURCE LINES 95-103
 
 .. code-block:: Python
 
@@ -283,66 +229,16 @@ Translation vector is used to demonstrate the power spectrum of ellipsoidal repr
      [ 2.86203436  4.88789961  6.73143792]] [[1.05715855 3.61232694 6.89484241]]
     New Positions: [[2.         2.         5.27355258]
      [4.86203436 6.88789961 8.73143792]] [[3.05715855 5.61232694 8.89484241]]
-    Computing neighborlist:   0%|          | 0/2 [00:00<?, ?it/s]    Computing neighborlist: 100%|██████████| 2/2 [00:00<00:00, 12905.55it/s]
-    Iterating samples for (0, 0):   0%|          | 0/33 [00:00<?, ?it/s]                                                                        Accruing lmax:   0%|          | 0/6 [00:00<?, ?it/s]                                                        Iterating tensor block keys:   0%|          | 0/6 [00:00<?, ?it/s]
-    Iterating neighbor types:   0%|          | 0/1 [00:00<?, ?it/s]
-
-    Finding matching block samples:   0%|          | 0/4 [00:00<?, ?it/s]
-
-                                                                         
-                                                                   
-    Contracting features:   0%|          | 0/1 [00:00<?, ?it/s]
-                                                               
-    Iterating neighbor types:   0%|          | 0/1 [00:00<?, ?it/s]
-
-    Finding matching block samples:   0%|          | 0/4 [00:00<?, ?it/s]
-
-                                                                         
-                                                                   
-    Contracting features:   0%|          | 0/1 [00:00<?, ?it/s]
-                                                               
-    Iterating neighbor types:   0%|          | 0/1 [00:00<?, ?it/s]
-
-    Finding matching block samples:   0%|          | 0/4 [00:00<?, ?it/s]
-
-                                                                         
-                                                                   
-    Contracting features:   0%|          | 0/1 [00:00<?, ?it/s]
-                                                               
-    Iterating neighbor types:   0%|          | 0/1 [00:00<?, ?it/s]
-
-    Finding matching block samples:   0%|          | 0/4 [00:00<?, ?it/s]
-
-                                                                         
-                                                                   
-    Contracting features:   0%|          | 0/1 [00:00<?, ?it/s]
-                                                               
-    Iterating neighbor types:   0%|          | 0/1 [00:00<?, ?it/s]
-
-    Finding matching block samples:   0%|          | 0/4 [00:00<?, ?it/s]
-
-                                                                         
-                                                                   
-    Contracting features:   0%|          | 0/1 [00:00<?, ?it/s]
-                                                               
-    Iterating neighbor types:   0%|          | 0/1 [00:00<?, ?it/s]
-
-    Finding matching block samples:   0%|          | 0/4 [00:00<?, ?it/s]
-
-                                                                         
-                                                                   
-    Contracting features:   0%|          | 0/1 [00:00<?, ?it/s]
-                                                                   Iterating tensor block keys: 100%|██████████| 6/6 [00:00<00:00, 1454.59it/s]
     np.allclose(power_spectrum, power_spectrum_translated)=True
 
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 103-104
+.. GENERATED FROM PYTHON SOURCE LINES 104-105
 
 Here, we demonstrate rotational invariance, rotating all ellipsoids by the same amount.
 
-.. GENERATED FROM PYTHON SOURCE LINES 104-118
+.. GENERATED FROM PYTHON SOURCE LINES 105-119
 
 .. code-block:: Python
 
@@ -357,7 +253,7 @@ Here, we demonstrate rotational invariance, rotating all ellipsoids by the same 
         )
     print("New Orientations:", frames[0].arrays["c_q"], frames[1].arrays["c_q"])
 
-    power_spectrum_rotation = calculator.power_spectrum(frames, AniSOAP_HYPERS)
+    power_spectrum_rotation = calculator.power_spectrum(frames)
     print(f"{np.allclose(power_spectrum, power_spectrum_rotation, rtol=1e-2, atol=1e-2)=}")
 
 
@@ -372,62 +268,12 @@ Here, we demonstrate rotational invariance, rotating all ellipsoids by the same 
      [-0.213207   -0.03290243  0.26500539  0.93980442]] [[ 0.79385889  0.57747976 -0.17079529  0.08446388]]
     New Orientations: [[ 0.26050794  0.20466222 -0.94322073  0.02415869]
      [ 0.71412501  0.08971953 -0.40514029  0.56377054]] [[-0.02878644  0.4417325  -0.55380868 -0.70522314]]
-    Computing neighborlist:   0%|          | 0/2 [00:00<?, ?it/s]    Computing neighborlist: 100%|██████████| 2/2 [00:00<00:00, 16946.68it/s]
-    Iterating samples for (0, 0):   0%|          | 0/33 [00:00<?, ?it/s]                                                                        Accruing lmax:   0%|          | 0/6 [00:00<?, ?it/s]                                                        Iterating tensor block keys:   0%|          | 0/6 [00:00<?, ?it/s]
-    Iterating neighbor types:   0%|          | 0/1 [00:00<?, ?it/s]
-
-    Finding matching block samples:   0%|          | 0/4 [00:00<?, ?it/s]
-
-                                                                         
-                                                                   
-    Contracting features:   0%|          | 0/1 [00:00<?, ?it/s]
-                                                               
-    Iterating neighbor types:   0%|          | 0/1 [00:00<?, ?it/s]
-
-    Finding matching block samples:   0%|          | 0/4 [00:00<?, ?it/s]
-
-                                                                         
-                                                                   
-    Contracting features:   0%|          | 0/1 [00:00<?, ?it/s]
-                                                               
-    Iterating neighbor types:   0%|          | 0/1 [00:00<?, ?it/s]
-
-    Finding matching block samples:   0%|          | 0/4 [00:00<?, ?it/s]
-
-                                                                         
-                                                                   
-    Contracting features:   0%|          | 0/1 [00:00<?, ?it/s]
-                                                               
-    Iterating neighbor types:   0%|          | 0/1 [00:00<?, ?it/s]
-
-    Finding matching block samples:   0%|          | 0/4 [00:00<?, ?it/s]
-
-                                                                         
-                                                                   
-    Contracting features:   0%|          | 0/1 [00:00<?, ?it/s]
-                                                               
-    Iterating neighbor types:   0%|          | 0/1 [00:00<?, ?it/s]
-
-    Finding matching block samples:   0%|          | 0/4 [00:00<?, ?it/s]
-
-                                                                         
-                                                                   
-    Contracting features:   0%|          | 0/1 [00:00<?, ?it/s]
-                                                               
-    Iterating neighbor types:   0%|          | 0/1 [00:00<?, ?it/s]
-
-    Finding matching block samples:   0%|          | 0/4 [00:00<?, ?it/s]
-
-                                                                         
-                                                                   
-    Contracting features:   0%|          | 0/1 [00:00<?, ?it/s]
-                                                                   Iterating tensor block keys: 100%|██████████| 6/6 [00:00<00:00, 1547.90it/s]
     np.allclose(power_spectrum, power_spectrum_rotation, rtol=1e-2, atol=1e-2)=True
 
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 119-126
+.. GENERATED FROM PYTHON SOURCE LINES 120-127
 
 Here's how to create ellipsoidal frames. In this example:
 
@@ -437,7 +283,7 @@ Here's how to create ellipsoidal frames. In this example:
 * I just made up arbitrary postions and orientations. Quaternions should be in (w,x,y,z) format.
 * In reality you would choose positions and orientations based on some underlying atomistic model.
 
-.. GENERATED FROM PYTHON SOURCE LINES 126-146
+.. GENERATED FROM PYTHON SOURCE LINES 127-147
 
 .. code-block:: Python
 
@@ -468,14 +314,14 @@ Here's how to create ellipsoidal frames. In this example:
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 147-147
+.. GENERATED FROM PYTHON SOURCE LINES 148-148
 
 You can then use ``ase.io.write()``/``ase.io.read()`` to save/load these frames for later use.
 
 
 .. rst-class:: sphx-glr-timing
 
-   **Total running time of the script:** (0 minutes 0.176 seconds)
+   **Total running time of the script:** (0 minutes 0.169 seconds)
 
 
 .. _sphx_glr_download_auto_examples_example01_invariances_of_powerspectrum_test.py:

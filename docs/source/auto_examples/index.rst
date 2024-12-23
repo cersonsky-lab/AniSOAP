@@ -23,7 +23,7 @@ The 2nd example is an example demonstrating how AniSOAP can be used to coarse-gr
 
 .. raw:: html
 
-    <div class="sphx-glr-thumbcontainer" tooltip="1. How to read ellipsoidal frame from xyz 2. How to convert ellipsoidal frames to AniSOAP vectors 3. How to create ellipsoidal frames">
+    <div class="sphx-glr-thumbcontainer" tooltip="1. How to read ellipsoidal frames from .xyz file 2. How to convert ellipsoidal frames to AniSOAP vectors 3. How to create ellipsoidal frames with ase.Atoms">
 
 .. only:: html
 

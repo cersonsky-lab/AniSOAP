@@ -4,9 +4,9 @@ Example 1: Creating AniSOAP vectors from ellipsoidal frames.
 ============================================================
 This example demonstrates:
 
-1. How to read ellipsoidal frame from xyz
+1. How to read ellipsoidal frames from ``.xyz`` file
 2. How to convert ellipsoidal frames to AniSOAP vectors
-3. How to create ellipsoidal frames
+3. How to create ellipsoidal frames with ``ase.Atoms``
 """
 
 import sys
@@ -85,6 +85,7 @@ calculator = EllipsoidalDensityProjection(**AniSOAP_HYPERS)
 # Create the AniSOAP vector (i.e. the power spectrum).
 power_spectrum = calculator.power_spectrum(frames)
 plt.plot(power_spectrum.T)
+plt.legend(["frame[0] power spectrum", "frame[1] power spectrum"])
 plt.show()
 
 # %% 
@@ -112,7 +113,7 @@ for frame in frames:
     )
 print("New Orientations:", frames[0].arrays["c_q"], frames[1].arrays["c_q"])
 
-power_spectrum_rotation = calculator.power_spectrum(frames, AniSOAP_HYPERS)
+power_spectrum_rotation = calculator.power_spectrum(frames)
 print(f"{np.allclose(power_spectrum, power_spectrum_rotation, rtol=1e-2, atol=1e-2)=}")
 
 # %%
