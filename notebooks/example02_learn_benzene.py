@@ -1,4 +1,4 @@
-#%%
+# %%
 """
 Example 2: Machine-learning benzene energies.
 ============================================================
@@ -29,21 +29,23 @@ import pickle
 lmax = 9
 nmax = 6
 
-atom_frames = read("benzenes.xyz", ":")    # all atom frames, containing benzene energies
-frames = read("ellipsoids.xyz", ":")    # ellipsoid frames
+atom_frames = read("benzenes.xyz", ":")  # all atom frames, containing benzene energies
+frames = read("ellipsoids.xyz", ":")  # ellipsoid frames
 energies = np.array([aframe.info["energy_pa"] for aframe in atom_frames])
-energies = np.reshape(energies, (-1, 1))   # Turn energies into column vector, required for sklearn
+energies = np.reshape(
+    energies, (-1, 1)
+)  # Turn energies into column vector, required for sklearn
 plt.hist(energies, bins=100)
 plt.xlabel("Loaded Energies, eV")
 plt.show()
 
 
-# %% 
+# %%
 # Computing the AniSOAP Vectors
-# 
+#
 # * The ideal semiaxes for the ellipsoid are (4, 4, 0.5)
 
-a1, a2, a3 = 4., 4., 0.5
+a1, a2, a3 = 4.0, 4.0, 0.5
 for frame in frames:
     frame.arrays["c_diameter[1]"] = a1 * np.ones(len(frame))
     frame.arrays["c_diameter[2]"] = a2 * np.ones(len(frame))
@@ -68,7 +70,7 @@ x_anisoap_raw = calculator.power_spectrum(frames)
 
 # %%
 # Here, we do standard preparation of the data for machine learning.
-# 
+#
 # * Perform a train test split and standardization.
 # * Note: Warnings below are from StandardFlexibleScaler.
 
@@ -85,7 +87,7 @@ x_test = x_test_scaler.transform(x_anisoap_raw[i_test])
 y_test_scaler = StandardFlexibleScaler(column_wise=True).fit(energies[i_test])
 y_test = y_test_scaler.transform(energies[i_test])
 
-# %% 
+# %%
 # Input into a regularized linear regression machine learning model
 
 from sklearn.linear_model import RidgeCV
@@ -98,15 +100,21 @@ print(f"{lr.alpha_=:.3f}")
 # Model performance and Parity Plot
 # sphinx_gallery_thumbnail_number = 2
 plt.figure(figsize=(8, 8))
-plt.scatter(y_train_scaler.inverse_transform(y_train), 
-            y_train_scaler.inverse_transform(lr.predict(x_train).reshape(-1,1)),
-            alpha=0.5)
+plt.scatter(
+    y_train_scaler.inverse_transform(y_train),
+    y_train_scaler.inverse_transform(lr.predict(x_train).reshape(-1, 1)),
+    alpha=0.5,
+)
 
-plt.scatter(y_test_scaler.inverse_transform(y_test), 
-            y_test_scaler.inverse_transform(lr.predict(x_test).reshape(-1,1)),
-            alpha=0.5)
+plt.scatter(
+    y_test_scaler.inverse_transform(y_test),
+    y_test_scaler.inverse_transform(lr.predict(x_test).reshape(-1, 1)),
+    alpha=0.5,
+)
 
-plt.plot([np.min(energies), np.max(energies)], [np.min(energies), np.max(energies)], "r--")
+plt.plot(
+    [np.min(energies), np.max(energies)], [np.min(energies), np.max(energies)], "r--"
+)
 plt.xlabel("Per-atom Energies (eV)")
 plt.ylabel("AniSOAP Predicted Per-atom Energies (eV)")
 plt.legend(["Train", "Test", "y=x"])

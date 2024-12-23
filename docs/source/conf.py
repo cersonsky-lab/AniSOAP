@@ -26,16 +26,16 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx.ext.coverage",
     "sphinx_tabs.tabs",
-    "sphinx_gallery.gen_gallery"
+    "sphinx_gallery.gen_gallery",
 ]
 
 sphinx_gallery_conf = {
-    'examples_dirs': '../../notebooks/',   # path to your example scripts
-    'gallery_dirs': 'auto_examples',  # path to where to save gallery generated output
-    'filename_pattern': '/*',
-    'ignore_pattern': r'__init__\.py',
-    'example_extensions': {'.py'},
-    'within_subsection_order': "ExampleTitleSortKey"
+    "examples_dirs": "../../notebooks/",  # path to your example scripts
+    "gallery_dirs": "auto_examples",  # path to where to save gallery generated output
+    "filename_pattern": "/*",
+    "ignore_pattern": r"__init__\.py",
+    "example_extensions": {".py"},
+    "within_subsection_order": "ExampleTitleSortKey",
 }
 
 sys.path.insert(0, os.path.abspath("../../"))
