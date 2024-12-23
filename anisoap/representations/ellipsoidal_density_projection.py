@@ -668,7 +668,7 @@ class EllipsoidalDensityProjection:
         else:
             return features
 
-    def power_spectrum(self, frames, sum_over_samples=True, show_progress=False):
+    def power_spectrum(self, frames, mean_over_samples=True, show_progress=False, rust_moments=True):
         """Function to compute the power spectrum of AniSOAP
 
         computes the power spectrum of AniSOAP with the inputs of AniSOAP hyperparameters
@@ -684,7 +684,7 @@ class EllipsoidalDensityProjection:
             'c_diameter[1]', 'c_diameter[2]', 'c_diameter[3]', 'c_q', 'positions', and 'numbers'.
             It only accepts c_q for the angular attribute of each frame.
 
-        sum_over_sample: bool
+        mean_over_samples: bool
             A function that returns the sum of coefficients of the frames in the sample.
 
         Returns
@@ -721,7 +721,7 @@ class EllipsoidalDensityProjection:
                 if "quaternion" in array:
                     raise ValueError(f"frame should contain c_q rather than quaternion")
 
-        mvg_coeffs = self.transform(frames, show_progress=show_progress)
+        mvg_coeffs = self.transform(frames, show_progress=show_progress, rust_moments=rust_moments)
         mvg_nu1 = standardize_keys(mvg_coeffs)
 
         # Combines the mvg_nu1 with itself using the Clebsch-Gordan coefficients.
@@ -734,10 +734,10 @@ class EllipsoidalDensityProjection:
             other_keys_match=["types_center"],
         )
 
-        # If sum_over_samples = True, it returns simplified form of coefficients with fewer dimensions in the TensorMap for subsequent visualization.
+        # If mean_over_samples = True, it returns simplified form of coefficients with fewer dimensions in the TensorMap for subsequent visualization.
         # If not, it returns raw numerical data of coefficients in mvg_nu2 TensorMap
-        if sum_over_samples:
-            x_asoap_raw = metatensor.sum_over_samples(mvg_nu2, sample_names="center")
+        if mean_over_samples:
+            x_asoap_raw = metatensor.mean_over_samples(mvg_nu2, sample_names="center")
             x_asoap_raw = x_asoap_raw.block().values.squeeze()
             return x_asoap_raw
         else:
