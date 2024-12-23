@@ -22,56 +22,58 @@ Example 2: Machine-learning benzene energies.
 ============================================================
 This example demonstrates:
 
-1. How to import packages
+1. How to read ellipsoidal frames from ``.xyz`` file.
+2. How to convert ellipsoidal frames to AniSOAP vectors.
+3. How to use these frames in machine learning models.
 
-2. How to print hello world
+.. GENERATED FROM PYTHON SOURCE LINES 11-26
 
-.. GENERATED FROM PYTHON SOURCE LINES 10-14
+.. code-block:: Python
+
+
+    import metatensor
+    import numpy as np
+    from anisoap.representations import EllipsoidalDensityProjection
+    from anisoap.utils import ClebschGordanReal, cg_combine, standardize_keys
+    from ase.io import read
+    from matplotlib import pyplot as plt
+    from matplotlib import rc
+    from rascaline import SoapPowerSpectrum
+    from sklearn.decomposition import PCA
+    from skmatter.metrics import global_reconstruction_error as GRE
+    from sklearn.model_selection import train_test_split
+    from skmatter.preprocessing import StandardFlexibleScaler
+    import pickle
+
+
+
+
+
+
+
+
+.. GENERATED FROM PYTHON SOURCE LINES 27-28
+
+Read the frames
+
+.. GENERATED FROM PYTHON SOURCE LINES 28-41
 
 .. code-block:: Python
 
 
-    import numpy as np 
-    import matplotlib.pyplot as plt
+    lmax = 9
+    nmax = 6
+
+    atom_frames = read("benzenes.xyz", ":")    # all atom frames, containing benzene energies
+    frames = read("ellipsoids.xyz", ":")    # ellipsoid frames
+    energies = np.array([aframe.info["energy_pa"] for aframe in atom_frames])
+    energies = np.reshape(energies, (-1, 1))   # Turn energies into column vector, required for sklearn
+    plt.hist(energies, bins=100)
+    plt.xlabel("Loaded Energies, eV")
+    plt.show()
 
 
 
-
-
-
-
-
-.. GENERATED FROM PYTHON SOURCE LINES 15-17
-
-Section 1: print hello
----------------------------------------------------
-
-.. GENERATED FROM PYTHON SOURCE LINES 17-21
-
-.. code-block:: Python
-
-    x = 1
-    y = 2
-    print("Hello, world!")
-
-
-
-
-
-.. rst-class:: sphx-glr-script-out
-
- .. code-block:: none
-
-    Hello, world!
-
-
-
-
-.. GENERATED FROM PYTHON SOURCE LINES 22-22
-
-.. code-block:: Python
-
-    plt.plot(np.exp(np.linspace(0, 5)))
 
 
 .. image-sg:: /auto_examples/images/sphx_glr_example02_learn_benzene_001.png
@@ -80,19 +82,186 @@ Section 1: print hello
    :class: sphx-glr-single-img
 
 
+
+
+
+.. GENERATED FROM PYTHON SOURCE LINES 42-45
+
+Computing the AniSOAP Vectors
+
+* The ideal semiaxes for the ellipsoid are (4, 4, 0.5)
+
+.. GENERATED FROM PYTHON SOURCE LINES 45-69
+
+.. code-block:: Python
+
+
+    a1, a2, a3 = 4., 4., 0.5
+    for frame in frames:
+        frame.arrays["c_diameter[1]"] = a1 * np.ones(len(frame))
+        frame.arrays["c_diameter[2]"] = a2 * np.ones(len(frame))
+        frame.arrays["c_diameter[3]"] = a3 * np.ones(len(frame))
+
+    AniSOAP_HYPERS = {
+        "max_angular": lmax,
+        "max_radial": nmax,
+        "radial_basis_name": "gto",
+        "subtract_center_contribution": True,
+        "rotation_type": "quaternion",
+        "rotation_key": "c_q",
+        "cutoff_radius": 7.0,
+        "radial_gaussian_width": 1.5,
+        "basis_rcond": 1e-8,
+        "basis_tol": 1e-3,
+    }
+
+    calculator = EllipsoidalDensityProjection(**AniSOAP_HYPERS)
+
+    x_anisoap_raw = calculator.power_spectrum(frames)
+
+
+
+
+
 .. rst-class:: sphx-glr-script-out
 
  .. code-block:: none
 
+    /Users/alin62/Documents/Research/anisoap/anisoap/representations/ellipsoidal_density_projection.py:554: UserWarning: In quaternion mode, quaternions are assumed to be in (w,x,y,z) format.
+      warnings.warn(
 
-    [<matplotlib.lines.Line2D object at 0x15e1c85b0>]
+
+
+
+.. GENERATED FROM PYTHON SOURCE LINES 70-74
+
+Here, we do standard preparation of the data for machine learning.
+
+* Perform a train test split and standardization.
+* Note: Warnings below are from StandardFlexibleScaler.
+
+.. GENERATED FROM PYTHON SOURCE LINES 74-88
+
+.. code-block:: Python
+
+
+    from sklearn.model_selection import train_test_split
+
+    i_train, i_test = train_test_split(np.arange(len(frames)), train_size=0.9, shuffle=True)
+    x_train_scaler = StandardFlexibleScaler(column_wise=False).fit(x_anisoap_raw[i_train])
+    x_train = x_train_scaler.transform(x_anisoap_raw[i_train])
+    y_train_scaler = StandardFlexibleScaler(column_wise=True).fit(energies[i_train])
+    y_train = y_train_scaler.transform(energies[i_train])
+
+    x_test_scaler = StandardFlexibleScaler(column_wise=False).fit(x_anisoap_raw[i_test])
+    x_test = x_test_scaler.transform(x_anisoap_raw[i_test])
+    y_test_scaler = StandardFlexibleScaler(column_wise=True).fit(energies[i_test])
+    y_test = y_test_scaler.transform(energies[i_test])
+
+
+
+
+
+.. rst-class:: sphx-glr-script-out
+
+ .. code-block:: none
+
+    /Users/alin62/miniconda3/envs/anisoap/lib/python3.10/site-packages/sklearn/base.py:474: FutureWarning: `BaseEstimator._validate_data` is deprecated in 1.6 and will be removed in 1.7. Use `sklearn.utils.validation.validate_data` instead. This function becomes public and is part of the scikit-learn developer API.
+      warnings.warn(
+    /Users/alin62/miniconda3/envs/anisoap/lib/python3.10/site-packages/sklearn/base.py:474: FutureWarning: `BaseEstimator._validate_data` is deprecated in 1.6 and will be removed in 1.7. Use `sklearn.utils.validation.validate_data` instead. This function becomes public and is part of the scikit-learn developer API.
+      warnings.warn(
+    /Users/alin62/miniconda3/envs/anisoap/lib/python3.10/site-packages/sklearn/base.py:474: FutureWarning: `BaseEstimator._validate_data` is deprecated in 1.6 and will be removed in 1.7. Use `sklearn.utils.validation.validate_data` instead. This function becomes public and is part of the scikit-learn developer API.
+      warnings.warn(
+    /Users/alin62/miniconda3/envs/anisoap/lib/python3.10/site-packages/sklearn/base.py:474: FutureWarning: `BaseEstimator._validate_data` is deprecated in 1.6 and will be removed in 1.7. Use `sklearn.utils.validation.validate_data` instead. This function becomes public and is part of the scikit-learn developer API.
+      warnings.warn(
+    /Users/alin62/miniconda3/envs/anisoap/lib/python3.10/site-packages/sklearn/base.py:474: FutureWarning: `BaseEstimator._validate_data` is deprecated in 1.6 and will be removed in 1.7. Use `sklearn.utils.validation.validate_data` instead. This function becomes public and is part of the scikit-learn developer API.
+      warnings.warn(
+    /Users/alin62/miniconda3/envs/anisoap/lib/python3.10/site-packages/sklearn/base.py:474: FutureWarning: `BaseEstimator._validate_data` is deprecated in 1.6 and will be removed in 1.7. Use `sklearn.utils.validation.validate_data` instead. This function becomes public and is part of the scikit-learn developer API.
+      warnings.warn(
+    /Users/alin62/miniconda3/envs/anisoap/lib/python3.10/site-packages/sklearn/base.py:474: FutureWarning: `BaseEstimator._validate_data` is deprecated in 1.6 and will be removed in 1.7. Use `sklearn.utils.validation.validate_data` instead. This function becomes public and is part of the scikit-learn developer API.
+      warnings.warn(
+    /Users/alin62/miniconda3/envs/anisoap/lib/python3.10/site-packages/sklearn/base.py:474: FutureWarning: `BaseEstimator._validate_data` is deprecated in 1.6 and will be removed in 1.7. Use `sklearn.utils.validation.validate_data` instead. This function becomes public and is part of the scikit-learn developer API.
+      warnings.warn(
+
+
+
+
+.. GENERATED FROM PYTHON SOURCE LINES 89-90
+
+Input into a regularized linear regression machine learning model
+
+.. GENERATED FROM PYTHON SOURCE LINES 90-97
+
+.. code-block:: Python
+
+
+    from sklearn.linear_model import RidgeCV
+
+    lr = RidgeCV(cv=5, alphas=np.logspace(-8, 2, 20), fit_intercept=True)
+    lr.fit(x_train, y_train)
+    print(f"{lr.alpha_=:.3f}")
+
+
+
+
+
+.. rst-class:: sphx-glr-script-out
+
+ .. code-block:: none
+
+    lr.alpha_=0.001
+
+
+
+
+.. GENERATED FROM PYTHON SOURCE LINES 98-100
+
+Model performance and Parity Plot
+sphinx_gallery_thumbnail_number = 2
+
+.. GENERATED FROM PYTHON SOURCE LINES 100-116
+
+.. code-block:: Python
+
+    plt.figure(figsize=(8, 8))
+    plt.scatter(y_train_scaler.inverse_transform(y_train), 
+                y_train_scaler.inverse_transform(lr.predict(x_train).reshape(-1,1)),
+                alpha=0.5)
+
+    plt.scatter(y_test_scaler.inverse_transform(y_test), 
+                y_test_scaler.inverse_transform(lr.predict(x_test).reshape(-1,1)),
+                alpha=0.5)
+
+    plt.plot([np.min(energies), np.max(energies)], [np.min(energies), np.max(energies)], "r--")
+    plt.xlabel("Per-atom Energies (eV)")
+    plt.ylabel("AniSOAP Predicted Per-atom Energies (eV)")
+    plt.legend(["Train", "Test", "y=x"])
+
+    print(f"Train R^2: {lr.score(x_train, y_train):.3f}")
+    print(f"Test R^2: {lr.score(x_test, y_test):.3f}")
+
+
+
+.. image-sg:: /auto_examples/images/sphx_glr_example02_learn_benzene_002.png
+   :alt: example02 learn benzene
+   :srcset: /auto_examples/images/sphx_glr_example02_learn_benzene_002.png
+   :class: sphx-glr-single-img
+
+
+.. rst-class:: sphx-glr-script-out
+
+ .. code-block:: none
+
+    Train R^2: 0.909
+    Test R^2: 0.881
+
 
 
 
 
 .. rst-class:: sphx-glr-timing
 
-   **Total running time of the script:** (0 minutes 0.034 seconds)
+   **Total running time of the script:** (6 minutes 0.866 seconds)
 
 
 .. _sphx_glr_download_auto_examples_example02_learn_benzene.py:
