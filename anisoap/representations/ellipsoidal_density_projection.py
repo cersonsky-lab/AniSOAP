@@ -668,7 +668,9 @@ class EllipsoidalDensityProjection:
         else:
             return features
 
-    def power_spectrum(self, frames, mean_over_samples=True, show_progress=False, rust_moments=True):
+    def power_spectrum(
+        self, frames, mean_over_samples=True, show_progress=False, rust_moments=True
+    ):
         """Function to compute the power spectrum of AniSOAP
 
         computes the power spectrum of AniSOAP with the inputs of AniSOAP hyperparameters
@@ -721,7 +723,9 @@ class EllipsoidalDensityProjection:
                 if "quaternion" in array:
                     raise ValueError(f"frame should contain c_q rather than quaternion")
 
-        mvg_coeffs = self.transform(frames, show_progress=show_progress, rust_moments=rust_moments)
+        mvg_coeffs = self.transform(
+            frames, show_progress=show_progress, rust_moments=rust_moments
+        )
         mvg_nu1 = standardize_keys(mvg_coeffs)
 
         # Combines the mvg_nu1 with itself using the Clebsch-Gordan coefficients.
