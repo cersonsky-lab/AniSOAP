@@ -25,7 +25,7 @@
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="prev" title="Usage" href="usage.html" /> 
+    <link rel="prev" title="Example 2: Machine-learning benzene energies." href="auto_examples/example02_learn_benzene.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -52,7 +52,6 @@
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting Started</a></li>
 <li class="toctree-l1"><a class="reference internal" href="auto_examples/index.html">Examples</a></li>
-<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">API Reference</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#module-anisoap.representations.ellipsoidal_density_projection">Representations</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#anisoap.representations.ellipsoidal_density_projection.EllipsoidalDensityProjection"><code class="docutils literal notranslate"><span class="pre">EllipsoidalDensityProjection</span></code></a><ul>
@@ -192,8 +191,8 @@ be used.</p></li>
 <dl class="py method">
 <dt class="sig sig-object py" id="anisoap.representations.ellipsoidal_density_projection.EllipsoidalDensityProjection.power_spectrum">
 <span class="sig-name descname"><span class="pre">power_spectrum</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">frames</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mean_over_samples</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_progress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rust_moments</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#anisoap.representations.ellipsoidal_density_projection.EllipsoidalDensityProjection.power_spectrum" title="Link to this definition"></a></dt>
-<dd><p>Function to compute the power spectrum of AniSOAP</p>
-<p>computes the power spectrum of AniSOAP with the inputs of AniSOAP hyperparameters
+<dd><p>Helper function to compute the power spectrum of AniSOAP</p>
+<p>Computes the power spectrum of AniSOAP with the inputs of AniSOAP hyperparameters
 and ellipsoidal frames using ellipsoidal density projection. It checks if
 each ellipsoidal frame contains all required attributes and processes
 Clebsch-Gordan coefficients for the angular component of the AniSOAP descriptors.</p>
@@ -208,8 +207,8 @@ It only accepts c_q for the angular attribute of each frame.</p></li>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p><ul class="simple">
-<li><p><em>x_asoap_raw when kwarg sum_over_samples=True or mvg_nu2 when sum_over_samples=False</em></p></li>
-<li><p><strong>x_asoap_raw</strong> (<em>A 2-dimensional np.array with shape (n_samples, n_features). This AniSOAP power spectrum aggregates (sums) over each sample.</em>)</p></li>
+<li><p><cite>x_asoap_raw</cite> when kwarg mean_over_samples=True or <cite>mvg_nu2</cite> when mean_over_samples=False</p></li>
+<li><p><strong>x_asoap_raw</strong> (<em>A 2-dimensional np.array with shape (n_samples, n_features). This AniSOAP power spectrum aggregates (averages) over each sample.</em>)</p></li>
 <li><p><strong>mvg_nu2</strong> (<em>a TensorMap of unaggregated power spectrum features.</em>)</p></li>
 </ul>
 </p>
@@ -1034,7 +1033,7 @@ expansion coefficients, we need to divide by that coefficient.</p>
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="usage.html" class="btn btn-neutral float-left" title="Usage" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="auto_examples/example02_learn_benzene.html" class="btn btn-neutral float-left" title="Example 2: Machine-learning benzene energies." accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
     </div>
 
   <hr/>

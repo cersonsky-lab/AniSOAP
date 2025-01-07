@@ -26,7 +26,7 @@ This example demonstrates:
 2. How to convert ellipsoidal frames to AniSOAP vectors.
 3. How to create ellipsoidal frames with ``ase.Atoms``.
 
-.. GENERATED FROM PYTHON SOURCE LINES 11-29
+.. GENERATED FROM PYTHON SOURCE LINES 11-28
 
 .. code-block:: Python
 
@@ -54,12 +54,11 @@ This example demonstrates:
 
 
 
-
-.. GENERATED FROM PYTHON SOURCE LINES 30-31
+.. GENERATED FROM PYTHON SOURCE LINES 29-30
 
 Read the first two frames of ellipsoids.xyz, which represent coarse-grained benzene molecules.
 
-.. GENERATED FROM PYTHON SOURCE LINES 31-39
+.. GENERATED FROM PYTHON SOURCE LINES 30-38
 
 .. code-block:: Python
 
@@ -68,7 +67,7 @@ Read the first two frames of ellipsoids.xyz, which represent coarse-grained benz
     frames_translation = read("ellipsoids.xyz", "0:2")
     frames_rotation = read("ellipsoids.xyz", "0:2")
 
-    print(f"{len(frames)=}")   # a list of atoms objects
+    print(f"{len(frames)=}")  # a list of atoms objects
     print(f"{frames[0].arrays=}")
 
 
@@ -87,21 +86,21 @@ Read the first two frames of ellipsoids.xyz, which represent coarse-grained benz
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 40-43
+.. GENERATED FROM PYTHON SOURCE LINES 39-42
 
-In this case, the xyz file did not store ellipsoid dimension information. 
+In this case, the xyz file did not store ellipsoid dimension information.
 
 We will add this information here.
 
-.. GENERATED FROM PYTHON SOURCE LINES 43-52
+.. GENERATED FROM PYTHON SOURCE LINES 42-51
 
 .. code-block:: Python
 
 
     for frame in frames:
-        frame.arrays["c_diameter[1]"] = np.ones(len(frame)) * 3.
-        frame.arrays["c_diameter[2]"] = np.ones(len(frame)) * 3.
-        frame.arrays["c_diameter[3]"] = np.ones(len(frame)) * 1.
+        frame.arrays["c_diameter[1]"] = np.ones(len(frame)) * 3.0
+        frame.arrays["c_diameter[2]"] = np.ones(len(frame)) * 3.0
+        frame.arrays["c_diameter[3]"] = np.ones(len(frame)) * 1.0
 
     print(f"{frames[0].arrays=}")
     print(f"{frames[1].arrays=}")
@@ -122,11 +121,11 @@ We will add this information here.
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 53-54
+.. GENERATED FROM PYTHON SOURCE LINES 52-53
 
 Specify the hypers to create AniSOAP vector.
 
-.. GENERATED FROM PYTHON SOURCE LINES 54-71
+.. GENERATED FROM PYTHON SOURCE LINES 53-70
 
 .. code-block:: Python
 
@@ -161,11 +160,11 @@ Specify the hypers to create AniSOAP vector.
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 72-73
+.. GENERATED FROM PYTHON SOURCE LINES 71-72
 
 Create the AniSOAP vector (i.e. the power spectrum).
 
-.. GENERATED FROM PYTHON SOURCE LINES 73-78
+.. GENERATED FROM PYTHON SOURCE LINES 72-77
 
 .. code-block:: Python
 
@@ -186,13 +185,13 @@ Create the AniSOAP vector (i.e. the power spectrum).
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 79-82
+.. GENERATED FROM PYTHON SOURCE LINES 78-81
 
 Here we will demonstrate translation invariance.
 
-Translation vector is used to demonstrate the power spectrum of ellipsoidal representations are invariant of translation in positions.
+A translation vector is used to demonstrate that the power spectrum of ellipsoidal representations is invariant to translation in positions.
 
-.. GENERATED FROM PYTHON SOURCE LINES 82-90
+.. GENERATED FROM PYTHON SOURCE LINES 81-89
 
 .. code-block:: Python
 
@@ -221,18 +220,18 @@ Translation vector is used to demonstrate the power spectrum of ellipsoidal repr
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 91-92
+.. GENERATED FROM PYTHON SOURCE LINES 90-91
 
 Here, we demonstrate rotational invariance, rotating all ellipsoids by the same amount.
 
-.. GENERATED FROM PYTHON SOURCE LINES 92-106
+.. GENERATED FROM PYTHON SOURCE LINES 91-105
 
 .. code-block:: Python
 
     print("Old Orientations:", frames[0].arrays["c_q"], frames[1].arrays["c_q"])
 
-    quaternion = [1, 2, 0, -3]   # random rotation
-    q_rotation = R.from_quat(quaternion, scalar_first=True)   
+    quaternion = [1, 2, 0, -3]  # random rotation
+    q_rotation = R.from_quat(quaternion, scalar_first=True)
     for frame in frames:
         frame.arrays["c_q"] = R.as_quat(
             q_rotation * R.from_quat(frame.arrays["c_q"], scalar_first=True),
@@ -260,7 +259,7 @@ Here, we demonstrate rotational invariance, rotating all ellipsoids by the same 
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 107-114
+.. GENERATED FROM PYTHON SOURCE LINES 106-113
 
 Here's how to create ellipsoidal frames. In this example:
 
@@ -270,27 +269,43 @@ Here's how to create ellipsoidal frames. In this example:
 * I just made up arbitrary postions and orientations. Quaternions should be in (w,x,y,z) format.
 * In reality you would choose positions and orientations based on some underlying atomistic model.
 
-.. GENERATED FROM PYTHON SOURCE LINES 114-134
+.. GENERATED FROM PYTHON SOURCE LINES 113-149
 
 .. code-block:: Python
 
-    frame1 = Atoms(symbols='XX', 
-                   positions=np.array([[0., 0., 0.], [2.5, 3., 2.]]),
-                   cell=np.array([5., 5., 5.,]), 
-                   pbc=True)
-    frame1.arrays["c_q"] = np.array([[0., 1., 0., 0.], [0., 0., 1., 0]])
-    frame1.arrays["c_diameter[1]"] = np.array([3., 3.])
-    frame1.arrays["c_diameter[2]"] = np.array([3., 3.])
-    frame1.arrays["c_diameter[3]"] = np.array([1., 1.])
+    frame1 = Atoms(
+        symbols="XX",
+        positions=np.array([[0.0, 0.0, 0.0], [2.5, 3.0, 2.0]]),
+        cell=np.array(
+            [
+                5.0,
+                5.0,
+                5.0,
+            ]
+        ),
+        pbc=True,
+    )
+    frame1.arrays["c_q"] = np.array([[0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0]])
+    frame1.arrays["c_diameter[1]"] = np.array([3.0, 3.0])
+    frame1.arrays["c_diameter[2]"] = np.array([3.0, 3.0])
+    frame1.arrays["c_diameter[3]"] = np.array([1.0, 1.0])
 
-    frame2 = Atoms(symbols='XXX', 
-                   positions = np.array([[0., 1., 2.], [2., 3., 4.], [5., 5., 1.]]),
-                   cell=[10., 10., 10.,], 
-                   pbc=True)
-    frame2.arrays["c_q"] = np.array([[0., 1., 0., 0.], [0., 0., 1., 0], [0., 0., 0.707, 0.707]])
-    frame2.arrays["c_diameter[1]"] = np.array([3., 3., 3.])
-    frame2.arrays["c_diameter[2]"] = np.array([3., 3., 3.])
-    frame2.arrays["c_diameter[3]"] = np.array([1., 1., 1.])
+    frame2 = Atoms(
+        symbols="XXX",
+        positions=np.array([[0.0, 1.0, 2.0], [2.0, 3.0, 4.0], [5.0, 5.0, 1.0]]),
+        cell=[
+            10.0,
+            10.0,
+            10.0,
+        ],
+        pbc=True,
+    )
+    frame2.arrays["c_q"] = np.array(
+        [[0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0], [0.0, 0.0, 0.707, 0.707]]
+    )
+    frame2.arrays["c_diameter[1]"] = np.array([3.0, 3.0, 3.0])
+    frame2.arrays["c_diameter[2]"] = np.array([3.0, 3.0, 3.0])
+    frame2.arrays["c_diameter[3]"] = np.array([1.0, 1.0, 1.0])
 
     frames = [frame1, frame2]
 
@@ -301,14 +316,14 @@ Here's how to create ellipsoidal frames. In this example:
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 135-135
+.. GENERATED FROM PYTHON SOURCE LINES 150-151
 
 You can then use ``ase.io.write()``/``ase.io.read()`` to save/load these frames for later use.
 
 
 .. rst-class:: sphx-glr-timing
 
-   **Total running time of the script:** (0 minutes 0.173 seconds)
+   **Total running time of the script:** (0 minutes 0.232 seconds)
 
 
 .. _sphx_glr_download_auto_examples_example01_invariances_of_powerspectrum_test.py:

@@ -23,7 +23,6 @@ with anisotropic interactions.
    installation
    getting_started
    auto_examples/index
-   usage
    api
 
 

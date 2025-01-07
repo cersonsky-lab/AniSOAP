@@ -77,7 +77,7 @@ plt.show()
 # %%
 # Here we will demonstrate translation invariance.
 #
-# Translation vector is used to demonstrate the power spectrum of ellipsoidal representations are invariant of translation in positions.
+# A translation vector is used to demonstrate that the power spectrum of ellipsoidal representations is invariant to translation in positions.
 print("Old Positions:", frames[0].get_positions(), frames[1].get_positions())
 translation_vector = np.array([2.0, 2.0, 2.0])
 for frame in frames:

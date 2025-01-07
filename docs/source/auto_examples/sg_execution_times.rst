@@ -6,7 +6,7 @@
 
 Computation times
 =================
-**06:00.866** total execution time for 2 files **from auto_examples**:
+**06:03.990** total execution time for 2 files **from auto_examples**:
 
 .. container::
 
@@ -33,8 +33,8 @@ Computation times
      - Time
      - Mem (MB)
    * - :ref:`sphx_glr_auto_examples_example02_learn_benzene.py` (``example02_learn_benzene.py``)
-     - 06:00.866
+     - 06:03.757
      - 0.0
    * - :ref:`sphx_glr_auto_examples_example01_invariances_of_powerspectrum_test.py` (``example01_invariances_of_powerspectrum_test.py``)
-     - 00:00.000
+     - 00:00.232
      - 0.0

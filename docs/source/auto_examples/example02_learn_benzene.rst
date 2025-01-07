@@ -26,10 +26,11 @@ This example demonstrates:
 2. How to convert ellipsoidal frames to AniSOAP vectors.
 3. How to use these frames in machine learning models.
 
-.. GENERATED FROM PYTHON SOURCE LINES 11-26
+.. GENERATED FROM PYTHON SOURCE LINES 11-27
 
 .. code-block:: Python
 
+    # sphinx_gallery_thumbnail_number = 2
 
     import metatensor
     import numpy as np
@@ -52,11 +53,11 @@ This example demonstrates:
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 27-28
+.. GENERATED FROM PYTHON SOURCE LINES 28-29
 
 Read the frames
 
-.. GENERATED FROM PYTHON SOURCE LINES 28-41
+.. GENERATED FROM PYTHON SOURCE LINES 29-44
 
 .. code-block:: Python
 
@@ -64,10 +65,12 @@ Read the frames
     lmax = 9
     nmax = 6
 
-    atom_frames = read("benzenes.xyz", ":")    # all atom frames, containing benzene energies
-    frames = read("ellipsoids.xyz", ":")    # ellipsoid frames
+    atom_frames = read("benzenes.xyz", ":")  # all atom frames, containing benzene energies
+    frames = read("ellipsoids.xyz", ":")  # ellipsoid frames
     energies = np.array([aframe.info["energy_pa"] for aframe in atom_frames])
-    energies = np.reshape(energies, (-1, 1))   # Turn energies into column vector, required for sklearn
+    energies = np.reshape(
+        energies, (-1, 1)
+    )  # Turn energies into column vector, required for sklearn
     plt.hist(energies, bins=100)
     plt.xlabel("Loaded Energies, eV")
     plt.show()
@@ -85,18 +88,18 @@ Read the frames
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 42-45
+.. GENERATED FROM PYTHON SOURCE LINES 45-48
 
 Computing the AniSOAP Vectors
 
 * The ideal semiaxes for the ellipsoid are (4, 4, 0.5)
 
-.. GENERATED FROM PYTHON SOURCE LINES 45-69
+.. GENERATED FROM PYTHON SOURCE LINES 48-72
 
 .. code-block:: Python
 
 
-    a1, a2, a3 = 4., 4., 0.5
+    a1, a2, a3 = 4.0, 4.0, 0.5
     for frame in frames:
         frame.arrays["c_diameter[1]"] = a1 * np.ones(len(frame))
         frame.arrays["c_diameter[2]"] = a2 * np.ones(len(frame))
@@ -133,14 +136,14 @@ Computing the AniSOAP Vectors
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 70-74
+.. GENERATED FROM PYTHON SOURCE LINES 73-77
 
 Here, we do standard preparation of the data for machine learning.
 
 * Perform a train test split and standardization.
 * Note: Warnings below are from StandardFlexibleScaler.
 
-.. GENERATED FROM PYTHON SOURCE LINES 74-88
+.. GENERATED FROM PYTHON SOURCE LINES 77-91
 
 .. code-block:: Python
 
@@ -186,11 +189,11 @@ Here, we do standard preparation of the data for machine learning.
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 89-90
+.. GENERATED FROM PYTHON SOURCE LINES 92-93
 
 Input into a regularized linear regression machine learning model
 
-.. GENERATED FROM PYTHON SOURCE LINES 90-97
+.. GENERATED FROM PYTHON SOURCE LINES 93-100
 
 .. code-block:: Python
 
@@ -209,30 +212,35 @@ Input into a regularized linear regression machine learning model
 
  .. code-block:: none
 
-    lr.alpha_=0.001
+    lr.alpha_=0.002
 
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 98-100
+.. GENERATED FROM PYTHON SOURCE LINES 101-102
 
 Model performance and Parity Plot
-sphinx_gallery_thumbnail_number = 2
 
-.. GENERATED FROM PYTHON SOURCE LINES 100-116
+.. GENERATED FROM PYTHON SOURCE LINES 102-124
 
 .. code-block:: Python
 
     plt.figure(figsize=(8, 8))
-    plt.scatter(y_train_scaler.inverse_transform(y_train), 
-                y_train_scaler.inverse_transform(lr.predict(x_train).reshape(-1,1)),
-                alpha=0.5)
+    plt.scatter(
+        y_train_scaler.inverse_transform(y_train),
+        y_train_scaler.inverse_transform(lr.predict(x_train).reshape(-1, 1)),
+        alpha=0.5,
+    )
 
-    plt.scatter(y_test_scaler.inverse_transform(y_test), 
-                y_test_scaler.inverse_transform(lr.predict(x_test).reshape(-1,1)),
-                alpha=0.5)
+    plt.scatter(
+        y_test_scaler.inverse_transform(y_test),
+        y_test_scaler.inverse_transform(lr.predict(x_test).reshape(-1, 1)),
+        alpha=0.5,
+    )
 
-    plt.plot([np.min(energies), np.max(energies)], [np.min(energies), np.max(energies)], "r--")
+    plt.plot(
+        [np.min(energies), np.max(energies)], [np.min(energies), np.max(energies)], "r--"
+    )
     plt.xlabel("Per-atom Energies (eV)")
     plt.ylabel("AniSOAP Predicted Per-atom Energies (eV)")
     plt.legend(["Train", "Test", "y=x"])
@@ -252,8 +260,8 @@ sphinx_gallery_thumbnail_number = 2
 
  .. code-block:: none
 
-    Train R^2: 0.909
-    Test R^2: 0.881
+    Train R^2: 0.904
+    Test R^2: 0.895
 
 
 
@@ -261,7 +269,7 @@ sphinx_gallery_thumbnail_number = 2
 
 .. rst-class:: sphx-glr-timing
 
-   **Total running time of the script:** (6 minutes 0.866 seconds)
+   **Total running time of the script:** (6 minutes 3.757 seconds)
 
 
 .. _sphx_glr_download_auto_examples_example02_learn_benzene.py:
