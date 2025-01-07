@@ -8,6 +8,7 @@ This example demonstrates:
 2. How to convert ellipsoidal frames to AniSOAP vectors.
 3. How to use these frames in machine learning models.
 """
+# sphinx_gallery_thumbnail_number = 2
 
 import metatensor
 import numpy as np
@@ -98,7 +99,6 @@ print(f"{lr.alpha_=:.3f}")
 
 # %%
 # Model performance and Parity Plot
-# sphinx_gallery_thumbnail_number = 2
 plt.figure(figsize=(8, 8))
 plt.scatter(
     y_train_scaler.inverse_transform(y_train),

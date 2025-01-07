@@ -671,9 +671,9 @@ class EllipsoidalDensityProjection:
     def power_spectrum(
         self, frames, mean_over_samples=True, show_progress=False, rust_moments=True
     ):
-        """Function to compute the power spectrum of AniSOAP
+        """Helper function to compute the power spectrum of AniSOAP
 
-        computes the power spectrum of AniSOAP with the inputs of AniSOAP hyperparameters
+        Computes the power spectrum of AniSOAP with the inputs of AniSOAP hyperparameters
         and ellipsoidal frames using ellipsoidal density projection. It checks if
         each ellipsoidal frame contains all required attributes and processes
         Clebsch-Gordan coefficients for the angular component of the AniSOAP descriptors.
@@ -691,8 +691,8 @@ class EllipsoidalDensityProjection:
 
         Returns
         -------
-        x_asoap_raw when kwarg sum_over_samples=True or mvg_nu2 when sum_over_samples=False:
-        x_asoap_raw: A 2-dimensional np.array with shape (n_samples, n_features). This AniSOAP power spectrum aggregates (sums) over each sample.
+        `x_asoap_raw` when kwarg mean_over_samples=True or `mvg_nu2` when mean_over_samples=False:
+        x_asoap_raw: A 2-dimensional np.array with shape (n_samples, n_features). This AniSOAP power spectrum aggregates (averages) over each sample.
         mvg_nu2: a TensorMap of unaggregated power spectrum features.
 
         """
