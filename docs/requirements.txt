@@ -5,15 +5,11 @@ sphinx-gallery  # convert python files into nice documentation
 sphinx-tabs     # tabs for code examples (one tab per language)
 
 
---find-links https://download.pytorch.org/whl/torch_stable.html
-torch==1.11.0+cpu
---find-links https://download.pytorch.org/whl/torch_stable.html
-torchvision==0.12.0+cpu
-metatensor >=0.1.0,<0.2.0
+metatensor
 
 tqdm
 chemfiles
 matplotlib
 skmatter
 ase
-rascaline @ git+https://github.com/Luthaf/rascaline
+featomic @ git+https://github.com/Luthaf/featomic

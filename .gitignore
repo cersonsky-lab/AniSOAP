@@ -25,6 +25,9 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+docs/build
+docs/source/auto_examples
+docs/source/sg_execution_times.rst
 
 # Outputfile Plots etc...
 *.png

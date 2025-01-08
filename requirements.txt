@@ -1,0 +1,5 @@
+featomic
+metatensor
+scipy
+skmatter
+tqdm
