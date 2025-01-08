@@ -11,7 +11,7 @@ chief difference being AniSOAP's ability to represent ellipsoidal particles.
 
 First Steps
 -----------
-AniSOAP depends on and utilizes the packages `featomic (aka rascaline) 
+AniSOAP depends on and utilizes the packages `featomic (formerly known as rascaline) 
 <https://metatensor.github.io/featomic/latest/index.html>`_, `metatensor <https://docs.metatensor.org/latest/index.html>`_,
 and `ase <https://wiki.fysik.dtu.dk/ase/index.html>`_.  
 It may be helpful to familiarize yourself with these packages before diving into
