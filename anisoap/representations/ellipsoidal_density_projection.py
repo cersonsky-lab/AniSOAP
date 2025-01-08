@@ -5,12 +5,12 @@ from itertools import product
 import metatensor
 import numpy as np
 from anisoap_rust_lib import compute_moments
+from featomic import NeighborList
 from metatensor import (
     Labels,
     TensorBlock,
     TensorMap,
 )
-from rascaline import NeighborList
 from scipy.spatial.transform import Rotation
 from skmatter.preprocessing import StandardFlexibleScaler
 from tqdm.auto import tqdm

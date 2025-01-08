@@ -1,5 +1,5 @@
 --extra-index-url https://luthaf.fr/nightly-wheels/
-rascaline
+featomic
 ase
 coverage[toml]
 pytest

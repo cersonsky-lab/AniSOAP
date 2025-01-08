@@ -17,7 +17,7 @@ from anisoap.utils import ClebschGordanReal, cg_combine, standardize_keys
 from ase.io import read
 from matplotlib import pyplot as plt
 from matplotlib import rc
-from rascaline import SoapPowerSpectrum
+from featomic import SoapPowerSpectrum
 from sklearn.decomposition import PCA
 from skmatter.metrics import global_reconstruction_error as GRE
 from sklearn.model_selection import train_test_split
