@@ -12,7 +12,7 @@ Before installing AniSOAP, please make sure you have the following installed (We
 * `sciPy: 1.4.0 or higher <https://scipy.org/install/>`_
 * `Atomic Simulation Environment (ASE): 3.18 or higher <https://wiki.fysik.dtu.dk/ase/install.html>`_
 * `Metatensor <https://docs.metatensor.org/latest/index.html>`_
-* `Featomic (aka Rascaline) <https://metatensor.github.io/featomic/latest/index.html>`_
+* `Featomic (formerly known as Rascaline) <https://metatensor.github.io/featomic/latest/index.html>`_
 * `Rust -- We recommend using rustup <https://rustup.rs/>`_
 
 
