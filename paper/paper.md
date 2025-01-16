@@ -1,5 +1,5 @@
 ---
-title: 'AniSOAP: Machine Learning Representations '
+title: 'AniSOAP: Machine Learning Representations for Coarse-grained and Non-spherical Systems'
 tags:
   - Python
   - machine learning
