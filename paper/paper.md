@@ -4,31 +4,10 @@ tags:
   - Python
   - machine learning
   - molecular simulation
-# authors:
-#   - name: Adrian M. Price-Whelan
-#     orcid: 0000-0000-0000-0000
-#     equal-contrib: true
-#     affiliation: "1, 2" # (Multiple affiliations must be quoted)
-#   - name: Author Without ORCID
-#     equal-contrib: true # (This is how you can denote equal contributions between multiple authors)
-#     affiliation: 2
-#   - name: Author with no affiliation
-#     corresponding: true # (This is how to denote the corresponding author)
-#     affiliation: 3
-#   - given-names: Ludwig
-#     dropping-particle: van
-#     surname: Beethoven
-#     affiliation: 3
-# affiliations:
-#  - name: Lyman Spitzer, Jr. Fellow, Princeton University, USA
-#    index: 1
-#  - name: Institution Name, Country
-#    index: 2
-#  - name: Independent Researcher, Country
-#    index: 3
+
 authors:
   - name: Arthur Yan Lin
-    orcid: 0000-0000-0000-0000
+    orcid: 0000-0002-7665-3767
     affiliation: 1
   - name: Lucas Ortengren
     orcid: 0000-0000-0000-0000
@@ -37,13 +16,13 @@ authors:
     orcid: 0000-0000-0000-0000
     affiliation: 1
   - name: Yong-Cheol Cho
-    orcid: 0000-0000-0000-0000
+    orcid: 0009-0001-6038-6764
     affiliation: 1
   - name: Jigyasa Nigam
-    orcid: 0000-0000-0000-0000
+    orcid: 0000-0001-6857-4332
     affiliation: 2
   - name: Rose K. Cersonsky
-    orcid: 0000-0000-0000-0000
+    orcid: 0000-0003-4515-3441
     affiliation: 1
 affiliations:
  - name: Department of Chemical and Biological Engineering, University of Wisconsin-Madison, USA
@@ -56,10 +35,6 @@ affiliations:
 date: 31 August 2024
 bibliography: paper.bib
 
-# Optional fields if submitting to a AAS journal too, see this blog post:
-# https://blog.joss.theoj.org/2018/12/a-new-collaboration-with-aas-publishing
-aas-doi: 10.3847/xxxxx <- update this with the DOI from AAS once you know it.
-aas-journal: Astrophysical Journal <- The name of the AAS journal.
 ---
 
 # Summary
@@ -89,8 +64,6 @@ The AniSOAP package currently takes in as input a list of frames in the `Atomic 
 
 With this information, one can construct an `EllipsoidalDensityProjection` object, whose main functionality is to calculate the expansion coefficients of the density field in each frame. One can take Clebsch-Gordan products of these expansion coefficients to create higher body-order descriptors. We provide all the functionality required for these processes, and an example of constructing an arbitrarily high body-order descriptor is shown in an example. We also provide the convenience method `power_spectrum` and `radial_spectrum` to calculate the 3-body and 2-body descriptors of each frame.
 
-<!-- # What capabilities are available to users of the AniSOAP package? -->
-
 # Conclusion and future developments
 AniSOAP is a powerful featurization that can be used for supervised and unsupervised analyses of molecular systems. AniSOAP is under active development and we envision it being used in a wide variety of contexts. Below, we outline two AniSOAP development goals.
 
@@ -100,61 +73,11 @@ We are also interested in unifying the theory of MLIPPs with the vast theory and
 
 # References
 
-<!-- # What AniSOAP can and cannot do
-
-* Geometries more complicated than ellipsoids. However, ellipsoids is already a very powerful generalization, and overlapping ellipsoids may for now serve as a proxy for complicated geometries.
-* Direct differentiation to learn forces. -->
-
-
-<!-- Machine learning techniques are rooted in the creation of numerical representations, which often incorporate physical symmetries and hence sensitivitely differentiate different atomistic environments. 
-
-thrive on being able to differentiate different atomistic environments and on incorporating physical symmetries. In doing so, they provide a model for a potential that is fast and accurate. 
-
-Machine learning has rapidly transformed atomistic simulations, enabling simulations of large systems (e.g. 10000) to be fast and accurate, enabling data-driven reproduction and analyses physical phenomena.  -->
-
-<!-- # Mathematics
-
-Single dollars (\$) are required for inline mathematics e.g. $f(x) = e^{\pi/x}$
-
-Double dollars make self-standing equations:
-
-$$\Theta(x) = \left\{\begin{array}{l}
-0\textrm{ if } x < 0\cr
-1\textrm{ else}
-\end{array}\right.$$
-
-You can also use plain \LaTeX for equations
-\begin{equation}\label{eq:fourier}
-\hat f(\omega) = \int_{-\infty}^{\infty} f(x) e^{i\omega x} dx
-\end{equation}
-and refer to \autoref{eq:fourier} from text.
-
-# Citations
-
-Citations to entries in paper.bib should be in
-[rMarkdown](http://rmarkdown.rstudio.com/authoring_bibliographies_and_citations.html)
-format.
-
-If you want to cite a software repository URL (e.g. something on GitHub without a preferred
-citation) then you can do it with the example BibTeX entry below for @fidgit.
-
-For a quick reference, the following citation commands can be used:
-- `@author:2001`  ->  "Author et al. (2001)"
-- `[@author:2001]` -> "(Author et al., 2001)"
-- `[@author1:2001; @author2:2001]` -> "(Author1 et al., 2001; Author2 et al., 2002)"
-
-# Figures
-
-Figures can be included like this:
-![Caption for example figure.\label{fig:example}](figure.png)
-and referenced from text using \autoref{fig:example}.
-
-Figure sizes can be customized by adding an optional second parameter:
-![Caption for example figure.](figure.png){ width=20% }
-
 # Acknowledgements
 
 We acknowledge contributions from Brigitta Sipocz, Syrtis Major, and Semyeong
 Oh, and support from Kathryn Johnston during the genesis of this project.
 
-# References -->
+This project was funded by the Wisconsin Alumni Research Fund (R.K.C.), NSF through the University of Wisconsin Materials Research Science and Engineering Center (Grant No. DMR-2309000, A.L.), and the European Research Council (ERC) under the research and innovation program (Grant Agreement No. 101001890-FIAMMA, J.N., K.K.H.D.).
+
+We extend our un-ending gratitude to Guillaume Fraux and the developers of rascaline for fielding our many questions during the implementation and validation of AniSOAP. Kevin?
