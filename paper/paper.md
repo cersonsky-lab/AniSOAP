@@ -71,13 +71,9 @@ Our first goal is to directly use the wide variety of ML driven techniques used 
 
 We are also interested in unifying the theory of MLIPPs with the vast theory and developments of bottom-up coarse-graining. While bottom-up coarse-graining has recently benefited from significantly neural network potentials[@wang_machine_2019; @majewski_machine_2023; @wilson_anisotropic_2023], such techniques typically have large data requirements due to the neural network architecture, which require more training data than shallower models, and the inherently low signal-to-noise of the training set due to high mapping degeneracy in coarse-grained models[@durumeric_machine_2023]. AniSOAP may remedy this data-barrier on two different fronts: AniSOAP based potentials tend to be shallow (linear/kernel regression), and the geometric accuracy of AniSOAP particles will significantly decrease the mapping degeneracy. We hope that these benefits can be tied with existing theoretical frameworks on anisotropic coarse-graining[@nguyen_systematic_2022] to create robust, interpretable, and practical tools to perform accurate molecular coarse-grained simulations.
 
-# References
-
 # Acknowledgements
-
-We acknowledge contributions from Brigitta Sipocz, Syrtis Major, and Semyeong
-Oh, and support from Kathryn Johnston during the genesis of this project.
-
 This project was funded by the Wisconsin Alumni Research Fund (R.K.C.), NSF through the University of Wisconsin Materials Research Science and Engineering Center (Grant No. DMR-2309000, A.L.), and the European Research Council (ERC) under the research and innovation program (Grant Agreement No. 101001890-FIAMMA, J.N., K.K.H.D.).
 
-We extend our un-ending gratitude to Guillaume Fraux and the developers of rascaline for fielding our many questions during the implementation and validation of AniSOAP. Kevin?
+We extend our un-ending gratitude to Guillaume Fraux and the developers of rascaline for fielding our many questions during the implementation and validation of AniSOAP, and Kevin Kazuki Huguenin-Dumittan for building the first iteration of AniSOAP.
+
+# References
