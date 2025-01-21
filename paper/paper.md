@@ -9,22 +9,17 @@ authors:
   - name: Arthur Yan Lin
     orcid: 0000-0002-7665-3767
     affiliation: 1
-    equal-contrib: true
   - name: Lucas Ortengren
     orcid: 0009-0002-8899-7513
     affiliation: 1
-    equal-contrib: false
   - name: Seonwoo Hwang
     affiliation: 1
-    equal-contrib: false
   - name: Yong-Cheol Cho
     orcid: 0009-0001-6038-6764
     affiliation: 1
-    equal-contrib: false
   - name: Jigyasa Nigam
     orcid: 0000-0001-6857-4332
     affiliation: 2
-    equal-contrib: false
   - name: Rose K. Cersonsky
     orcid: 0000-0003-4515-3441
     affiliation: 1
