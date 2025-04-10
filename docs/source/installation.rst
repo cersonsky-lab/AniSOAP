@@ -45,4 +45,11 @@ AniSOAP is still under active development, so you may want to run some tests to 
   pytest tests/.
 
 
+Local Documentation Build
+-------------------------
 
+To build the documentation locally, you can install Sphinx and related dependencies using::
+
+  pip install -r docs/requirements.txt 
+
+Then, you can use the Makefile in docs/ to build the docs. 
