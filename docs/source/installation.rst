@@ -28,7 +28,11 @@ Then navigate to the AniSOAP directory with::
 
   cd AniSOAP
 
-Now use pip to install the library::
+First, install all of AniSOAP's dependencies with::
+
+  pip install -r requirements.txt
+
+Now use pip to install the AniSOAP library::
 
   pip install .
 
