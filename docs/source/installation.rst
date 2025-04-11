@@ -5,15 +5,16 @@ Installation
 Dependencies
 ------------
 
-Before installing AniSOAP, please make sure you have the following installed (We recommend using an environment manager like `conda <https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html/>`_):
+A portion of AniSOAP is written in Rust, so installing the Rust compiler (rustc) and package manager (Cargo) is a prerequisite. Please follow the instructions for your platform here: https://rustup.rs/. Note that on unix systems, one must first install the C-compiler toolchain before installing rust.
+
+The rest of the python dependencies are listed below. We provide a requirements.txt file containing these dependencies that's located in the root directory of the AniSOAP project. Installation instructions are in the next section. We recommend using an environment manager like `conda <https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html/>`_ to create a clean working environment for AniSOAP.
 
 * `Python: 3.9 or 3.10 <https://www.python.org/downloads/>`_
 * `numPy: 1.13 or higher <https://numpy.org/install/>`_
 * `sciPy: 1.4.0 or higher <https://scipy.org/install/>`_
 * `Atomic Simulation Environment (ASE): 3.18 or higher <https://wiki.fysik.dtu.dk/ase/install.html>`_
 * `Metatensor <https://docs.metatensor.org/latest/index.html>`_
-* `Featomic (formerly known as Rascaline) <https://metatensor.github.io/featomic/latest/index.html>`_
-* `Rust -- We recommend using rustup <https://rustup.rs/>`_
+* `Featomic <https://metatensor.github.io/featomic/latest/index.html>`_
 
 
 Installing AniSOAP
@@ -48,8 +49,8 @@ AniSOAP is still under active development, so you may want to run some tests to 
 Local Documentation Build
 -------------------------
 
-To build the documentation locally, you can install Sphinx and related dependencies using::
+To build the documentation locally, you can install additional Sphinx dependencies using::
 
   pip install -r docs/requirements.txt 
 
-Then, you can use the Makefile in docs/ to build the docs. 
+Then, you can use the Makefile in ``docs/`` to build the docs. For example, navigating to the ``docs/`` folder, then running ``make html`` will create the html documentation and place it in the ``docs/build``. Doing so will also run the examples in ``notebooks/example01_invariances_of_powerspectrum.py`` and ``notebooks/example02_learn_benzene.py`` and embed these examples in the documentation. To build documentation without running the examples, you can use ``make html-noplot``. This will run much more quickly.
