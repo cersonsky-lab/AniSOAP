@@ -1,7 +1,7 @@
 [project]
 name = "anisoap"
 version = "0.0.0"
-requires-python = "3.9, 3.10"
+requires-python = ">=3.9"
 authors = [
   {name = "Arthur Lin", email = "alin62@wisc.edu"},
   {name = "Kevin Kazuki Huguenin-Dumittan"},
