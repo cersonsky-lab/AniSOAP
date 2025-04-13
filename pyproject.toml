@@ -35,7 +35,7 @@ dependencies = [
   "tqdm==4.67.1",
   "metatensor==0.2.0",
   "wigners==0.3.0",
-  "matplotlib==3.10.1",
+  "matplotlib",
   "skmatter==0.2.0"
 ]
 [build-system]
