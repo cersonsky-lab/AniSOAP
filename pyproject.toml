@@ -25,7 +25,19 @@ classifiers = [
   "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",  
 ]
-
+dependencies = [
+  "featomic==0.6.1",
+  "ase==3.25.0",
+  "coverage[toml]",
+  "pytest==8.3.5",
+  "scipy==1.15.2",
+  "setuptools-rust==1.11.1",
+  "tqdm==4.67.1",
+  "metatensor==0.2.0",
+  "wigners==0.3.0",
+  "matplotlib==3.10.1",
+  "skmatter==0.2.0"
+]
 [build-system]
 requires = ["setuptools", "setuptools-rust"]
 build-backend = "setuptools.build_meta"
