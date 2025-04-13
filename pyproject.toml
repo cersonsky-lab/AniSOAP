@@ -30,7 +30,7 @@ dependencies = [
   "ase==3.25.0",
   "coverage[toml]",
   "pytest==8.3.5",
-  "scipy==1.15.2",
+  "scipy",
   "setuptools-rust==1.11.1",
   "tqdm==4.67.1",
   "metatensor==0.2.0",
