@@ -21,7 +21,7 @@ The rest of the python dependencies are listed below and are all available on Py
 * `tqdm <https://tqdm.github.io/>`_
 * `pytest <https://docs.pytest.org/en/stable/>`_
 * `skmatter <https://scikit-matter.readthedocs.io/en/latest/>`_
-* `coverag <https://coverage.readthedocs.io/en/7.8.0/>`_
+* `coverage <https://coverage.readthedocs.io/en/7.8.0/>`_
 
 Installing AniSOAP
 ------------------
