@@ -28,17 +28,17 @@ classifiers = [
   "Programming Language :: Python :: 3.12",  
 ]
 dependencies = [
-  "featomic>=0.6.1",
-  "ase>=3.25.0",
+  "featomic",
+  "ase",
   "coverage[toml]",
-  "pytest>=8.3.5",
+  "pytest",
   "scipy",
-  "setuptools-rust>=1.11.1",
-  "tqdm>=4.67.1",
-  "metatensor>=0.2.0",
-  "wigners>=0.3.0",
+  "setuptools-rust",
+  "tqdm",
+  "metatensor",
+  "wigners",
   "matplotlib",
-  "skmatter>=0.2.0"
+  "skmatter"
 ]
 [build-system]
 requires = ["setuptools", "setuptools-rust"]
