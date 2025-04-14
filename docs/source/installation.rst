@@ -7,15 +7,21 @@ Dependencies
 
 A portion of AniSOAP is written in Rust, so installing the Rust compiler (rustc) and package manager (Cargo) is a prerequisite. Please follow the instructions for your platform here: https://rustup.rs/. Note that on unix systems, one must first install the C-compiler toolchain before installing rust.
 
-The rest of the python dependencies are listed below and are all available on PyPI. You do not have to install these dependencies individually; installing the AniSOAP package will automatically install the dependencies. We recommend using an environment manager like conda (https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html) to create a clean working environment for AniSOAP.
+The rest of the python dependencies are listed below and are all available on PyPI. **You do not have to install these dependencies individually**; installing the AniSOAP package will automatically install the dependencies. We recommend using an environment manager like conda (https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html) to create a clean working environment for AniSOAP.
 
-* `Python: 3.9 or 3.10 <https://www.python.org/downloads/>`_
-* `numPy: 1.13 or higher <https://numpy.org/install/>`_
-* `sciPy: 1.4.0 or higher <https://scipy.org/install/>`_
-* `Atomic Simulation Environment (ASE): 3.18 or higher <https://wiki.fysik.dtu.dk/ase/install.html>`_
+* `Python: 3.9, 3.10, 3.11, 3.12 supported <https://www.python.org/downloads/>`_
+* `numPy <https://numpy.org/install/>`_
+* `sciPy <https://scipy.org/install/>`_
+* `Atomic Simulation Environment (ASE) <https://wiki.fysik.dtu.dk/ase/install.html>`_
 * `Metatensor <https://docs.metatensor.org/latest/index.html>`_
 * `Featomic <https://metatensor.github.io/featomic/latest/index.html>`_
-
+* `matplotlib <https://matplotlib.org/>`_
+* `wigners <https://pypi.org/project/wigners/>`_
+* `setuptools-rust <https://setuptools-rust.readthedocs.io/en/v1.1.2/>`_
+* `tqdm <https://tqdm.github.io/>`_
+* `pytest <https://docs.pytest.org/en/stable/>`_
+* `skmatter <https://scikit-matter.readthedocs.io/en/latest/>`_
+* `coverag <https://coverage.readthedocs.io/en/7.8.0/>`_
 
 Installing AniSOAP
 ------------------
@@ -35,7 +41,7 @@ Then, install the AniSOAP library and its dependencies::
 
 Note that this step compiles the rust dependencies, so this step will fail if rust is not installed.
 
-Note that if this step fails because of incompatabilities related to dependency-versioning, we provide a ``requirements.txt`` file that contains pinned versions for most of these dependencies, located in the root directory of the AniSOAP project. Use::
+If this step fails because of incompatabilities related to dependency-versioning, we provide a ``requirements.txt`` file that contains pinned versions for most of these dependencies, located in the root directory of the AniSOAP project. Use::
 
   pip install -r requirements.txt 
 
