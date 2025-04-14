@@ -1,12 +1,12 @@
 --extra-index-url https://luthaf.fr/nightly-wheels/
-featomic
-ase
+featomic==0.6.1
+ase==3.25.0
 coverage[toml]
-pytest
+pytest==8.3.5
 scipy
-setuptools-rust
-tqdm
-metatensor
-wigners
+setuptools-rust==1.11.1
+tqdm==4.67.1
+metatensor==0.2.0
+wigners==0.3.0
 matplotlib
-skmatter
+skmatter==0.2.0
