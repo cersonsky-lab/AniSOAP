@@ -707,7 +707,7 @@ class EllipsoidalDensityProjection:
             "c_diameter[1]",
             "c_diameter[2]",
             "c_diameter[3]",
-            "c_q",
+            self.rotation_key,
             "positions",
             "numbers",
         ]
@@ -720,8 +720,6 @@ class EllipsoidalDensityProjection:
                     raise ValueError(
                         f"frame at index {index} is missing a required attribute '{attr}'"
                     )
-                if "quaternion" in array:
-                    raise ValueError(f"frame should contain c_q rather than quaternion")
 
         mvg_coeffs = self.transform(
             frames, show_progress=show_progress, rust_moments=rust_moments
