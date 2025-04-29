@@ -1,0 +1,63 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: AniSOAP
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Arthur
+    family-names: Lin
+    email: alin62@wisc.edu
+    affiliation: University of Wisconsin-Madison
+    orcid: 'https://orcid.org/0000-0002-7665-3767'
+  - given-names: Lucas
+    family-names: Ortengren
+    orcid: 'https://orcid.org/0009-0002-8899-7513'
+    affiliation: University of Wisconsin-Madison
+    email: ortengren@wisc.edu
+  - given-names: Seonwoo
+    family-names: Hwang
+    email: hwangsean1119@gmail.com
+    affiliation: University of Wisconsin-Madison
+  - given-names: Yong-Cheol
+    family-names: Cho
+    affiliation: University of Illinois Urbana-Champaign
+    orcid: 'https://orcid.org/0009-0001-6038-6764'
+  - given-names: Jigyasa
+    family-names: Nigam
+    orcid: 'https://orcid.org/0000-0001-6857-4332'
+  - given-names: Rose
+    family-names: Cersonsky
+    email: rose.cersonsky@wisc.edu
+    affiliation: University of Wisconsin-Madison
+    orcid: 'https://orcid.org/0000-0003-4515-3441'
+identifiers:
+  - type: url
+    value: 'https://github.com/cersonsky-lab/AniSOAP'
+repository-code: 'https://github.com/cersonsky-lab/AniSOAP'
+url: 'https://anisoap.readthedocs.io/en/latest/'
+abstract: >-
+  `AniSOAP` is a package that creates Machine Learning (ML)
+  representations of non-spherical particle configurations;
+  these representations can then be used in ML-driven
+  simulations and analyses. This generalization of existing
+  spherical ML representations therefore aims to bridge the
+  gap between two scientific communities: The
+  machine-learned atomistic simulation community, whose
+  primary concern is obtaining fast and (quantum) accurate
+  descriptions of the complex interactions occuring between
+  (spherical) atoms, and the coarse-grained and colloid
+  modeling community, whose primary concern is understanding
+  emergent behavior of macroscopic particles with
+  (plausibly) complex geometries. `AniSOAP` provide a common
+  framework to answer scientific questions at the
+  intersection of these two fields.
+keywords:
+  - Machine Learning
+  - Anisotropy
+  - Machine Learning Potentials
+  - Molecular Simulation
+license: Apache-2.0
