@@ -32,7 +32,7 @@ There are several ways you can contribute to the AniSOAP project:
 ## Testing
 We use pytest for testing. Before submitting your PR, run the tests to make sure everything works:
 
-``pytest``
+``pytest tests/.``
 
 ## Licensing
 By contributing to AniSOAP, you agree that your contributions will be licensed under the same open-source license as the project. Please see the `LICENSE` file for more information.
