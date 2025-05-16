@@ -1,7 +1,7 @@
 [project]
 name = "anisoap"
 version = "0.0.0"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 authors = [
   {name = "Arthur Lin", email = "alin62@wisc.edu"},
   {name = "Kevin Kazuki Huguenin-Dumittan"},
@@ -22,11 +22,24 @@ classifiers = [
   "Natural Language :: English",
 
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.8",
   "Programming Language :: Python :: 3.9",
-  "Programming Language :: Python :: 3.10",  
+  "Programming Language :: Python :: 3.10", 
+  "Programming Language :: Python :: 3.11", 
+  "Programming Language :: Python :: 3.12",  
 ]
-
+dependencies = [
+  "featomic",
+  "ase",
+  "coverage[toml]",
+  "pytest",
+  "scipy",
+  "setuptools-rust",
+  "tqdm",
+  "metatensor",
+  "wigners",
+  "matplotlib",
+  "skmatter"
+]
 [build-system]
 requires = ["setuptools", "setuptools-rust"]
 build-backend = "setuptools.build_meta"

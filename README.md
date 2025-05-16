@@ -12,6 +12,9 @@ AniSOAP
 While technically complete, AniSOAP is in beta mode, and subject to new changes regularly. 
 Please use with caution as we iron out some of the finer details.
 
+## Documentation
+
+Please read our latest documentation, containing examples and API usage here: [https://anisoap.readthedocs.io/en/latest/](https://anisoap.readthedocs.io/en/latest/)
 ## Dependencies
 
 Before installing anisoap, please make sure you have at least the
@@ -30,13 +33,13 @@ AniSOAP also requires the Rust language.  If you do not already have Rust instal
 
 The installation of the library for python use can be done simply with
 
-    pip install -r requirements.txt
-
-and then
-
     pip install .
 
-The code is currently still being developed. To make sure that your version behaves properly, please run the internal tests from the main directory with
+which installs all of AniSOAP's dependencies and AniSOAP itself. This installs the latest version of each dependency. If these results in conflict, you can use
+
+    pip install -r requirements.txt
+
+to install all the dependencies with frozen versions, followed by `pip install .` to install AniSOAP itself. You can test the library itself using
 
     pytest tests/.
 
