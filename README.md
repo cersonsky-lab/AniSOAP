@@ -47,9 +47,7 @@ Please contact the developers if some tests fail.
 
 ## For developers:
 
-Please run pytest and check that all tests pass before pushing new changes to the main branch with
-
-    pytest tests/.
+Contributions are welcome!  For more information, please see the [guidelines](./CONTRIBUTING.md).
 
 Contributors
 ------------
