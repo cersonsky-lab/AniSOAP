@@ -7,6 +7,8 @@ AniSOAP
   <img src="https://codecov.io/gh/cersonsky-lab/anisoap/branch/main/graph/badge.svg?token=UZJPJG34SM" />
 </a>
 
+AniSOAP is a Python library for creating descriptors of chemical systems suitable for machine learning use. This project aims to extend the popular Smooth Overlap of Atomic Positions (SOAP) descriptors to coarse-grained systems consisting of aspherical particles with anisotropic interactions.
+
 ## Warning!
 
 While technically complete, AniSOAP is in beta mode, and subject to new changes regularly. 
@@ -15,6 +17,7 @@ Please use with caution as we iron out some of the finer details.
 ## Documentation
 
 Please read our latest documentation, containing examples and API usage here: [https://anisoap.readthedocs.io/en/latest/](https://anisoap.readthedocs.io/en/latest/)
+
 ## Dependencies
 
 Before installing anisoap, please make sure you have at least the
