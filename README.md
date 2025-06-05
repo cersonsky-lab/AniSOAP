@@ -7,11 +7,6 @@ AniSOAP
   <img src="https://codecov.io/gh/cersonsky-lab/anisoap/branch/main/graph/badge.svg?token=UZJPJG34SM" />
 </a>
 
-## Warning!
-
-While technically complete, AniSOAP is in beta mode, and subject to new changes regularly. 
-Please use with caution as we iron out some of the finer details.
-
 ## Documentation
 
 Please read our latest documentation, containing examples and API usage here: [https://anisoap.readthedocs.io/en/latest/](https://anisoap.readthedocs.io/en/latest/)
