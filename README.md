@@ -15,21 +15,10 @@ Please use with caution as we iron out some of the finer details.
 ## Documentation
 
 Please read our latest documentation, containing examples and API usage here: [https://anisoap.readthedocs.io/en/latest/](https://anisoap.readthedocs.io/en/latest/)
-## Dependencies
-
-Before installing anisoap, please make sure you have at least the
-following packages installed:
-* python (3.9 or 3.10)
-* numpy (1.13 or higher)
-* scipy (1.4.0 or higher)
-* ASE (3.18 or higher)
-* math
-* metatensor
-* featomic
-
-AniSOAP also requires the Rust language.  If you do not already have Rust installed, we recommend using the rustup tool, available [here](https://rustup.rs).
 
 ## Installation
+
+AniSOAP requires the Rust language.  If you do not already have Rust installed, we recommend using the rustup tool, available [here](https://rustup.rs).  To check that Rust is installed correctly, enter `rustc --version` in a command prompt and make sure it does not return an error.
 
 The installation of the library for python use can be done simply with
 
