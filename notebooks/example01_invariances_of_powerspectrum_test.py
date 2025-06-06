@@ -27,9 +27,9 @@ import matplotlib.pyplot as plt
 # %%
 # Read the first two frames of ellipsoids.xyz, which represent coarse-grained benzene molecules.
 
-frames = read("notebooks/ellipsoids.xyz", "0:2")
-frames_translation = read("notebooks/ellipsoids.xyz", "0:2")
-frames_rotation = read("notebooks/ellipsoids.xyz", "0:2")
+frames = read("./ellipsoids.xyz", "0:2")
+frames_translation = read("./ellipsoids.xyz", "0:2")
+frames_rotation = read("./ellipsoids.xyz", "0:2")
 
 print(f"{len(frames)=}")  # a list of atoms objects
 print(f"{frames[0].arrays=}")

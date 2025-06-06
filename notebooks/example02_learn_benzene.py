@@ -31,9 +31,9 @@ lmax = 9
 nmax = 6
 
 atom_frames = read(
-    "notebooks/benzenes.xyz", ":"
+    "./benzenes.xyz", ":"
 )  # all atom frames, containing benzene energies
-frames = read("notebooks/ellipsoids.xyz", ":")  # ellipsoid frames
+frames = read("./ellipsoids.xyz", ":")  # ellipsoid frames
 energies = np.array([aframe.info["energy_pa"] for aframe in atom_frames])
 energies = np.reshape(
     energies, (-1, 1)
