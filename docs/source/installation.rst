@@ -5,9 +5,9 @@ Installation
 Dependencies
 ------------
 
-A portion of AniSOAP is written in Rust, so installing the Rust compiler (rustc) and package manager (Cargo) is a prerequisite. Please follow the instructions for your platform here: https://rustup.rs/. Note that on unix systems, one must first install the C-compiler toolchain before installing rust. Rust and cargo are properly installed when `rustc --version` and `cargo --version` don't produce an error.
+A portion of AniSOAP is written in Rust, so installing the Rust compiler (rustc) and package manager (Cargo) is a prerequisite. Please follow the instructions for your platform here: https://rustup.rs/. Note that on unix systems, one must first install the C-compiler toolchain before installing rust. Rust and cargo are properly installed when ``rustc --version`` and ``cargo --version`` don't produce an error.
 
-The rest of the python dependencies are in `pyproject.toml` in the root folder and are all available on PyPI. **Installing the AniSOAP package will automatically install the dependencies.** We recommend using an environment manager like conda (https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html) to create a clean working environment for AniSOAP.
+The rest of the python dependencies are in ``pyproject.toml`` in the root folder and are all available on PyPI. **Installing the AniSOAP package will automatically install the dependencies.** We recommend using an environment manager like conda (https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html) to create a clean working environment for AniSOAP.
 
 Installing AniSOAP
 ------------------
