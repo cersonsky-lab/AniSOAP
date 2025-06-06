@@ -5,22 +5,9 @@ Installation
 Dependencies
 ------------
 
-A portion of AniSOAP is written in Rust, so installing the Rust compiler (rustc) and package manager (Cargo) is a prerequisite. Please follow the instructions for your platform here: https://rustup.rs/. Note that on unix systems, one must first install the C-compiler toolchain before installing rust.
+A portion of AniSOAP is written in Rust, so installing the Rust compiler (rustc) and package manager (Cargo) is a prerequisite. Please follow the instructions for your platform here: https://rustup.rs/. Note that on unix systems, one must first install the C-compiler toolchain before installing rust. Rust and cargo are properly installed when `rustc --version` and `cargo --version` don't produce an error.
 
-The rest of the python dependencies are listed below and are all available on PyPI. **You do not have to install these dependencies individually**; installing the AniSOAP package will automatically install the dependencies. We recommend using an environment manager like conda (https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html) to create a clean working environment for AniSOAP.
-
-* `Python: 3.9, 3.10, 3.11, 3.12 supported <https://www.python.org/downloads/>`_
-* `sciPy <https://scipy.org/install/>`_
-* `Atomic Simulation Environment (ASE) <https://wiki.fysik.dtu.dk/ase/install.html>`_
-* `Metatensor <https://docs.metatensor.org/latest/index.html>`_
-* `Featomic <https://metatensor.github.io/featomic/latest/index.html>`_
-* `matplotlib <https://matplotlib.org/>`_
-* `wigners <https://pypi.org/project/wigners/>`_
-* `setuptools-rust <https://setuptools-rust.readthedocs.io/en/v1.1.2/>`_
-* `tqdm <https://tqdm.github.io/>`_
-* `pytest <https://docs.pytest.org/en/stable/>`_
-* `skmatter <https://scikit-matter.readthedocs.io/en/latest/>`_
-* `coverage <https://coverage.readthedocs.io/en/7.8.0/>`_
+The rest of the python dependencies are in `pyproject.toml` in the root folder and are all available on PyPI. **Installing the AniSOAP package will automatically install the dependencies.** We recommend using an environment manager like conda (https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html) to create a clean working environment for AniSOAP.
 
 Installing AniSOAP
 ------------------
