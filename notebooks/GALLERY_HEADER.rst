@@ -2,6 +2,7 @@ Examples
 ========
 
 Here is a collection of examples that may prove useful. These examples can be viewed in the gallery below, or can be viewed on Github:
+
 * `Example 1 <https://github.com/cersonsky-lab/AniSOAP/blob/main/notebooks/example01_invariances_of_powerspectrum_test.ipynb>`_
 * `Example 2 <https://github.com/cersonsky-lab/AniSOAP/blob/main/notebooks/example02_learn_benzene.ipynb>`
 
