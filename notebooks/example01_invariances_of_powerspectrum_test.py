@@ -83,7 +83,11 @@ for frame in frames:
     frame.set_positions(frame.get_positions() + translation_vector)
 print("New Positions:", frames[0].get_positions(), frames[1].get_positions())
 power_spectrum_translated = calculator.power_spectrum(frames)
-print(f"{np.allclose(power_spectrum, power_spectrum_translated)=}")
+
+if np.allclose(power_spectrum, power_spectrum_translated):
+    print("Power spectrum has translational invariance!")
+else:
+    print("Power spectrum has no translational invariance")
 
 # %%
 # Here, we demonstrate rotational invariance, rotating all ellipsoids by the same amount.
@@ -99,7 +103,10 @@ for frame in frames:
 print("New Orientations:", frames[0].arrays["c_q"], frames[1].arrays["c_q"])
 
 power_spectrum_rotation = calculator.power_spectrum(frames)
-print(f"{np.allclose(power_spectrum, power_spectrum_rotation, rtol=1e-2, atol=1e-2)=}")
+if np.allclose(power_spectrum, power_spectrum_rotation, rtol=1e-2, atol=1e-2):
+    print("Power spectrum has rotation invariance (with lenient tolerances)")
+else:
+    print("Power spectrum has no rotation invariance")
 
 # %%
 # Here's how to create ellipsoidal frames. In this example:
