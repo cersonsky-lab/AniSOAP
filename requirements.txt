@@ -9,3 +9,5 @@ metatensor==0.2.0
 wigners==0.3.0
 matplotlib
 skmatter==0.2.0
+# Using older version of scikit-learn until skmatter becomes compatible with most recent version (1.7.0)
+scikit-learn==1.5.0
