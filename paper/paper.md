@@ -55,10 +55,17 @@ By incorporating anisotropy, AniSOAP extends the advances of atomistic machine l
 # What is an AniSOAP vector?
 An AniSOAP vector is a series of numbers that represents a system of ellipsoidal particles, which in the most general case, consists of $\geq 1$ particles with different positions, shapes, orientations, and species identifications. Essentially, this is very similar to other point-cloud, many-body representations used in atomistic machine learning, like SOAP[@bartok_representing_2013] or ACE[@drautz_atomic_2019], except for the fact that AniSOAP vectors incorporate additional geometric information. Specific use-cases of AniSOAP can be seen in our paper here[@lin_expanding_2024].
 
-# What does the AniSOAP package do to take a configuration and construct the representation?
+# Implementation details
 The AniSOAP package currently takes in as input a list of frames in the `Atomic Simulation Environment` package[@hjorth_larsen_atomic_2017]. Each frame contains the particles' positions, dimensions, and orientations. If using periodic boundary conditions, the frame also needs the dimensions of the unit cell. Additional information about each frame can also be stored (e.g. the system energy) and used as a target for supervised ML.
 
-With this information, one can construct an `EllipsoidalDensityProjection` object, whose main functionality is to calculate the expansion coefficients of the density field in each frame. One can take Clebsch-Gordan products of these expansion coefficients to create higher body-order descriptors. We provide all the functionality required for these processes, and also provide the convenience method `power_spectrum` to calculate the 3-body descriptors of each frame.
+With this information, one can construct an `EllipsoidalDensityProjection` object, whose main functionality is to calculate the expansion coefficients of the density field in each frame. 
+Procedurally, this amounts to computing the coefficients and moments of radial basis functions... <-- Arthur start here. For efficient computation, we have ported repeated steps into compile language ... 
+
+This returned in the metatensor format (as opposed to numpy array) because of the general sparsity of such vectors. This reduces space complexity in this step, but vectorial objects can be obtained via... 
+
+One can take Clebsch-Gordan products of these expansion coefficients to create higher body-order descriptors. 
+
+As many users will be primarily interested in power-spectrum representations, we provide all the functionality required for these processes, and also provide the convenience method `power_spectrum` to calculate the 3-body descriptors of each frame. 
 
 # Conclusion and future developments
 AniSOAP is a powerful featurization that can be used for supervised and unsupervised analyses of molecular systems. AniSOAP is under active development and we envision it being used in a wide variety of contexts. Our main future development goals involve using AniSOAP as the underlying representation for machine-learned anisotropic potentials, and to understand how the relationship behind AniSOAP and its all-atom counterpart SOAP fits into the broad theory of bottom-up coarse-graining. We hope that accomplishing these goals can enable fast, accurate, and interpretable macromolecular or colloidal simulations.
