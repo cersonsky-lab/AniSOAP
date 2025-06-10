@@ -235,12 +235,17 @@ def mixed_kernel(X1, X2):
     return np.dot(x_soap1, x_soap2) + np.dot(x_anisoap1, x_anisoap2)
 # %%
 # Create mixed AniSOAP/SOAP representation
+# TODO: Use KernelNormalizer to Normalize each precomputed kernel.
 from skmatter.preprocessing import KernelNormalizer
-alpha = 0.25
+alpha = 1
 Kaa = x_train_soap @ x_train_soap.T
 Kcg = x_train_anisoap @ x_train_anisoap.T
 Kicg = x_train_soapcg @ x_train_soapcg.T
 Kmix = alpha * Kaa + (1 - alpha) * Kcg
+
+Kaa_test = x_test_soap @ x_train_soap.T
+Kcg_test = x_test_anisoap @ x_train_anisoap.T
+Kmix_test = alpha * Kaa_test + (1 - alpha) * Kcg_test
 # x_train_mix_raw = np.hstack((alpha * x_train_soap, (1-alpha) * x_train_anisoap))
 # x_train_mix_raw = alpha * x_train_soap.T @ x_train_soap + (1 - alpha) * x_train_anisoap.T @ x_train_anisoap
 # x_train_mix = StandardFlexibleScaler(column_wise=False).fit_transform(x_train_mix_raw)
@@ -254,14 +259,14 @@ x_test_mix = StandardFlexibleScaler(column_wise=False).fit_transform(x_test_mix_
 
 lr.fit(Kmix, y_train)
 
-y_train_pred_mix = lr.predict(x_train_mix)
-y_test_pred_mix = lr.predict(x_test_mix)
+y_train_pred_mix = lr.predict(Kmix)
+y_test_pred_mix = lr.predict(Kmix_test)
 energies_train_pred_mix = y_train_scaler.inverse_transform(y_train_pred_mix.reshape(-1, 1))
 energies_test_pred_mix = y_test_scaler.inverse_transform(y_test_pred_mix.reshape(-1, 1))
 print(f"{alpha=}")
-print(f"MixedRep Train R^2: {lr.score(x_train_mix, y_train):.3f}")
+print(f"MixedRep Train R^2: {lr.score(Kmix, y_train):.3f}")
 print(f"MixedRep Train RMSE: {RMSE(energies[i_train], energies_train_pred_mix)}") 
-print(f"MixedRep Test R^2: {lr.score(x_test_mix, y_test):.3f}")
+print(f"MixedRep Test R^2: {lr.score(Kmix_test, y_test):.3f}")
 print(f"MixedRep Test RMSE: {RMSE(energies[i_test], energies_test_pred_mix)}") 
 # %%
 from tqdm.auto import tqdm
