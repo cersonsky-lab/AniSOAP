@@ -226,33 +226,18 @@ print(f"SOAP_CG Train R^2: {lr.score(x_train_soapcg, y_train):.3f}")
 print(f"SOAP_CG Train RMSE: {RMSE(energies[i_train], energies_train_pred_soapcg)}") 
 print(f"SOAP_CG Test R^2: {lr.score(x_test_soapcg, y_test):.3f}")
 print(f"SOAP_CG Test RMSE: {RMSE(energies[i_test], energies_test_pred_soapcg)}") 
-
-#%%
-def mixed_kernel(X1, X2):
-    # Each are rows of a concatenated matrix
-    x_soap1, x_anisoap1 = X1[:21], X1[21:]
-    x_soap2, x_anisoap2 = X2[:21], X2[21:]
-    return np.dot(x_soap1, x_soap2) + np.dot(x_anisoap1, x_anisoap2)
 # %%
 # Create mixed AniSOAP/SOAP representation
-from skmatter.preprocessing import KernelNormalizer
-alpha = 0.25
-Kaa = x_train_soap @ x_train_soap.T
-Kcg = x_train_anisoap @ x_train_anisoap.T
-Kicg = x_train_soapcg @ x_train_soapcg.T
-Kmix = alpha * Kaa + (1 - alpha) * Kcg
-# x_train_mix_raw = np.hstack((alpha * x_train_soap, (1-alpha) * x_train_anisoap))
-# x_train_mix_raw = alpha * x_train_soap.T @ x_train_soap + (1 - alpha) * x_train_anisoap.T @ x_train_anisoap
-# x_train_mix = StandardFlexibleScaler(column_wise=False).fit_transform(x_train_mix_raw)
-# x_train_mix = 
-lr = KernelRidge(alpha=1e-8, kernel="precomputed")
+alpha = 1
+x_train_mix_raw = np.hstack((alpha * x_train_soap, (1-alpha) * x_train_anisoap))
+x_train_mix = StandardFlexibleScaler(column_wise=False).fit_transform(x_train_mix_raw)
 
 x_test_mix_raw = np.hstack((alpha * x_test_soap, (1-alpha) * x_test_anisoap))
-# x_test_mix_raw = alpha * x_test_soap.T @ x_test_soap + (1 - alpha ) * x_test_anisoap.T @ x_test_anisoap
+# 
 # x_test_mix_raw = x_test_mix_raw[:, x_test_mix_raw.var(axis=0)>1e-12]
 x_test_mix = StandardFlexibleScaler(column_wise=False).fit_transform(x_test_mix_raw)
 
-lr.fit(Kmix, y_train)
+lr.fit(x_train_mix, y_train)
 
 y_train_pred_mix = lr.predict(x_train_mix)
 y_test_pred_mix = lr.predict(x_test_mix)
@@ -265,7 +250,6 @@ print(f"MixedRep Test R^2: {lr.score(x_test_mix, y_test):.3f}")
 print(f"MixedRep Test RMSE: {RMSE(energies[i_test], energies_test_pred_mix)}") 
 # %%
 from tqdm.auto import tqdm
-from sklearn.decomposition import PCA 
 train_rmses = []
 test_rmses = []
 alphas = np.linspace(0, 1, 101)
@@ -276,11 +260,16 @@ for alpha in tqdm(alphas):
     x_test_mix_raw = np.hstack((alpha * x_test_soap, (1-alpha) * x_test_anisoap))
     # x_test_mix_raw = x_test_mix_raw[:, x_test_mix_raw.var(axis=0)>1e-12]
     x_test_mix = StandardFlexibleScaler(column_wise=False).fit_transform(x_test_mix_raw)
-
+ 
     lr.fit(x_train_mix, y_train)
     y_train_pred_mix = lr.predict(x_train_mix)
     y_test_pred_mix = lr.predict(x_test_mix)
     energies_train_pred_mix = y_train_scaler.inverse_transform(y_train_pred_mix.reshape(-1, 1))
+    # print(f"{alpha=}")
+    # print(f"MixedRep Train R^2: {lr.score(x_train_mix, y_train):.3f}")
+    # print(f"MixedRep Train RMSE: {RMSE(energies[i_train], energies_train_pred_mix)}") 
+    # print(f"MixedRep Test R^2: {lr.score(x_test_mix, y_test):.3f}")
+    # print(f"MixedRep Test RMSE: {RMSE(energies[i_test], energies_test_pred_mix)}") 
     energies_test_pred_mix = y_test_scaler.inverse_transform(y_test_pred_mix.reshape(-1, 1))
     train_rmses.append(RMSE(energies[i_train], energies_train_pred_mix))
     test_rmses.append(RMSE(energies[i_test], energies_test_pred_mix))
@@ -295,45 +284,5 @@ mpl.rcParams['svg.fonttype'] = 'none'
 plt.plot(alphas, np.array(train_rmses), linewidth=2.0)
 plt.xlabel("$\lambda$ (0 is CG AniSOAP, 1 is All-Atom SOAP)")
 plt.ylabel("RMSE of Energy Prediction (eV/atom)")
-plt.savefig("bananaplot_CGAniSOAP_CGSOAP.svg")
-
-# %%
-from tqdm.auto import tqdm
-from sklearn.decomposition import PCA 
-train_rmses2 = []
-test_rmses2 = []
-alphas = np.linspace(0, 1, 101)
-for alpha in tqdm(alphas):
-    x_train_mix2_raw = np.hstack((alpha * x_train_soap, (1-alpha) * x_train_soapcg))
-    x_train_mix2 = StandardFlexibleScaler(column_wise=False).fit_transform(x_train_mix2_raw)
-
-    x_test_mix_raw2 = np.hstack((alpha * x_test_soap, (1-alpha) * x_test_soapcg))
-    # x_test_mix_raw = x_test_mix_raw[:, x_test_mix_raw.var(axis=0)>1e-12]
-    x_test_mix2 = StandardFlexibleScaler(column_wise=False).fit_transform(x_test_mix_raw2)
-
-    lr.fit(x_train_mix2, y_train)
-    y_train_pred_mix2 = lr.predict(x_train_mix2)
-    y_test_pred_mix2 = lr.predict(x_test_mix2)
-    energies_train_pred_mix2 = y_train_scaler.inverse_transform(y_train_pred_mix2.reshape(-1, 1))
-    energies_test_pred_mix2 = y_test_scaler.inverse_transform(y_test_pred_mix2.reshape(-1, 1))
-    # print(f"{alpha=}")
-    # print(f"MixedRep Train R^2: {lr.score(x_train_mix2, y_train):.3f}")
-    # print(f"MixedRep Train RMSE: {RMSE(energies[i_train], energies_train_pred_mix)}") 
-    # print(f"MixedRep Test R^2: {lr.score(x_test_mix, y_test):.3f}")
-    # print(f"MixedRep Test RMSE: {RMSE(energies[i_test], energies_test_pred_mix)}") 
-    train_rmses2.append(RMSE(energies[i_train], energies_train_pred_mix2))
-    test_rmses2.append(RMSE(energies[i_test], energies_test_pred_mix2))
-# %%
-import matplotlib as mpl
-mpl.rcParams['font.sans-serif'] = "Helvetica"
-mpl.rcParams['font.family'] = "sans-serif"
-mpl.rcParams['font.size'] = 14
-
-mpl.rcParams['mathtext.fontset'] = "custom"
-mpl.rcParams['svg.fonttype'] = 'none'
-plt.plot(alphas, np.array(train_rmses2), linewidth=2.0)
-plt.xlabel("$\lambda$ (0 is CG AniSOAP, 1 is All-Atom SOAP)")
-plt.ylabel("RMSE of Energy Prediction (eV/atom)")
-plt.savefig("bananaplot_CGAniSOAP_CGSOAP.svg")
-# %%
+# plt.savefig("bananaplot_CGAniSOAP_AASOAP.svg")
 
