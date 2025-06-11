@@ -293,25 +293,59 @@ print(f"MixedRepIsotropic Test R^2: {kr_icg.score(Kmix_icg_test, y_test):.3f}")
 print(f"MixedRepIsotropic Test RMSE: {RMSE(energies[i_test], energies_test_pred_mix_icg)}") 
 # %%
 from tqdm.auto import tqdm
-from sklearn.decomposition import PCA 
 train_rmses = []
 test_rmses = []
+train_rmses_icg = []
+test_rmses_icg = []
 alphas = np.linspace(0, 1, 101)
+Kaa = x_train_soap @ x_train_soap.T
+Kcg = x_train_anisoap @ x_train_anisoap.T
+Kicg = x_train_soapcg @ x_train_soapcg.T
+
+kernel_normalizer_aa = KernelNormalizer()
+kernel_normalizer_cg = KernelNormalizer()
+kernel_normalizer_icg = KernelNormalizer()
+kernel_normalizer_aa.fit(Kaa)
+kernel_normalizer_cg.fit(Kcg)
+kernel_normalizer_icg.fit(Kicg)
+Kaa_norm = kernel_normalizer_aa.transform(Kaa)
+Kcg_norm = kernel_normalizer_cg.transform(Kcg)
+Kicg_norm = kernel_normalizer_icg.transform(Kicg)
+
+Kaa_test = x_test_soap @ x_train_soap.T
+Kcg_test = x_test_anisoap @ x_train_anisoap.T
+Kicg_test = x_test_soapcg @ x_train_soapcg.T 
+
+Kaa_test = kernel_normalizer_aa.transform(Kaa_test)
+Kcg_test = kernel_normalizer_cg.transform(Kcg_test)
+Kicg_test = kernel_normalizer_icg.transform(Kicg_test)
 for alpha in tqdm(alphas):
-    x_train_mix_raw = np.hstack((alpha * x_train_soap, (1-alpha) * x_train_anisoap))
-    x_train_mix = StandardFlexibleScaler(column_wise=False).fit_transform(x_train_mix_raw)
+   
+    Kmix = alpha * Kaa_norm + (1 - alpha) * Kcg_norm
+    Kmix_icg = alpha * Kaa_norm + (1 - alpha) * Kicg_norm
+    Kmix_test = alpha * Kaa_test + (1 - alpha) * Kcg_test
+    Kmix_icg_test = alpha * Kaa_test + (1 - alpha) * Kicg_test 
 
-    x_test_mix_raw = np.hstack((alpha * x_test_soap, (1-alpha) * x_test_anisoap))
-    # x_test_mix_raw = x_test_mix_raw[:, x_test_mix_raw.var(axis=0)>1e-12]
-    x_test_mix = StandardFlexibleScaler(column_wise=False).fit_transform(x_test_mix_raw)
+    kr = KernelRidge(alpha=1e-8, kernel="precomputed")
+    kr_icg = KernelRidge(alpha=1e-8, kernel="precomputed")
 
-    lr.fit(x_train_mix, y_train)
-    y_train_pred_mix = lr.predict(x_train_mix)
-    y_test_pred_mix = lr.predict(x_test_mix)
+    kr.fit(Kmix, y_train)
+    kr_icg.fit(Kmix_icg, y_train)
+
+    y_train_pred_mix = kr.predict(Kmix)
+    y_test_pred_mix = kr.predict(Kmix_test)
     energies_train_pred_mix = y_train_scaler.inverse_transform(y_train_pred_mix.reshape(-1, 1))
     energies_test_pred_mix = y_test_scaler.inverse_transform(y_test_pred_mix.reshape(-1, 1))
+
+    y_train_pred_mix_icg = kr_icg.predict(Kmix_icg)
+    y_test_pred_mix_icg = kr_icg.predict(Kmix_icg_test)
+    energies_train_pred_mix_icg = y_train_scaler.inverse_transform(y_train_pred_mix_icg.reshape(-1, 1))
+    energies_test_pred_mix_icg = y_test_scaler.inverse_transform(y_test_pred_mix_icg.reshape(-1, 1))
+
     train_rmses.append(RMSE(energies[i_train], energies_train_pred_mix))
     test_rmses.append(RMSE(energies[i_test], energies_test_pred_mix))
+    train_rmses_icg.append(RMSE(energies[i_train], energies_train_pred_mix_icg))
+    test_rmses_icg.append(RMSE(energies[i_test], energies_test_pred_mix_icg))
 # %%
 import matplotlib as mpl
 mpl.rcParams['font.sans-serif'] = "Helvetica"
@@ -320,48 +354,11 @@ mpl.rcParams['font.size'] = 14
 
 mpl.rcParams['mathtext.fontset'] = "custom"
 mpl.rcParams['svg.fonttype'] = 'none'
-plt.plot(alphas, np.array(train_rmses), linewidth=2.0)
-plt.xlabel("$\lambda$ (0 is CG AniSOAP, 1 is All-Atom SOAP)")
+plt.semilogy(alphas, np.array(train_rmses), linewidth=2.0, label="Mixed AniSOAPCG-SOAPAA")
+plt.semilogy(alphas, np.array(train_rmses_icg), linewidth=2.0, label="Mixed SOAPCG-SOAPAA")
+plt.xlabel("$\lambda$ (0 is Coarse-Grained, 1 is All-Atom SOAP)")
 plt.ylabel("RMSE of Energy Prediction (eV/atom)")
-plt.savefig("bananaplot_CGAniSOAP_CGSOAP.svg")
-
-# %%
-from tqdm.auto import tqdm
-from sklearn.decomposition import PCA 
-train_rmses2 = []
-test_rmses2 = []
-alphas = np.linspace(0, 1, 101)
-for alpha in tqdm(alphas):
-    x_train_mix2_raw = np.hstack((alpha * x_train_soap, (1-alpha) * x_train_soapcg))
-    x_train_mix2 = StandardFlexibleScaler(column_wise=False).fit_transform(x_train_mix2_raw)
-
-    x_test_mix_raw2 = np.hstack((alpha * x_test_soap, (1-alpha) * x_test_soapcg))
-    # x_test_mix_raw = x_test_mix_raw[:, x_test_mix_raw.var(axis=0)>1e-12]
-    x_test_mix2 = StandardFlexibleScaler(column_wise=False).fit_transform(x_test_mix_raw2)
-
-    lr.fit(x_train_mix2, y_train)
-    y_train_pred_mix2 = lr.predict(x_train_mix2)
-    y_test_pred_mix2 = lr.predict(x_test_mix2)
-    energies_train_pred_mix2 = y_train_scaler.inverse_transform(y_train_pred_mix2.reshape(-1, 1))
-    energies_test_pred_mix2 = y_test_scaler.inverse_transform(y_test_pred_mix2.reshape(-1, 1))
-    # print(f"{alpha=}")
-    # print(f"MixedRep Train R^2: {lr.score(x_train_mix2, y_train):.3f}")
-    # print(f"MixedRep Train RMSE: {RMSE(energies[i_train], energies_train_pred_mix)}") 
-    # print(f"MixedRep Test R^2: {lr.score(x_test_mix, y_test):.3f}")
-    # print(f"MixedRep Test RMSE: {RMSE(energies[i_test], energies_test_pred_mix)}") 
-    train_rmses2.append(RMSE(energies[i_train], energies_train_pred_mix2))
-    test_rmses2.append(RMSE(energies[i_test], energies_test_pred_mix2))
-# %%
-import matplotlib as mpl
-mpl.rcParams['font.sans-serif'] = "Helvetica"
-mpl.rcParams['font.family'] = "sans-serif"
-mpl.rcParams['font.size'] = 14
-
-mpl.rcParams['mathtext.fontset'] = "custom"
-mpl.rcParams['svg.fonttype'] = 'none'
-plt.plot(alphas, np.array(train_rmses2), linewidth=2.0)
-plt.xlabel("$\lambda$ (0 is CG AniSOAP, 1 is All-Atom SOAP)")
-plt.ylabel("RMSE of Energy Prediction (eV/atom)")
-plt.savefig("bananaplot_CGAniSOAP_CGSOAP.svg")
+plt.legend()
+# plt.savefig("bananaplot_CGAniSOAP_CGSOAP.svg")
 # %%
 
