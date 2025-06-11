@@ -77,39 +77,32 @@ calculator = EllipsoidalDensityProjection(**AniSOAP_HYPERS)
 x_anisoap_raw = calculator.power_spectrum(frames)
 
 #%%
-# Create an All Atom Representation with the same Hypers
-SOAP_HYPERS = {
-    "cutoff": {
-        "radius": rcut,
-        "smoothing": {"type": "ShiftedCosine", "width": 0.5},
-    },
-    "density": {
-        "type": "Gaussian",
-        "width": 0.3,
-    },
-    "basis": {
-        "type": "TensorProduct",
-        "max_angular": lmax,
-        "radial": {"type": "Gto", "max_radial": nmax},
-    },
-}
+# Create AniSOAP All Atom Spherical Rep
+# Takes 14 min
+a1, a2, a3 = 1., 1., 1.
+for frame in atom_frames:
+    frame.arrays["c_diameter[1]"] = a1 * np.ones(len(frame))
+    frame.arrays["c_diameter[2]"] = a2 * np.ones(len(frame))
+    frame.arrays["c_diameter[3]"] = a3 * np.ones(len(frame))
+    frame.arrays["c_q"] = np.array([[1, 0, 0, 0]] * len(frame))
 
-calculator = SoapPowerSpectrum(**SOAP_HYPERS)
-descriptor_example = calculator.compute(atom_frames)
-print("before: ", len(descriptor_example.keys))
-
-descriptor_example = descriptor_example.keys_to_samples("center_type")
-descriptor_example = descriptor_example.keys_to_properties(["neighbor_1_type", "neighbor_2_type"])
-print("after: ", len(descriptor_example.keys))
-x_soap_raw = metatensor.mean_over_samples(descriptor_example, sample_names=['atom', 'center_type'])
-x_soap_raw = x_soap_raw.block().values.squeeze()
-
+x_soap_rawrep = calculator.power_spectrum(atom_frames, show_progress=True, mean_over_samples=False)
 #%%
-# Create a spherical CG SOAP Representation with the same Hypers
-soapcg_desc = calculator.compute(frames)
-soapcg_desc = soapcg_desc.keys_to_samples("center_type")
-soapcg_desc = soapcg_desc.keys_to_properties(["neighbor_1_type", "neighbor_2_type"])
-x_soapcg_raw = metatensor.mean_over_samples(soapcg_desc, sample_names=['atom', 'center_type'])
+x_soap_raw = x_soap_rawrep.keys_to_samples("types_center")
+x_soap_raw = metatensor.mean_over_samples(x_soap_raw, sample_names=['center', 'types_center'])
+x_soap_raw = x_soap_raw.block().values.squeeze()
+#%%
+# Create AniSOAP Isotropic CG Rep
+a1, a2, a3 = 4., 4., 4.
+for frame in frames:
+    frame.arrays["c_diameter[1]"] = a1 * np.ones(len(frame))
+    frame.arrays["c_diameter[2]"] = a2 * np.ones(len(frame))
+    frame.arrays["c_diameter[3]"] = a3 * np.ones(len(frame))
+    frame.arrays["c_q"] = np.array([[1, 0, 0, 0]] * len(frame))
+
+x_soapcg_raw = calculator.power_spectrum(frames, mean_over_samples=False)
+x_soapcg_raw = x_soapcg_raw.keys_to_samples("types_center")
+x_soapcg_raw = metatensor.mean_over_samples(x_soapcg_raw, sample_names=['center', 'types_center'])
 x_soapcg_raw = x_soapcg_raw.block().values.squeeze()
 # %%
 # Here, we do standard preparation of the data for machine learning.
@@ -236,7 +229,7 @@ def mixed_kernel(X1, X2):
 # %%
 # Create mixed AniSOAP/SOAP representation
 from skmatter.preprocessing import KernelNormalizer
-alpha = 0
+alpha = 0.5
 Kaa = x_train_soap @ x_train_soap.T
 Kcg = x_train_anisoap @ x_train_anisoap.T
 Kicg = x_train_soapcg @ x_train_soapcg.T
@@ -354,10 +347,11 @@ mpl.rcParams['font.size'] = 14
 
 mpl.rcParams['mathtext.fontset'] = "custom"
 mpl.rcParams['svg.fonttype'] = 'none'
-plt.semilogy(alphas, np.array(train_rmses), linewidth=2.0, label="Mixed AniSOAPCG-SOAPAA")
-plt.semilogy(alphas, np.array(train_rmses_icg), linewidth=2.0, label="Mixed SOAPCG-SOAPAA")
+plt.plot(alphas, np.array(train_rmses), linewidth=2.0, label="Mixed AniSOAPCG-SOAPAA")
+plt.plot(alphas, np.array(train_rmses_icg), linewidth=2.0, label="Mixed SOAPCG-SOAPAA")
 plt.xlabel("$\lambda$ (0 is Coarse-Grained, 1 is All-Atom SOAP)")
 plt.ylabel("RMSE of Energy Prediction (eV/atom)")
+plt.ylim([9e-3, 20e-3])
 plt.legend()
 # plt.savefig("bananaplot_CGAniSOAP_CGSOAP.svg")
 # %%
