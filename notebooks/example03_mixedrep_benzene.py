@@ -93,7 +93,7 @@ x_soap_raw = metatensor.mean_over_samples(x_soap_raw, sample_names=['center', 't
 x_soap_raw = x_soap_raw.block().values.squeeze()
 #%%
 # Create AniSOAP Isotropic CG Rep
-a1, a2, a3 = 4., 4., 4.
+a1, a2, a3 = 1., 1., 1.
 for frame in frames:
     frame.arrays["c_diameter[1]"] = a1 * np.ones(len(frame))
     frame.arrays["c_diameter[2]"] = a2 * np.ones(len(frame))
