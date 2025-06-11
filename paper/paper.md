@@ -65,7 +65,7 @@ One can take Clebsch-Gordan products of these expansion coefficients to create h
 
 As many users will be primarily interested in power-spectrum representations, we provide all the functionality required for these processes, and also provide the convenience method `power_spectrum` to calculate the 3-body descriptors of each frame. 
 
-The library is thoroughly tested, with unit-tests to test basic functionality, integration-tests to ensure that AniSOAP vectors are calculated correctly, and caching and speed tests to ensure that our aforementioned optimizations yield faster code.
+The library is thoroughly tested, with unit-tests to test basic functionality, integration-tests to ensure that AniSOAP vectors are calculated correctly, and caching and speed tests to ensure that our aforementioned optimizations yield faster code. These tests are integrated into a Github CI, and we ensure that future features should necessistate additional tests and should pass existing ones.
 
 # Conclusion and future developments
 AniSOAP is a powerful featurization that can be used for supervised and unsupervised analyses of molecular systems. AniSOAP is under active development and we envision it being used in a wide variety of contexts. Our main future development goals involve using AniSOAP as the underlying representation for machine-learned anisotropic potentials, and to understand how the relationship behind AniSOAP and its all-atom counterpart SOAP fits into the broad theory of bottom-up coarse-graining. We hope that accomplishing these goals can enable fast, accurate, and interpretable macromolecular or colloidal simulations.
