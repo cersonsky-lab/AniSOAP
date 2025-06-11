@@ -257,10 +257,10 @@ Kmix_test = alpha * Kaa_test + (1 - alpha) * Kcg_test
 # x_train_mix = 
 lr = KernelRidge(alpha=1e-8, kernel="precomputed")
 
-x_test_mix_raw = np.hstack((alpha * x_test_soap, (1-alpha) * x_test_anisoap))
+# x_test_mix_raw = np.hstack((alpha * x_test_soap, (1-alpha) * x_test_anisoap))
 # x_test_mix_raw = alpha * x_test_soap.T @ x_test_soap + (1 - alpha ) * x_test_anisoap.T @ x_test_anisoap
 # x_test_mix_raw = x_test_mix_raw[:, x_test_mix_raw.var(axis=0)>1e-12]
-x_test_mix = StandardFlexibleScaler(column_wise=False).fit_transform(x_test_mix_raw)
+# x_test_mix = StandardFlexibleScaler(column_wise=False).fit_transform(x_test_mix_raw)
 
 lr.fit(Kmix, y_train)
 
