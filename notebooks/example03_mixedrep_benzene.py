@@ -235,32 +235,26 @@ def mixed_kernel(X1, X2):
     return np.dot(x_soap1, x_soap2) + np.dot(x_anisoap1, x_anisoap2)
 # %%
 # Create mixed AniSOAP/SOAP representation
-# TODO: Use KernelNormalizer to Normalize each precomputed kernel.
 from skmatter.preprocessing import KernelNormalizer
 alpha = 1
 Kaa = x_train_soap @ x_train_soap.T
 Kcg = x_train_anisoap @ x_train_anisoap.T
 Kicg = x_train_soapcg @ x_train_soapcg.T
-Kaa = KernelNormalizer().fit_transform(Kaa)
-Kcg = KernelNormalizer().fit_transform(Kcg)
-Kmix = alpha * Kaa + (1 - alpha) * Kcg
+kernel_normalizer_aa = KernelNormalizer()
+kernel_normalizer_cg = KernelNormalizer()
+kernel_normalizer_aa.fit(Kaa)
+kernel_normalizer_cg.fit(Kcg)
+Kaa_norm = kernel_normalizer_aa.transform(Kaa)
+Kcg_norm = kernel_normalizer_cg.transform(Kcg)
+Kmix = alpha * Kaa_norm + (1 - alpha) * Kcg_norm
 
 Kaa_test = x_test_soap @ x_train_soap.T
 Kcg_test = x_test_anisoap @ x_train_anisoap.T
-# Below Lines break -- the fit_transform expects a square kernel matrix.
-Kaa_test = KernelNormalizer().fit_transform(Kaa_test)
-Kcg_test = KernelNormalizer().fit_transform(Kcg_test)
+Kaa_test = kernel_normalizer_aa.transform(Kaa_test)
+Kcg_test = kernel_normalizer_cg.transform(Kcg_test)
 Kmix_test = alpha * Kaa_test + (1 - alpha) * Kcg_test
-# x_train_mix_raw = np.hstack((alpha * x_train_soap, (1-alpha) * x_train_anisoap))
-# x_train_mix_raw = alpha * x_train_soap.T @ x_train_soap + (1 - alpha) * x_train_anisoap.T @ x_train_anisoap
-# x_train_mix = StandardFlexibleScaler(column_wise=False).fit_transform(x_train_mix_raw)
-# x_train_mix = 
-lr = KernelRidge(alpha=1e-8, kernel="precomputed")
 
-# x_test_mix_raw = np.hstack((alpha * x_test_soap, (1-alpha) * x_test_anisoap))
-# x_test_mix_raw = alpha * x_test_soap.T @ x_test_soap + (1 - alpha ) * x_test_anisoap.T @ x_test_anisoap
-# x_test_mix_raw = x_test_mix_raw[:, x_test_mix_raw.var(axis=0)>1e-12]
-# x_test_mix = StandardFlexibleScaler(column_wise=False).fit_transform(x_test_mix_raw)
+lr = KernelRidge(alpha=1e-8, kernel="precomputed")
 
 lr.fit(Kmix, y_train)
 
