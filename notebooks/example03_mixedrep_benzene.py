@@ -236,37 +236,61 @@ def mixed_kernel(X1, X2):
 # %%
 # Create mixed AniSOAP/SOAP representation
 from skmatter.preprocessing import KernelNormalizer
-alpha = 1
+alpha = 0
 Kaa = x_train_soap @ x_train_soap.T
 Kcg = x_train_anisoap @ x_train_anisoap.T
 Kicg = x_train_soapcg @ x_train_soapcg.T
+
 kernel_normalizer_aa = KernelNormalizer()
 kernel_normalizer_cg = KernelNormalizer()
+kernel_normalizer_icg = KernelNormalizer()
 kernel_normalizer_aa.fit(Kaa)
 kernel_normalizer_cg.fit(Kcg)
+kernel_normalizer_icg.fit(Kicg)
 Kaa_norm = kernel_normalizer_aa.transform(Kaa)
 Kcg_norm = kernel_normalizer_cg.transform(Kcg)
+Kicg_norm = kernel_normalizer_icg.transform(Kicg)
+
 Kmix = alpha * Kaa_norm + (1 - alpha) * Kcg_norm
+Kmix_icg = alpha * Kaa_norm + (1 - alpha) * Kicg_norm
 
 Kaa_test = x_test_soap @ x_train_soap.T
 Kcg_test = x_test_anisoap @ x_train_anisoap.T
+Kicg_test = x_test_soapcg @ x_train_soapcg.T 
+
 Kaa_test = kernel_normalizer_aa.transform(Kaa_test)
 Kcg_test = kernel_normalizer_cg.transform(Kcg_test)
+Kicg_test = kernel_normalizer_icg.transform(Kicg_test)
+
 Kmix_test = alpha * Kaa_test + (1 - alpha) * Kcg_test
+Kmix_icg_test = alpha * Kaa_test + (1 - alpha) * Kicg_test 
 
-lr = KernelRidge(alpha=1e-8, kernel="precomputed")
+kr = KernelRidge(alpha=1e-8, kernel="precomputed")
+kr_icg = KernelRidge(alpha=1e-8, kernel="precomputed")
 
-lr.fit(Kmix, y_train)
+kr.fit(Kmix, y_train)
+kr_icg.fit(Kmix_icg, y_train)
 
-y_train_pred_mix = lr.predict(Kmix)
-y_test_pred_mix = lr.predict(Kmix_test)
+y_train_pred_mix = kr.predict(Kmix)
+y_test_pred_mix = kr.predict(Kmix_test)
 energies_train_pred_mix = y_train_scaler.inverse_transform(y_train_pred_mix.reshape(-1, 1))
 energies_test_pred_mix = y_test_scaler.inverse_transform(y_test_pred_mix.reshape(-1, 1))
+
+y_train_pred_mix_icg = kr_icg.predict(Kmix_icg)
+y_test_pred_mix_icg = kr_icg.predict(Kmix_icg_test)
+energies_train_pred_mix_icg = y_train_scaler.inverse_transform(y_train_pred_mix_icg.reshape(-1, 1))
+energies_test_pred_mix_icg = y_test_scaler.inverse_transform(y_test_pred_mix_icg.reshape(-1, 1))
+
 print(f"{alpha=}")
-print(f"MixedRep Train R^2: {lr.score(Kmix, y_train):.3f}")
+print(f"MixedRep Train R^2: {kr.score(Kmix, y_train):.3f}")
 print(f"MixedRep Train RMSE: {RMSE(energies[i_train], energies_train_pred_mix)}") 
-print(f"MixedRep Test R^2: {lr.score(Kmix_test, y_test):.3f}")
+print(f"MixedRep Test R^2: {kr.score(Kmix_test, y_test):.3f}")
 print(f"MixedRep Test RMSE: {RMSE(energies[i_test], energies_test_pred_mix)}") 
+
+print(f"MixedRepIsotropic Train R^2: {kr_icg.score(Kmix_icg, y_train):.3f}")
+print(f"MixedRepIsotropic Train RMSE: {RMSE(energies[i_train], energies_train_pred_mix_icg)}") 
+print(f"MixedRepIsotropic Test R^2: {kr_icg.score(Kmix_icg_test, y_test):.3f}")
+print(f"MixedRepIsotropic Test RMSE: {RMSE(energies[i_test], energies_test_pred_mix_icg)}") 
 # %%
 from tqdm.auto import tqdm
 from sklearn.decomposition import PCA 
