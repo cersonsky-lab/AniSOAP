@@ -241,10 +241,15 @@ alpha = 1
 Kaa = x_train_soap @ x_train_soap.T
 Kcg = x_train_anisoap @ x_train_anisoap.T
 Kicg = x_train_soapcg @ x_train_soapcg.T
+Kaa = KernelNormalizer().fit_transform(Kaa)
+Kcg = KernelNormalizer().fit_transform(Kcg)
 Kmix = alpha * Kaa + (1 - alpha) * Kcg
 
 Kaa_test = x_test_soap @ x_train_soap.T
 Kcg_test = x_test_anisoap @ x_train_anisoap.T
+# Below Lines break -- the fit_transform expects a square kernel matrix.
+Kaa_test = KernelNormalizer().fit_transform(Kaa_test)
+Kcg_test = KernelNormalizer().fit_transform(Kcg_test)
 Kmix_test = alpha * Kaa_test + (1 - alpha) * Kcg_test
 # x_train_mix_raw = np.hstack((alpha * x_train_soap, (1-alpha) * x_train_anisoap))
 # x_train_mix_raw = alpha * x_train_soap.T @ x_train_soap + (1 - alpha) * x_train_anisoap.T @ x_train_anisoap
