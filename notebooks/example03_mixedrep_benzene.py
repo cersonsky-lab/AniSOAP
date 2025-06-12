@@ -115,7 +115,8 @@ from sklearn.decomposition import PCA
 from skmatter.decomposition import PCovR
 pca = PCA(n_components=21)
 pcovr = PCovR(n_components=21)
-i_train, i_test = train_test_split(np.arange(len(frames)), train_size=0.9, shuffle=True)
+seed = 42
+i_train, i_test = train_test_split(np.arange(len(frames)), train_size=0.9, shuffle=True, random_state=seed)
 
 y_train_scaler = StandardFlexibleScaler(column_wise=True).fit(energies[i_train])
 y_train = y_train_scaler.transform(energies[i_train])
