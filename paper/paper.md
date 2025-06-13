@@ -27,7 +27,7 @@ authors:
 affiliations:
  - name: Department of Chemical and Biological Engineering, University of Wisconsin-Madison, USA
    index: 1
- - name: Laboratory of Computational Science and Modeling, École Polytechnique Fédérale de Lausanne, Switzerland
+ - name: Research Laboratory of Electronics, Massachusetts Institute of Technology, USA
    index: 2
  - name: Department of Computer Science and Engineering, University of Wisconsin-Madison, USA
    index: 3
@@ -71,8 +71,8 @@ The library is thoroughly tested, with unit-tests to test basic functionality, i
 AniSOAP is a powerful featurization that can be used for supervised and unsupervised analyses of molecular systems. AniSOAP is under active development and we envision it being used in a wide variety of contexts. Our main future development goals involve using AniSOAP as the underlying representation for machine-learned anisotropic potentials, and to understand how the relationship behind AniSOAP and its all-atom counterpart SOAP fits into the broad theory of bottom-up coarse-graining. We hope that accomplishing these goals can enable fast, accurate, and interpretable macromolecular or colloidal simulations.
 
 # Acknowledgements
-This project was funded by the Wisconsin Alumni Research Fund (R.K.C.), NSF through the University of Wisconsin Materials Research Science and Engineering Center (Grant No. DMR-2309000, A.L.), and the European Research Council (ERC) under the research and innovation program (Grant Agreement No. 101001890-FIAMMA, J.N.).
+This project was funded by the Wisconsin Alumni Research Fund (R.K.C.), NSF through the University of Wisconsin Materials Research Science and Engineering Center (Grant No. DMR-2309000, A.L.), the European Research Council (ERC) under the research and innovation program (Grant Agreement No. 101001890-FIAMMA, J.N.), and the MIT Postdoc Fellowship for Excellence (J.N.).
 
-We extend our un-ending gratitude to Guillaume Fraux and the developers of rascaline for fielding our many questions during the implementation and validation of AniSOAP, and Kevin Kazuki Huguenin-Dumittan for building the first iteration of AniSOAP.
+We extend our un-ending gratitude to Guillaume Fraux and the developers of featomic for fielding our many questions during the implementation and validation of AniSOAP, and Kevin Kazuki Huguenin-Dumittan for building the first iteration of AniSOAP.
 
 # References
