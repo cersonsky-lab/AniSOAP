@@ -52,18 +52,17 @@ While CG has made enormous strides in accelerating simulation and analysis, it's
 
 By incorporating anisotropy, AniSOAP extends the advances of atomistic machine learning to coarse-grained and mesoscale systems. With the flexibility of machine learning algorithms and anchored by the concepts underlying the feature-rich SOAP representation, AniSOAP provides a promising conduit for providing data-driven insights to many chemical systems at different length and time-scales.
 
-# What is an AniSOAP vector?
-An AniSOAP vector is a series of numbers that represents a system of ellipsoidal particles, which in the most general case, consists of $\geq 1$ particles with different positions, shapes, orientations, and species identifications. Essentially, this is very similar to other point-cloud, many-body representations used in atomistic machine learning, like SOAP[@bartok_representing_2013] or ACE[@drautz_atomic_2019], except for the fact that AniSOAP vectors incorporate additional geometric information. Specific use-cases of AniSOAP can be seen in our paper here[@lin_expanding_2024].
+The main aim of the `AniSOAP` package is to enable the creation of `AniSOAP` feature vectors, which represent systems of ellipsoidal particles. Analogous to how SOAP or ACE create _atom_-centered representations, `AniSOAP` instead creates _particle_-centered representations, where a particle is an anisotropic coarse-grained group of atoms. Specific use-cases of AniSOAP can be seen in our paper here[@lin_expanding_2024].
 
 # Implementation details
-The AniSOAP package currently takes in as input a list of frames in the `Atomic Simulation Environment` package[@hjorth_larsen_atomic_2017]. Each frame contains the particles' positions, dimensions, and orientations. If using periodic boundary conditions, the frame also needs the dimensions of the unit cell. Additional information about each frame can also be stored (e.g. the system energy) and used as a target for supervised ML.
+The AniSOAP package currently takes in as input a list of frames in the `Atomic Simulation Environment` package[@hjorth_larsen_atomic_2017]. Each frame contains the particles' positions, dimensions, and orientations. If using periodic boundary conditions, the frame also needs to contain the dimensions and orientations of the unit cell. Additional information about each frame can also be stored (e.g. the system energy) and used as a target for supervised ML.
 
-With this information, one can construct an `EllipsoidalDensityProjection` object, whose main functionality is to calculate the expansion coefficients of the density field in each frame.
+With this information, one can construct an `EllipsoidalDensityProjection` object, whose main functionality is to calculate the expansion coefficients of an anisotropic density field in each frame.
 Procedurally, calculating the expansion coefficients amounts to repeatedly and recursively computing high-order moments of an underlying multivariate gaussian, as outlined in [@lin_expanding_2024]. For efficient computation, we have ported these highly-repeated calculations to Rust, a high-performance compiled language.
 
 One can take Clebsch-Gordan products of these expansion coefficients to create higher body-order descriptors, and we optimize this step by caching intermediate results with a Least Recently Used (LRU) cache.
 
-As many users will be primarily interested in power-spectrum representations, we provide all the functionality required for these processes, and also provide the convenience method `power_spectrum` to calculate the 3-body descriptors of each frame. 
+As many users will be primarily interested in power-spectrum (i.e. 3-body) representations, we provide all the functionality required for these processes, and also provide the convenience method `power_spectrum` to calculate the 3-body descriptors of each frame. 
 
 The library is thoroughly tested, with unit-tests to test basic functionality, integration-tests to ensure that AniSOAP vectors are calculated correctly, and caching and speed tests to ensure that our aforementioned optimizations yield faster code. These tests are integrated into a Github CI, and we ensure that future features should necessistate additional tests and should pass existing ones.
 
