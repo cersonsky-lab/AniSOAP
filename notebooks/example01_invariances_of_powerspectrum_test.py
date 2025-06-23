@@ -5,7 +5,7 @@ Example 1: Creating AniSOAP vectors from ellipsoidal frames.
 This example demonstrates:
 
 1. How to read ellipsoidal frames from ``.xyz`` file.
-2. How to convert ellipsoidal frames to AniSOAP vectors.
+2. How to convert ellipsoidal frames to AniSOAP vectors, via the power_spectrum convenience method and via manual calculations and combinations of expansion coefficients. We also demonstrate the Translational and Rotational invariance of these representations.
 3. How to create ellipsoidal frames with ``ase.Atoms``.
 """
 from ase.io import read
@@ -67,12 +67,46 @@ AniSOAP_HYPERS = {
 calculator = EllipsoidalDensityProjection(**AniSOAP_HYPERS)
 
 # %%
-# Create the AniSOAP vector (i.e. the power spectrum).
+# First, we demonstrate how to create the AniSOAP vector (i.e. the power spectrum) using a convenience method.
 power_spectrum = calculator.power_spectrum(frames)
 plt.plot(power_spectrum.T)
 plt.legend(["frame[0] power spectrum", "frame[1] power spectrum"])
 plt.show()
 
+# %%
+# Under the hood, the `power_spectrum` convenience method first calculates the expansion coefficients,
+# then performs a Clebsch-Gordan product on these coefficients to obtain the power spectrum.
+# This requires importing some utilities first.
+from anisoap.utils.metatensor_utils import (
+    ClebschGordanReal,
+    cg_combine,
+    standardize_keys,
+)
+import metatensor 
+
+mvg_coeffs = calculator.transform(frames)
+mvg_nu1 = standardize_keys(mvg_coeffs) # standardize the metadata naming schemes
+# Create an object that stores Clebsch-Gordan coefficients for a certain lmax:
+mycg = ClebschGordanReal(lmax)
+
+# Combines the mvg_nu1 with itself using the Clebsch-Gordan coefficients.
+# This combines the angular and radial components of the sample.
+mvg_nu2 = cg_combine(
+    mvg_nu1,
+    mvg_nu1,
+    clebsch_gordan=mycg,
+    lcut=0,
+    other_keys_match=["types_center"],
+)
+
+# mvg_nu2 is the unaggregated form of the AniSOAP descriptor and is what is returned by `power_spectrum` when mean_over_samples=False. 
+# Typically, we want an aggregated representation on a per-frame basis, rather than an unaggregated per-frame-per-particle representation.
+mvg_nu2_avg = metatensor.mean_over_samples(mvg_nu2, sample_names="center")
+x_asoap_raw = mvg_nu2_avg.block().values.squeeze()   
+# This (n_samples x n_features) feature matrix can then be fed into an ML learning architecture.
+# This is equivalent to the output of the convenience method used above.
+if (np.allclose(x_asoap_raw, power_spectrum)): 
+    print("The two representations are equivalent")
 # %%
 # Here we will demonstrate translation invariance.
 #
