@@ -82,10 +82,10 @@ from anisoap.utils.metatensor_utils import (
     cg_combine,
     standardize_keys,
 )
-import metatensor 
+import metatensor
 
 mvg_coeffs = calculator.transform(frames)
-mvg_nu1 = standardize_keys(mvg_coeffs) # standardize the metadata naming schemes
+mvg_nu1 = standardize_keys(mvg_coeffs)  # standardize the metadata naming schemes
 # Create an object that stores Clebsch-Gordan coefficients for a certain lmax:
 mycg = ClebschGordanReal(lmax)
 
@@ -99,13 +99,13 @@ mvg_nu2 = cg_combine(
     other_keys_match=["types_center"],
 )
 
-# mvg_nu2 is the unaggregated form of the AniSOAP descriptor and is what is returned by `power_spectrum` when mean_over_samples=False. 
+# mvg_nu2 is the unaggregated form of the AniSOAP descriptor and is what is returned by `power_spectrum` when mean_over_samples=False.
 # Typically, we want an aggregated representation on a per-frame basis, rather than an unaggregated per-frame-per-particle representation.
 mvg_nu2_avg = metatensor.mean_over_samples(mvg_nu2, sample_names="center")
-x_asoap_raw = mvg_nu2_avg.block().values.squeeze()   
+x_asoap_raw = mvg_nu2_avg.block().values.squeeze()
 # This (n_samples x n_features) feature matrix can then be fed into an ML learning architecture.
 # This is equivalent to the output of the convenience method used above.
-if (np.allclose(x_asoap_raw, power_spectrum)): 
+if np.allclose(x_asoap_raw, power_spectrum):
     print("The two representations are equivalent")
 # %%
 # Here we will demonstrate translation invariance.
