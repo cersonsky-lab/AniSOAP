@@ -201,11 +201,11 @@ def coarsen_frame(frame: Atoms, cg_info: CGInfo, calc_geometry=False, mic=True) 
     cg_frame.arrays["atom_indices"] = np.asarray(cg_info.cg_indices).reshape(1, -1)
     return cg_frame
 
-def coarsen_frame_manybeads(frame: Atoms, cg_infos: list[CGInfo], calc_geometries: list[bool])->Atoms:
+def coarsen_frame_manybeads(frame: Atoms, cg_infos: list[CGInfo], calc_geometries: list[bool], mic)->Atoms:
     cg_frames = []
     assert len(cg_infos) == len(calc_geometries)
     for cg_info, calc_geometry in zip(cg_infos, calc_geometries):
-        cg_frames.append(coarsen_frame(frame, cg_info, calc_geometry))
+        cg_frames.append(coarsen_frame(frame, cg_info, calc_geometry, mic=mic))
 
     # Now, turn list into a single Atoms object:
     cg_ = cg_frames[0]
