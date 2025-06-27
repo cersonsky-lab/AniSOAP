@@ -56,16 +56,16 @@ from scipy.spatial.transform import Rotation as R
 from skmatter.metrics import global_reconstruction_error as GRE
 from itertools import combinations_with_replacement
 
-def get_center_of_mass(frame: Atoms):
+def get_center_of_mass(frame: Atoms, mic=True):
     # For unwrapped systems, set mic=False.
     # For wrapped systems, USUALLY, mic=True, but not always.
-    displacements = frame.get_all_distances(mic=False, vector=True)  # vectors is a nxnx3 array, it's the displacement from each point to all other points
+    displacements = frame.get_all_distances(mic=mic, vector=True)  # vectors is a nxnx3 array, it's the displacement from each point to all other points
     positions = frame[0].position + displacements[0]
     masses = frame.get_masses()
     com = masses @ positions / masses.sum()
     return com 
 
-def get_moments_of_inertia(frame: Atoms, vectors=False):
+def get_moments_of_inertia(frame: Atoms, mic=True, vectors=True):
     """
     COPIED FROM ASE Source: https://wiki.fysik.dtu.dk/ase/_modules/ase/atoms.html#Atoms.get_moments_of_inertia
     MODIFIED TO Include MINIMUM IMAGE CONVENTION. 
@@ -78,7 +78,7 @@ def get_moments_of_inertia(frame: Atoms, vectors=False):
     """
     # For unwrapped systems, set mic=False.
     # For wrapped systems, USUALLY, mic=True, but not always.
-    displacements = frame.get_all_distances(mic=False, vector=True)  # vectors is a nxnx3 array, it's the displacement from each point to all other points
+    displacements = frame.get_all_distances(mic=mic, vector=vectors)  # vectors is a nxnx3 array, it's the displacement from each point to all other points
     # com = frame.get_center_of_mass()   # ASE's incorrect center of mass without mic. 
     com = get_center_of_mass(frame)
     positions = frame[0].position + displacements[0] 
@@ -108,11 +108,11 @@ def get_moments_of_inertia(frame: Atoms, vectors=False):
     else:
         return evals
 
-def get_quat_and_semiaxes(frame: Atoms):
+def get_quat_and_semiaxes(frame: Atoms, mic=True):
     """
     Returns the correct ellipsoidal semiaxes and orientation.
     """
-    mom, evecs = get_moments_of_inertia(frame, vectors=True)
+    mom, evecs = get_moments_of_inertia(frame, mic=mic, vectors=True)
     if np.allclose(np.linalg.det(evecs), -1):
         evecs *= -1
     assert(np.allclose(np.linalg.det(evecs), 1))
@@ -177,15 +177,15 @@ def coarsen(AAframe: Atoms, bead: CGFrame, idxs: np.ndarray, symbol:str="X", del
     
     return bead
 
-def coarsen_frame(frame: Atoms, cg_info: CGInfo, calc_geometry=False) -> Atoms:
+def coarsen_frame(frame: Atoms, cg_info: CGInfo, calc_geometry=False, mic=True) -> Atoms:
     """
     Given a frame, calculate the CG Bead, and return it
     """
     
     # Todo: validate to ensure that indices are valid.
     # Identify com and quat 
-    com = get_center_of_mass(frame[cg_info.cg_indices])
-    semiaxes, quat = get_quat_and_semiaxes(frame[cg_info.cg_indices])
+    com = get_center_of_mass(frame[cg_info.cg_indices], mic=mic)
+    semiaxes, quat = get_quat_and_semiaxes(frame[cg_info.cg_indices], )
     # If calc_geometry is false, just create a spherical bead large enough to
     # encompass all atoms.
     if not calc_geometry:
