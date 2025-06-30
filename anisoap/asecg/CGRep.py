@@ -185,7 +185,7 @@ def coarsen_frame(frame: Atoms, cg_info: CGInfo, calc_geometry=False, mic=True) 
     # Todo: validate to ensure that indices are valid.
     # Identify com and quat 
     com = get_center_of_mass(frame[cg_info.cg_indices], mic=mic)
-    semiaxes, quat = get_quat_and_semiaxes(frame[cg_info.cg_indices], )
+    semiaxes, quat = get_quat_and_semiaxes(frame[cg_info.cg_indices], mic=mic)
     # If calc_geometry is false, just create a spherical bead large enough to
     # encompass all atoms.
     if not calc_geometry:
