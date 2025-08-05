@@ -6,6 +6,7 @@ import metatensor
 import numpy as np
 from anisoap_rust_lib import compute_moments
 from featomic import NeighborList
+from fontTools.cffLib.width import optimizeWidths
 from metatensor import (
     Labels,
     TensorBlock,
@@ -212,6 +213,7 @@ def pairwise_ellip_expansion_profiling(
     sph_to_cart,
     radial_basis,
     rust_moments=True,
+    optimize=False,
 ):
     tensorblock_list = []
     keys = np.asarray(neighbor_list.keys, dtype=int)
@@ -279,10 +281,12 @@ def pairwise_ellip_expansion_profiling(
                         deg = l + 2 * (num_ns[l] - 1)
                         moments_l = moments[: deg + 1, : deg + 1, : deg + 1]
                         values_ldict[l].append(
+                            #TODO: optimize
                             np.einsum(
                                 "mnpqr, pqr->mn",
                                 scaled_sph_to_cart[l],
                                 moments_l,
+                                optimize=optimize,
                             )
                         )
 
@@ -943,7 +947,7 @@ class EllipsoidalDensityProjection:
         else:
             return features
 
-    def transform_profiling(self, frames, show_progress=False, normalize=True, rust_moments=True):
+    def transform_profiling(self, frames, normalize=True, rust_moments=True, optimize=False):
         self.frames = frames
 
         num_frames = len(frames)
@@ -1011,6 +1015,7 @@ class EllipsoidalDensityProjection:
             self.sph_to_cart,
             self.radial_basis,
             rust_moments=rust_moments,
+            optimize=optimize,
         )
 
         features = contract_pairwise_feat_profiling(pairwise_ellip_feat, types)
@@ -1100,7 +1105,7 @@ class EllipsoidalDensityProjection:
             return mvg_nu2
 
     def power_spectrum_profiling(
-        self, frames, mean_over_samples=True, show_progress=False, rust_moments=True
+        self, frames, mean_over_samples=True, rust_moments=True, optimize=False
     ):
        # Initialize the Clebsch Gordan calculator for the angular component.
         mycg = ClebschGordanReal(self.max_angular)
@@ -1129,7 +1134,7 @@ class EllipsoidalDensityProjection:
                     raise ValueError(f"frame should contain c_q rather than quaternion")
 
         mvg_coeffs = self.transform_profiling(
-            frames, rust_moments=rust_moments
+            frames, rust_moments=rust_moments, optimize=optimize,
         )
         mvg_nu1 = standardize_keys(mvg_coeffs)
 

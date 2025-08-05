@@ -52,14 +52,17 @@ def epd_creation_profile():
     stats1.dump_stats(filename="epd_creation.prof")
 
 
-def power_spectrum_profile():
+def power_spectrum_profile(optimize):
     calculator = EllipsoidalDensityProjection(**AniSOAP_HYPERS)
     with cProfile.Profile() as pr2:
-        x_anisoap_raw = calculator.power_spectrum_profiling(frames)
+        x_anisoap_raw = calculator.power_spectrum_profiling(frames, optimize)
     stats2 = pstats.Stats(pr2)
     stats2.sort_stats(pstats.SortKey.TIME)
     stats2.print_stats(10)
-    stats2.dump_stats(filename="power_spectrum.prof")
+    if optimize:
+        stats2.dump_stats(filename="power_spectrum_opt.prof")
+    else:
+        stats2.dump_stats(filename="power_spectrum_unopt.prof")
 
 
 def main():
@@ -68,7 +71,7 @@ def main():
     Where is the biggest slowdown? Is it the 5 nested for loops?
     How does this scale with number of frames inputted into power_spectrum?
     """
-    power_spectrum_profile()
+    power_spectrum_profile(True)
 
 
 if __name__ == "__main__":
