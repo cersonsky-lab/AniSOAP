@@ -202,6 +202,119 @@ def pairwise_ellip_expansion(
     return pairwise_ellip_feat
 
 
+def pairwise_ellip_expansion_profiling(
+    lmax,
+    neighbor_list,
+    types,
+    frame_to_global_atom_idx,
+    rotation_matrices,
+    ellipsoid_lengths,
+    sph_to_cart,
+    radial_basis,
+    rust_moments=True,
+):
+    tensorblock_list = []
+    keys = np.asarray(neighbor_list.keys, dtype=int)
+    keys = [tuple(i) + (l,) for i in keys for l in range(lmax + 1)]
+    num_ns = radial_basis.get_num_radial_functions()
+    maxdeg = np.max(np.arange(lmax + 1) + 2 * np.array(num_ns))
+
+    # This prefactor is the solid harmonics prefactor, that we need to divide by later.
+    # This is needed because spherical_to_cartesian calculates solid harmonics Rlm = sqrt((4pi)/(2l+1)) * r^l*Ylm
+    # Our expansion coefficients from the inner product does not have this prefactor included, so we divide it later.
+    solid_harm_prefact = np.sqrt((4 * np.pi) / (np.arange(lmax + 1) * 2 + 1))
+    scaled_sph_to_cart = []
+    for l in range(lmax + 1):
+        scaled_sph_to_cart.append(sph_to_cart[l] / solid_harm_prefact[l])
+
+    for center_types in types:
+        for neighbor_types in types:
+            if (center_types, neighbor_types) in neighbor_list.keys:
+                values_ldict = {l: [] for l in range(lmax + 1)}
+                nl_block = neighbor_list.block(
+                    first_atom_type=center_types,
+                    second_atom_type=neighbor_types,
+                )
+
+                for isample, nl_sample in enumerate(nl_block.samples):
+                    frame_idx, i, j = (
+                        nl_sample["system"],
+                        nl_sample["first_atom"],
+                        nl_sample["second_atom"],
+                    )
+                    i_global = frame_to_global_atom_idx[frame_idx] + i
+                    j_global = frame_to_global_atom_idx[frame_idx] + j
+
+                    r_ij = np.asarray(
+                        [
+                            nl_block.values[isample, 0],
+                            nl_block.values[isample, 1],
+                            nl_block.values[isample, 2],
+                        ]
+                    ).reshape(
+                        3,
+                    )
+
+                    rot = rotation_matrices[j_global]
+                    lengths = ellipsoid_lengths[j_global]
+                    length_norm = (
+                        np.prod(lengths) * (2.0 * np.pi) ** (3.0 / 2.0)
+                    ) ** -1.0
+
+                    (
+                        precision,
+                        center,
+                        constant,
+                    ) = radial_basis.compute_gaussian_parameters(r_ij, lengths, rot)
+
+                    if rust_moments:
+                        moments = compute_moments(precision, center, maxdeg)
+                    else:
+                        moments = compute_moments_inefficient_implementation(
+                            precision, center, maxdeg=maxdeg
+                        )
+                    moments *= np.exp(-0.5 * constant) * length_norm
+
+                    for l in range(lmax + 1):
+                        deg = l + 2 * (num_ns[l] - 1)
+                        moments_l = moments[: deg + 1, : deg + 1, : deg + 1]
+                        values_ldict[l].append(
+                            np.einsum(
+                                "mnpqr, pqr->mn",
+                                scaled_sph_to_cart[l],
+                                moments_l,
+                            )
+                        )
+
+                for l in range(lmax + 1):
+                    block = TensorBlock(
+                        values=np.asarray(values_ldict[l]),
+                        samples=nl_block.samples,  # as many rows as samples
+                        components=[
+                            Labels(
+                                ["spherical_component_m"],
+                                np.asarray([list(range(-l, l + 1))], np.int32).reshape(
+                                    -1, 1
+                                ),
+                            )
+                        ],
+                        properties=Labels(
+                            ["n"],
+                            np.asarray(list(range(num_ns[l])), np.int32).reshape(-1, 1),
+                        ),
+                    )
+                    tensorblock_list.append(block)
+
+    pairwise_ellip_feat = TensorMap(
+        Labels(
+            ["types_center", "types_neighbor", "angular_channel"],
+            np.asarray(keys, dtype=np.int32),
+        ),
+        tensorblock_list,
+    )
+    return pairwise_ellip_feat
+
+
 def contract_pairwise_feat(pair_ellip_feat, types, show_progress=False):
     """Function to sum over the pairwise expansion
 
@@ -377,6 +490,168 @@ def contract_pairwise_feat(pair_ellip_feat, types, show_progress=False):
                 leave=False,
             )
         ):
+            # This effectively loops over the types of the neighbors
+            # Now we just need to add the contributions to the final samples and values from this types to the right
+            # samples
+            nzidx = list(
+                sorted(
+                    [
+                        i
+                        for v in elem_cont_samples
+                        for i in indexed_elem_cont_samples[tuple(v)]
+                    ]
+                )
+            )
+
+            # identifies where the samples that this types contributes to, are present in the final samples
+            #             print(apecies[ib],key, bb, all_block_samples)
+            all_block_values[nzidx, :, :, iele] = contract_blocks[iele]
+
+        new_block = TensorBlock(
+            values=all_block_values.reshape(
+                all_block_values.shape[0], all_block_values.shape[1], -1
+            ),
+            samples=Labels(["type", "center"], np.asarray(all_block_samples, np.int32)),
+            components=block.components,
+            properties=Labels(
+                list(property_names),
+                np.asarray(np.vstack(contract_properties), np.int32),
+            ),
+        )
+
+        ellip_blocks.append(new_block)
+    ellip = TensorMap(
+        Labels(
+            ["types_center", "angular_channel"],
+            np.asarray(ellip_keys, dtype=np.int32),
+        ),
+        ellip_blocks,
+    )
+
+    return ellip
+
+def contract_pairwise_feat_profiling(pair_ellip_feat, types):
+    ellip_keys = list(
+        set([tuple(list(x)[:1] + list(x)[2:]) for x in pair_ellip_feat.keys])
+    )
+    ellip_keys.sort()
+    ellip_blocks = []
+    property_names = pair_ellip_feat.property_names + [
+        "neighbor_types",
+    ]
+
+    for key in ellip_keys:
+        contract_blocks = []
+        contract_properties = []
+        contract_samples = []
+        # these collect the values, properties and samples of the blocks when contracted over neighbor_types.
+        # All these lists have as many entries as len(types).
+
+        for ele in types:
+            selection = Labels(names=["types_neighbor"], values=np.array([[ele]]))
+            blockidx = pair_ellip_feat.blocks_matching(selection=selection)
+            # indices of the blocks in pair_ellip_feat with neighbor types = ele
+            sel_blocks = [
+                pair_ellip_feat.block(i)
+                for i in blockidx
+                if key
+                == tuple(
+                    list(pair_ellip_feat.keys[i])[:1]
+                    + list(pair_ellip_feat.keys[i])[2:]
+                )
+            ]
+
+            if not len(sel_blocks):
+                #                 print(key, ele, "skipped") # this block is not found in the pairwise feat
+                continue
+            assert len(sel_blocks) == 1
+
+            # sel_blocks is the corresponding block in the pairwise feat with the same (types_center, l) and
+            # types_neighbor = ele thus there can be only one block corresponding to the triplet (types_center, types_neighbor, l)
+            block = sel_blocks[0]
+
+            pair_block_sample = list(
+                zip(block.samples["system"], block.samples["first_atom"])
+            )
+
+            # Takes the system and first atom index from the current pair_block sample. There might be repeated
+            # entries here because for example (0,0,1) (0,0,2) might be samples of the pair block (the index of the
+            # neighbor atom is changing but for both of these we are keeping (0,0) corresponding to the system and
+            # first atom.
+
+            struct, center = np.unique(block.samples["system"]), np.unique(
+                block.samples["first_atom"]
+            )
+            possible_block_samples = list(product(struct, center))
+            # possible block samples contains all *unique* possible pairwise products between system and atom index
+            # From here we choose the entries that are actually present in the block to form the final sample
+
+            block_samples = []
+            block_values = []
+
+            indexed_sample_idx = {}
+            for idx, tup in enumerate(pair_block_sample):
+                if tup not in indexed_sample_idx:
+                    l = []
+                else:
+                    l = indexed_sample_idx[tup]
+                l.append(idx)
+                indexed_sample_idx[tup] = l
+
+            for isample, sample in enumerate(possible_block_samples):
+                if sample in indexed_sample_idx:
+                    sample_idx = indexed_sample_idx[tuple(sample)]
+
+                    # all samples of the pair block that match the current sample
+                    # in the example above, for sample = (0,0) we would identify sample_idx = [(0,0,1), (0,0,2)]
+                    if len(sample_idx) == 0:
+                        continue
+                    #             #print(key, ele, sample, block.samples[sample_idx])
+                    block_samples.append(sample)
+                    block_values.append(
+                        block.values[sample_idx].sum(axis=0)
+                    )  # sum over "j"  for given ele
+
+                    # block_values has as many entries as samples satisfying (key, neighbor_types=ele).
+                    # When we iterate over neighbor types, not all (type, center) would be present
+                    # Example: (0,0,1) might be present in a block with neighbor_types = 1 but no other pair block
+                    # ever has (0,0,x) present as a sample- so (0,0) doesnt show up in a block_sample for all ele
+                    # so in general we have a ragged list of contract_blocks
+
+            contract_blocks.append(block_values)
+            contract_samples.append(block_samples)
+            contract_properties.append([tuple(p) + (ele,) for p in block.properties])
+            # this adds the "ele" (i.e. neighbor_types) to the properties dimension
+
+        #         print(len(contract_samples))
+        all_block_samples = sorted(list(set().union(*contract_samples)))
+        # Selects the set of samples from all the block_samples we collected by iterating over the neighbor_types
+        # These form the final samples of the block!
+
+        all_block_values = np.zeros(
+            (
+                (len(all_block_samples),)
+                + block.values.shape[1:]
+                + (len(contract_blocks),)
+            )
+        )
+        # Create storage for the final values - we need as many rows as all_block_samples,
+        # block.values.shape[1:] accounts for "components" and "properties" that are already part of the pair blocks
+        # and we dont alter these
+        # len(contract_blocks) - adds the additional dimension for the neighbor_types since we accumulated
+        # values for each of them as \sum_{j in ele} <|rho_ij>
+        #  Thus - all_block_values.shape = (num_final_samples, components_pair, properties_pair, num_types)
+
+        indexed_elem_cont_samples = {}
+        for i, val in enumerate(all_block_samples):
+            if val not in indexed_elem_cont_samples:
+                l = []
+            else:
+                l = indexed_elem_cont_samples[val]
+            l.append(i)
+            indexed_elem_cont_samples[val] = l
+
+        for iele, elem_cont_samples in enumerate(contract_samples):
             # This effectively loops over the types of the neighbors
             # Now we just need to add the contributions to the final samples and values from this types to the right
             # samples
@@ -668,6 +943,83 @@ class EllipsoidalDensityProjection:
         else:
             return features
 
+    def transform_profiling(self, frames, show_progress=False, normalize=True, rust_moments=True):
+        self.frames = frames
+
+        num_frames = len(frames)
+        types = set()
+        self.num_atoms_per_frame = np.zeros((num_frames), int)
+
+        for i, f in enumerate(self.frames):
+            self.num_atoms_per_frame[i] = len(f)
+            for atom in f:
+                types.add(atom.number)
+
+        self.num_atoms_total = sum(self.num_atoms_per_frame)
+        types = sorted(types)
+
+        # Define variables determining size of feature vector coming from frames
+        self.num_atoms_per_frame = np.array([len(frame) for frame in frames])
+
+        num_particle_types = len(types)
+
+        # Initialize arrays in which to store all features
+        self.feature_gradients = 0
+
+        frame_generator = self.frames
+
+        self.frame_to_global_atom_idx = np.zeros((num_frames), int)
+        for n in range(1, num_frames):
+            self.frame_to_global_atom_idx[n] = (
+                    self.num_atoms_per_frame[n - 1] + self.frame_to_global_atom_idx[n - 1]
+            )
+
+        rotation_matrices = np.zeros((self.num_atoms_total, 3, 3))
+        ellipsoid_lengths = np.zeros((self.num_atoms_total, 3))
+
+        for i in range(num_frames):
+            for j in range(self.num_atoms_per_frame[i]):
+                j_global = self.frame_to_global_atom_idx[i] + j
+                if self.rotation_key in frames[i].arrays:
+                    rotation_matrices[j_global] = self.rotation_maker(
+                        frames[i].arrays[self.rotation_key][j]
+                    ).as_matrix()
+                else:
+                    warnings.warn(
+                        f"Frame {i} does not have rotations stored, this may cause errors down the line."
+                    )
+
+                ellipsoid_lengths[j_global] = [
+                    frames[i].arrays["c_diameter[1]"][j] / 2,
+                    frames[i].arrays["c_diameter[2]"][j] / 2,
+                    frames[i].arrays["c_diameter[3]"][j] / 2,
+                ]
+
+        self.nl = NeighborList(
+            cutoff=self.cutoff_radius,
+            full_neighbor_list=True,
+            self_pairs=(not self.subtract_center_contribution),
+        ).compute(frame_generator)
+
+        pairwise_ellip_feat = pairwise_ellip_expansion_profiling(
+            self.max_angular,
+            self.nl,
+            types,
+            self.frame_to_global_atom_idx,
+            rotation_matrices,
+            ellipsoid_lengths,
+            self.sph_to_cart,
+            self.radial_basis,
+            rust_moments=rust_moments,
+        )
+
+        features = contract_pairwise_feat_profiling(pairwise_ellip_feat, types)
+        if normalize:
+            normalized_features = self.radial_basis.orthonormalize_basis(features)
+            return normalized_features
+        else:
+            return features
+
     def power_spectrum(
         self, frames, mean_over_samples=True, show_progress=False, rust_moments=True
     ):
@@ -725,6 +1077,59 @@ class EllipsoidalDensityProjection:
 
         mvg_coeffs = self.transform(
             frames, show_progress=show_progress, rust_moments=rust_moments
+        )
+        mvg_nu1 = standardize_keys(mvg_coeffs)
+
+        # Combines the mvg_nu1 with itself using the Clebsch-Gordan coefficients.
+        # This combines the angular and radial components of the sample.
+        mvg_nu2 = cg_combine(
+            mvg_nu1,
+            mvg_nu1,
+            clebsch_gordan=mycg,
+            lcut=0,
+            other_keys_match=["types_center"],
+        )
+
+        # If mean_over_samples = True, it returns simplified form of coefficients with fewer dimensions in the TensorMap for subsequent visualization.
+        # If not, it returns raw numerical data of coefficients in mvg_nu2 TensorMap
+        if mean_over_samples:
+            x_asoap_raw = metatensor.mean_over_samples(mvg_nu2, sample_names="center")
+            x_asoap_raw = x_asoap_raw.block().values.squeeze()
+            return x_asoap_raw
+        else:
+            return mvg_nu2
+
+    def power_spectrum_profiling(
+        self, frames, mean_over_samples=True, show_progress=False, rust_moments=True
+    ):
+       # Initialize the Clebsch Gordan calculator for the angular component.
+        mycg = ClebschGordanReal(self.max_angular)
+
+        # Checks that the sample's first frame is not empty
+        if frames[0].arrays is None:
+            raise ValueError("frames cannot be none")
+        required_attributes = [
+            "c_diameter[1]",
+            "c_diameter[2]",
+            "c_diameter[3]",
+            "c_q",
+            "positions",
+            "numbers",
+        ]
+
+        # Checks if the sample contains all necessary information for computation of power spectrum
+        for index, frame in enumerate(frames):
+            array = frame.arrays
+            for attr in required_attributes:
+                if attr not in array:
+                    raise ValueError(
+                        f"frame at index {index} is missing a required attribute '{attr}'"
+                    )
+                if "quaternion" in array:
+                    raise ValueError(f"frame should contain c_q rather than quaternion")
+
+        mvg_coeffs = self.transform_profiling(
+            frames, rust_moments=rust_moments
         )
         mvg_nu1 = standardize_keys(mvg_coeffs)
 

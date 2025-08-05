@@ -11,6 +11,8 @@ from skmatter.metrics import global_reconstruction_error as GRE
 from sklearn.model_selection import train_test_split
 from skmatter.preprocessing import StandardFlexibleScaler
 import pickle
+import cProfile
+import pstats
 
 
 lmax = 9
@@ -41,19 +43,33 @@ AniSOAP_HYPERS = {
 }
 
 
+def epd_creation_profile():
+    with cProfile.Profile() as pr1:
+        calculator = EllipsoidalDensityProjection(**AniSOAP_HYPERS)
+    stats1 = pstats.Stats(pr1)
+    stats1.sort_stats(pstats.SortKey.TIME)
+    stats1.print_stats(10)
+    stats1.dump_stats(filename="epd_creation.prof")
+
+
+def power_spectrum_profile():
+    calculator = EllipsoidalDensityProjection(**AniSOAP_HYPERS)
+    with cProfile.Profile() as pr2:
+        x_anisoap_raw = calculator.power_spectrum_profiling(frames)
+    stats2 = pstats.Stats(pr2)
+    stats2.sort_stats(pstats.SortKey.TIME)
+    stats2.print_stats(10)
+    stats2.dump_stats(filename="power_spectrum.prof")
+
+
 def main():
     """
     Things to check for:
     Where is the biggest slowdown? Is it the 5 nested for loops?
     How does this scale with number of frames inputted into power_spectrum?
     """
-    import cProfile
-    import pstats
-    with cProfile.Profile() as pr:
-        calculator = EllipsoidalDensityProjection(**AniSOAP_HYPERS)
-        x_anisoap_raw = calculator.power_spectrum(frames)
-    # Do work here for printing out stats (see mCoding video)
-    # Either output in stdout or store a binary .prof, whichever is better.
+    power_spectrum_profile()
+
 
 if __name__ == "__main__":
     main()
