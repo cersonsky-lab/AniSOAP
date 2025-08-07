@@ -64,6 +64,29 @@ def power_spectrum_profile(optimize):
     else:
         stats2.dump_stats(filename="power_spectrum_unopt.prof")
 
+def power_spectrum_profile_pathopt(optimize):
+    calculator = EllipsoidalDensityProjection(**AniSOAP_HYPERS)
+    with cProfile.Profile() as pr2:
+        x_anisoap_raw = calculator.power_spectrum_profiling(frames, optimize)
+    stats2 = pstats.Stats(pr2)
+    stats2.sort_stats(pstats.SortKey.TIME)
+    stats2.print_stats(10)
+    if optimize:
+        stats2.dump_stats(filename="power_spectrum_pathopt.prof")
+    else:
+        stats2.dump_stats(filename="power_spectrum_unopt.prof")
+
+def power_spectrum_norust_profile(optimize):
+    calculator = EllipsoidalDensityProjection(**AniSOAP_HYPERS)
+    with cProfile.Profile() as pr2:
+        x_anisoap_raw = calculator.power_spectrum_profiling(frames[:len(frames)//10], optimize, rust_moments=False)
+    stats2 = pstats.Stats(pr2)
+    stats2.sort_stats(pstats.SortKey.TIME)
+    stats2.print_stats(10)
+    if optimize:
+        stats2.dump_stats(filename="power_spectrum_opt_norust.prof")
+    else:
+        stats2.dump_stats(filename="power_spectrum_unopt_norust.prof")
 
 def main():
     """
@@ -71,7 +94,7 @@ def main():
     Where is the biggest slowdown? Is it the 5 nested for loops?
     How does this scale with number of frames inputted into power_spectrum?
     """
-    power_spectrum_profile(True)
+    power_spectrum_profile_pathopt(True)
 
 
 if __name__ == "__main__":

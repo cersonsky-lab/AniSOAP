@@ -226,8 +226,14 @@ def pairwise_ellip_expansion_profiling(
     # Our expansion coefficients from the inner product does not have this prefactor included, so we divide it later.
     solid_harm_prefact = np.sqrt((4 * np.pi) / (np.arange(lmax + 1) * 2 + 1))
     scaled_sph_to_cart = []
+    einsum_path_map = []
     for l in range(lmax + 1):
         scaled_sph_to_cart.append(sph_to_cart[l] / solid_harm_prefact[l])
+        # Maybe create cached einsum path here
+        deg = l + 2 * (num_ns[l] - 1)
+        moments_l = np.ones((deg+1, deg+1, deg+1))
+        einsum_path = np.einsum_path('mnpqr, pqr->mn', scaled_sph_to_cart[l], moments_l, optimize='optimal')
+        einsum_path_map.append(einsum_path[0])
 
     for center_types in types:
         for neighbor_types in types:
@@ -286,7 +292,7 @@ def pairwise_ellip_expansion_profiling(
                                 "mnpqr, pqr->mn",
                                 scaled_sph_to_cart[l],
                                 moments_l,
-                                optimize=optimize,
+                                optimize=einsum_path_map[l],
                             )
                         )
 
