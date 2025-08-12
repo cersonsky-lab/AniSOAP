@@ -55,3 +55,12 @@ target = "anisoap_rust_lib"  # The last part of the name (e.g. "_lib") has to ma
 path = "Cargo.toml"      # Default value, can be omitted
 binding = "PyO3"         # Default value, can be omitted
 
+
+[tool.pixi.workspace]
+channels = ["conda-forge"]
+platforms = ["osx-arm64", "linux-64"]
+
+[tool.pixi.pypi-dependencies]
+anisoap = { path = ".", editable = true }
+
+[tool.pixi.tasks]
