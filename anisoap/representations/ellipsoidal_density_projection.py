@@ -742,7 +742,7 @@ class EllipsoidalDensityProjection:
         # If not, it returns raw numerical data of coefficients in mvg_nu2 TensorMap
         if mean_over_samples:
             x_asoap_raw = metatensor.mean_over_samples(mvg_nu2, sample_names="center")
-            x_asoap_raw = x_asoap_raw.block().values.squeeze()
+            x_asoap_raw = np.hstack([block.values.squeeze() for block in x_asoap_raw.blocks()])
             return x_asoap_raw
         else:
             return mvg_nu2
