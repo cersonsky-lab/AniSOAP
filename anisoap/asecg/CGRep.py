@@ -202,6 +202,9 @@ def coarsen_frame(frame: Atoms, cg_info: CGInfo, calc_geometry=False, mic=True) 
     return cg_frame
 
 def coarsen_frame_manybeads(frame: Atoms, cg_infos: list[CGInfo], calc_geometries: list[bool], mic)->Atoms:
+    """
+    Use this function if there are many coarse-grained beads in the frame.
+    """
     cg_frames = []
     assert len(cg_infos) == len(calc_geometries)
     for cg_info, calc_geometry in zip(cg_infos, calc_geometries):
