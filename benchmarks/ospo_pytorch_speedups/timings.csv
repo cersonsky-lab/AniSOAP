@@ -1,0 +1,10 @@
+benzenes_numpy,benzenes.xyz,numpy,0.242
+benzenes_torch,benzenes.xyz,torch,0.131
+ellipsoids_numpy,ellipsoids.xyz,numpy,0.213
+ellipsoids_torch,ellipsoids.xyz,torch,0.219
+four_species_numpy,four_species.xyz,numpy,0.252
+four_species_torch,four_species.xyz,torch,0.223
+one_species_numpy,one_species.xyz,numpy,0.490
+one_species_torch,one_species.xyz,torch,0.136
+three_species_numpy,three_species.xyz,numpy,0.393
+three_species_torch,three_species.xyz,torch,0.183
