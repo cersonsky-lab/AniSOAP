@@ -506,8 +506,8 @@ class EllipsoidalDensityProjection:
         self.radial_basis_name = radial_basis_name
 
         # Currently, gradients are not supported
-        if compute_gradients:
-            raise NotImplementedError("Sorry! Gradients have not yet been implemented")
+        # if compute_gradients:
+        #     raise NotImplementedError("Sorry! Gradients have not yet been implemented")
         #
 
         radial_hypers = {}
