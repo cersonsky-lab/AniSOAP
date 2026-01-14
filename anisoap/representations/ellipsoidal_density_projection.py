@@ -37,6 +37,7 @@ def pairwise_ellip_expansion(
     ellipsoid_lengths,
     sph_to_cart,
     radial_basis,
+    compute_gradients=False,
     show_progress=False,
     rust_moments=True,
 ):
@@ -104,6 +105,10 @@ def pairwise_ellip_expansion(
         for neighbor_types in types:
             if (center_types, neighbor_types) in neighbor_list.keys:
                 values_ldict = {l: [] for l in range(lmax + 1)}
+                if compute_gradients:
+                    values_ldict_grad_x = {l: [] for l in range(lmax + 1)}
+                    values_ldict_grad_y = {l: [] for l in range(lmax + 1)}
+                    values_ldict_grad_z = {l: [] for l in range(lmax + 1)}
                 nl_block = neighbor_list.block(
                     first_atom_type=center_types,
                     second_atom_type=neighbor_types,
@@ -153,13 +158,24 @@ def pairwise_ellip_expansion(
                         moments = compute_moments(precision, center, maxdeg)
                     else:
                         moments = compute_moments_inefficient_implementation(
-                            precision, center, maxdeg=maxdeg
+                            precision, center, maxdeg, compute_gradients 
                         )
-                    moments *= np.exp(-0.5 * constant) * length_norm
+                    if compute_gradients:
+                        # If compute_gradients, then moments is a tuple containing the moments and the three gradients.
+                        moments, moments_grad_x, moments_grad_y, moments_grad_z = moments
+                        moments *= np.exp(-0.5 * constant) * length_norm
+                        moments_grad_x *= np.exp(-0.5 * constant) * length_norm
+                        moments_grad_y *= np.exp(-0.5 * constant) * length_norm
+                        moments_grad_z *= np.exp(-0.5 * constant) * length_norm
+                    else:
+                        moments *= np.exp(-0.5 * constant) * length_norm
 
                     for l in range(lmax + 1):
                         deg = l + 2 * (num_ns[l] - 1)
                         moments_l = moments[: deg + 1, : deg + 1, : deg + 1]
+                        moments_l_grad_x = moments[: deg + 1, : deg + 1, : deg + 1]
+                        moments_l_grad_y = moments[: deg + 1, : deg + 1, : deg + 1]
+                        moments_l_grad_z = moments[: deg + 1, : deg + 1, : deg + 1]
                         values_ldict[l].append(
                             np.einsum(
                                 "mnpqr, pqr->mn",
@@ -167,6 +183,28 @@ def pairwise_ellip_expansion(
                                 moments_l,
                             )
                         )
+                        if compute_gradients:
+                            values_ldict_grad_x[l].append(
+                                np.einsum(
+                                    "mnpqr, pqr->mn",
+                                    scaled_sph_to_cart[l],
+                                    moments_l_grad_x,
+                                )
+                            )
+                            values_ldict_grad_y[l].append(
+                                np.einsum(
+                                    "mnpqr, pqr->mn",
+                                    scaled_sph_to_cart[l],
+                                    moments_l_grad_y,
+                                )
+                            )
+                            values_ldict_grad_z[l].append(
+                                np.einsum(
+                                    "mnpqr, pqr->mn",
+                                    scaled_sph_to_cart[l],
+                                    moments_l_grad_z,
+                                )
+                            )
 
                 for l in tqdm(
                     range(lmax + 1),
@@ -190,6 +228,14 @@ def pairwise_ellip_expansion(
                             np.asarray(list(range(num_ns[l])), np.int32).reshape(-1, 1),
                         ),
                     )
+
+                    if compute_gradients:
+                        gradient = TensorBlock(
+                            values=np.asarray(values_ldict[l]),
+                            samples = nl_block.samples,
+                            components=[]
+                        )
+                        block.add_gradient("positions", )
                     tensorblock_list.append(block)
 
     pairwise_ellip_feat = TensorMap(
@@ -201,6 +247,8 @@ def pairwise_ellip_expansion(
     )
     return pairwise_ellip_feat
 
+def moment_derivative(n0,n1,n2,cov):
+    x_grad = 2*cov[0,0]
 
 def contract_pairwise_feat(pair_ellip_feat, types, show_progress=False):
     """Function to sum over the pairwise expansion
@@ -562,7 +610,7 @@ class EllipsoidalDensityProjection:
     def transform(self, frames, show_progress=False, normalize=True, rust_moments=True):
         """Computes features and gradients for frames
 
-        Computes the features and (if compute_gradients == True) gradients
+        Computes the features and (if compute_gradients == Truegradients
         for all the provided frames. The features and gradients are stored in
         features and feature_gradients attribute.
 

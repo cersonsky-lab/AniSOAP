@@ -137,7 +137,7 @@ def compute_moments_diagonal_inefficient_implementation(
 # of the moment <x^n0 * y^n1 * z^n2> simply as moments[n0,n1,n2].
 # This leads to more intuitive code, at the cost of wasting around
 # a third of the memory in the array to store zeros.
-def compute_moments_inefficient_implementation(A, a, maxdeg):
+def compute_moments_inefficient_implementation(A, a, maxdeg, compute_gradients=False):
     r"""Computes all moments for a general dilation matrix.
 
     Parameters
@@ -189,6 +189,10 @@ def compute_moments_inefficient_implementation(A, a, maxdeg):
     # array elements will actually be relevant.
     # The advantage, however, is the simplicity in later use.
     moments = np.zeros((maxdeg + 1, maxdeg + 1, maxdeg + 1))
+    moments_grad_x = np.zeros((maxdeg + 1, maxdeg + 1, maxdeg + 1))
+    moments_grad_y = np.zeros((maxdeg + 1, maxdeg + 1, maxdeg + 1))
+    moments_grad_z = np.zeros((maxdeg + 1, maxdeg + 1, maxdeg + 1))
+
 
     # Initialize the first few elements
     moments[0, 0, 0] = 1.0
@@ -257,4 +261,22 @@ def compute_moments_inefficient_implementation(A, a, maxdeg):
                             + cov[2, 2] * n2 * moments[n0, n1, n2 - 1]
                         )
 
+                if compute_gradients:
+                    # Calculate moment gradients
+                    moments_grad_x[n0,n1,n2] =   2*cov[0,0]*moments[n0+1,n1,n2] - 2*cov[0,0]*a[0]*moments[n0,n1,n2] \
+                                                +2*cov[0,1]*moments[n0,n1+1,n2] - 2*cov[0,1]*a[1]*moments[n0,n1,n2] \
+                                                +2*cov[0,2]*moments[n0,n1,n2+1] - 2*cov[0,2]*a[2]*moments[n0,n1,n2] \
+                                                +n0*moments[n0-1,n1,n2]
+
+                    moments_grad_y[n0,n1,n2] =   2*cov[1,0]*moments[n0+1,n1,n1] - 2*cov[1,0]*a[0]*moments[n0,n1,n2] \
+                                                +2*cov[1,1]*moments[n0,n1+1,n2] - 2*cov[1,1]*a[1]*moments[n0,n1,n2] \
+                                                +2*cov[1,2]*moments[n0,n1,n2+1] - 2*cov[1,2]*a[2]*moments[n0,n1,n2] \
+                                                +n1*moments[n0,n1-1,n2]
+
+                    moments_grad_z[n0,n1,n2] =   2*cov[2,0]*moments[n0+1,n1,n1] - 2*cov[2,0]*a[0]*moments[n0,n1,n2] \
+                                                +2*cov[2,1]*moments[n0,n1+1,n2] - 2*cov[2,1]*a[1]*moments[n0,n1,n2] \
+                                                +2*cov[2,2]*moments[n0,n1,n2+1] - 2*cov[2,2]*a[2]*moments[n0,n1,n2] \
+                                                +n1*moments[n0,n1,n2-1]
+    if compute_gradients:
+        return global_factor * moments, global_factor*moments_grad_x, global_factor*moments_grad_y, global_factor*moments_grad_z
     return global_factor * moments
