@@ -173,9 +173,9 @@ def pairwise_ellip_expansion(
                     for l in range(lmax + 1):
                         deg = l + 2 * (num_ns[l] - 1)
                         moments_l = moments[: deg + 1, : deg + 1, : deg + 1]
-                        moments_l_grad_x = moments[: deg + 1, : deg + 1, : deg + 1]
-                        moments_l_grad_y = moments[: deg + 1, : deg + 1, : deg + 1]
-                        moments_l_grad_z = moments[: deg + 1, : deg + 1, : deg + 1]
+                        moments_l_grad_x = moments_grad_x[: deg + 1, : deg + 1, : deg + 1]
+                        moments_l_grad_y = moments_grad_y[: deg + 1, : deg + 1, : deg + 1]
+                        moments_l_grad_z = moments_grad_z[: deg + 1, : deg + 1, : deg + 1]
                         values_ldict[l].append(
                             np.einsum(
                                 "mnpqr, pqr->mn",
