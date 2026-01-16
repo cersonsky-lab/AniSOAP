@@ -230,12 +230,27 @@ def pairwise_ellip_expansion(
                     )
 
                     if compute_gradients:
+                        # We want to stack the three gradients so that the xyz are in axis=1.
+                        # So, the dimension of the gradient block has shape (nsamples, 3, 2l+1, nmax)
+                        values = np.stack((values_ldict_grad_x[l], values_ldict_grad_y[l], values_ldict_grad_z[l]), axis=1)
                         gradient = TensorBlock(
-                            values=np.asarray(values_ldict[l]),
+                            values=values,
                             samples = nl_block.samples,
-                            components=[]
+                            components=[
+                                Labels(["xyz"], np.array([0,1,2], np.int32).reshape(-1,1)),
+                                Labels(
+                                    ["spherical_component_m"],
+                                    np.asarray([list(range(-l, l + 1))], np.int32).reshape(
+                                        -1, 1
+                                    ),
+                                ),
+                            ],
+                            properties=Labels(
+                                ["n"],
+                                np.asarray(list(range(num_ns[l])), np.int32).reshape(-1, 1),
+                            ),
                         )
-                        block.add_gradient("positions", )
+                        block.add_gradient("positions", gradient)
                     tensorblock_list.append(block)
 
     pairwise_ellip_feat = TensorMap(
@@ -607,7 +622,7 @@ class EllipsoidalDensityProjection:
 
         self.rotation_key = rotation_key
 
-    def transform(self, frames, show_progress=False, normalize=True, rust_moments=True):
+    def transform(self, frames, show_progress=False, normalize=True, rust_moments=True, compute_gradients=False):
         """Computes features and gradients for frames
 
         Computes the features and (if compute_gradients == Truegradients
@@ -705,7 +720,8 @@ class EllipsoidalDensityProjection:
             ellipsoid_lengths,
             self.sph_to_cart,
             self.radial_basis,
-            show_progress,
+            compute_gradients=compute_gradients,
+            show_progress=show_progress,
             rust_moments=rust_moments,
         )
 
@@ -717,7 +733,7 @@ class EllipsoidalDensityProjection:
             return features
 
     def power_spectrum(
-        self, frames, mean_over_samples=True, show_progress=False, rust_moments=True
+        self, frames, mean_over_samples=True, show_progress=False, rust_moments=True, compute_gradients=False
     ):
         """Helper function to compute the power spectrum of AniSOAP
 
@@ -772,7 +788,7 @@ class EllipsoidalDensityProjection:
                     raise ValueError(f"frame should contain c_q rather than quaternion")
 
         mvg_coeffs = self.transform(
-            frames, show_progress=show_progress, rust_moments=rust_moments
+            frames, show_progress=show_progress, rust_moments=rust_moments, compute_gradients=compute_gradients,
         )
         mvg_nu1 = standardize_keys(mvg_coeffs)
 
