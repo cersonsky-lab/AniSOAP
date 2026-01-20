@@ -173,9 +173,6 @@ def pairwise_ellip_expansion(
                     for l in range(lmax + 1):
                         deg = l + 2 * (num_ns[l] - 1)
                         moments_l = moments[: deg + 1, : deg + 1, : deg + 1]
-                        moments_l_grad_x = moments_grad_x[: deg + 1, : deg + 1, : deg + 1]
-                        moments_l_grad_y = moments_grad_y[: deg + 1, : deg + 1, : deg + 1]
-                        moments_l_grad_z = moments_grad_z[: deg + 1, : deg + 1, : deg + 1]
                         values_ldict[l].append(
                             np.einsum(
                                 "mnpqr, pqr->mn",
@@ -184,6 +181,9 @@ def pairwise_ellip_expansion(
                             )
                         )
                         if compute_gradients:
+                            moments_l_grad_x = moments_grad_x[: deg + 1, : deg + 1, : deg + 1]
+                            moments_l_grad_y = moments_grad_y[: deg + 1, : deg + 1, : deg + 1]
+                            moments_l_grad_z = moments_grad_z[: deg + 1, : deg + 1, : deg + 1]
                             values_ldict_grad_x[l].append(
                                 np.einsum(
                                     "mnpqr, pqr->mn",
@@ -233,9 +233,25 @@ def pairwise_ellip_expansion(
                         # We want to stack the three gradients so that the xyz are in axis=1.
                         # So, the dimension of the gradient block has shape (nsamples, 3, 2l+1, nmax)
                         values = np.stack((values_ldict_grad_x[l], values_ldict_grad_y[l], values_ldict_grad_z[l]), axis=1)
+                        # We then need the values to be tiled on top of each other such that the first half is positive, the second half negative
+                        values = np.tile(values, (2, 1, 1, 1))
+                        values[len(values)//2:, :, :, :] = -values[len(values)//2:, :, :, :]
+                        assert np.allclose(values[:len(values)//2, :, :, :], -values[len(values)//2:, :, :, :])
+                        # Build the samples labels for the gradient, having the the same elements of the neighborlist samples, tiled on top of each other
+                        # We take advantage of symmetry: dX/dr_{ij} = -dX/dr_{ij}.
+                        # Above, we compute dX/dr_{ij}, so we populate the gradient tensorblock one half at a time: 
+                            # gradient.values[:len/2, :, :] = dX/dr{ij}, gradient.values[len/2, :, :] = -dX/dr_{ij}
+                        sample_col = np.tile(np.arange(len(nl_block.samples)), 2)
+                        system_col = np.tile(nl_block.samples['system'], 2)
+                        atom_col = np.hstack((nl_block.samples['first_atom'], nl_block.samples['second_atom']))
+                        sign_col = np.hstack((np.ones(len(nl_block.samples), dtype=np.int8), -np.ones(len(nl_block.samples), dtype=np.int8)))
+                        samples = metatensor.Labels(
+                            names=['sample', 'system', 'atom', 'sign'],
+                            values=np.vstack((sample_col, system_col, atom_col, sign_col)).T
+                        )
                         gradient = TensorBlock(
                             values=values,
-                            samples = nl_block.samples,
+                            samples = samples,
                             components=[
                                 Labels(["xyz"], np.array([0,1,2], np.int32).reshape(-1,1)),
                                 Labels(
