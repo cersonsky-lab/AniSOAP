@@ -741,7 +741,19 @@ class EllipsoidalDensityProjection:
             rust_moments=rust_moments,
         )
 
-        features = contract_pairwise_feat(pairwise_ellip_feat, types, show_progress)
+        # features = contract_pairwise_feat(pairwise_ellip_feat, types, show_progress)
+        # Instead of using contract_pairwise_feat, which doesn't propogate gradients, we use metatensor's capabilities.
+        # This does the same thing, except the values seem to be unraveled in a different way compared with the output of `contract_pairwise_feat`
+        # I don't think this is an issue.
+        features = metatensor.rename_dimension(pairwise_ellip_feat, axis="keys", old="types_neighbor", new="neighbor_types")
+        features = features.keys_to_properties(["neighbor_types"])
+        features = metatensor.sum_over_samples(features, ['second_atom', 'cell_shift_a', 'cell_shift_b', 'cell_shift_c'])
+        features = metatensor.rename_dimension(features, axis="samples", old="first_atom", new="center")
+
+        # Rename the labels so that they're consistent with how they'll be used later.
+        # types_neighbors -> neighbor_types, first_atom -> center
+        
+
         if normalize:
             normalized_features = self.radial_basis.orthonormalize_basis(features)
             return normalized_features
