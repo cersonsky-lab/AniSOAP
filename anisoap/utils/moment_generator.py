@@ -263,17 +263,17 @@ def compute_moments_inefficient_implementation(A, a, maxdeg, compute_gradients=F
 
                 if compute_gradients:
                     # Calculate moment gradients
-                    moments_grad_x[n0,n1,n2] =  -2*cov[0,0]*moments[n0+1,n1,n2] + 2*cov[0,0]*a[0]*moments[n0,n1,n2] \
-                                                -2*cov[0,1]*moments[n0,n1+1,n2] + 2*cov[0,1]*a[1]*moments[n0,n1,n2] \
-                                                -2*cov[0,2]*moments[n0,n1,n2+1] + 2*cov[0,2]*a[2]*moments[n0,n1,n2] 
+                    moments_grad_x[n0,n1,n2] =  -2*A[0,0]*moments[n0+1,n1,n2] + 2*A[0,0]*a[0]*moments[n0,n1,n2] \
+                                                -2*A[0,1]*moments[n0,n1+1,n2] + 2*A[0,1]*a[1]*moments[n0,n1,n2] \
+                                                -2*A[0,2]*moments[n0,n1,n2+1] + 2*A[0,2]*a[2]*moments[n0,n1,n2] 
 
-                    moments_grad_y[n0,n1,n2] =  -2*cov[1,0]*moments[n0+1,n1,n1] + 2*cov[1,0]*a[0]*moments[n0,n1,n2] \
-                                                -2*cov[1,1]*moments[n0,n1+1,n2] + 2*cov[1,1]*a[1]*moments[n0,n1,n2] \
-                                                -2*cov[1,2]*moments[n0,n1,n2+1] + 2*cov[1,2]*a[2]*moments[n0,n1,n2] 
+                    moments_grad_y[n0,n1,n2] =  -2*A[1,0]*moments[n0+1,n1,n1] + 2*A[1,0]*a[0]*moments[n0,n1,n2] \
+                                                -2*A[1,1]*moments[n0,n1+1,n2] + 2*A[1,1]*a[1]*moments[n0,n1,n2] \
+                                                -2*A[1,2]*moments[n0,n1,n2+1] + 2*A[1,2]*a[2]*moments[n0,n1,n2] 
 
-                    moments_grad_z[n0,n1,n2] =  -2*cov[2,0]*moments[n0+1,n1,n1] + 2*cov[2,0]*a[0]*moments[n0,n1,n2] \
-                                                -2*cov[2,1]*moments[n0,n1+1,n2] + 2*cov[2,1]*a[1]*moments[n0,n1,n2] \
-                                                -2*cov[2,2]*moments[n0,n1,n2+1] + 2*cov[2,2]*a[2]*moments[n0,n1,n2] 
+                    moments_grad_z[n0,n1,n2] =  -2*A[2,0]*moments[n0+1,n1,n1] + 2*A[2,0]*a[0]*moments[n0,n1,n2] \
+                                                -2*A[2,1]*moments[n0,n1+1,n2] + 2*A[2,1]*a[1]*moments[n0,n1,n2] \
+                                                -2*A[2,2]*moments[n0,n1,n2+1] + 2*A[2,2]*a[2]*moments[n0,n1,n2] 
     if compute_gradients:
         return global_factor * moments, global_factor*moments_grad_x, global_factor*moments_grad_y, global_factor*moments_grad_z
     return global_factor * moments
