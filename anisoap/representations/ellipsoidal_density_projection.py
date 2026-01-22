@@ -266,6 +266,9 @@ def pairwise_ellip_expansion(
                                 np.asarray(list(range(num_ns[l])), np.int32).reshape(-1, 1),
                             ),
                         )
+                        # We sum over the sign column to remove it - this also sorts the samples how we want it (first by "sample", then by "system", then by "atom")
+                        # This is desirable because samples where first_atom == second_atom should have 0 gradient.
+                        gradient = metatensor.sum_over_samples_block(gradient, ['sign'])
                         block.add_gradient("positions", gradient)
                     tensorblock_list.append(block)
 
@@ -748,11 +751,7 @@ class EllipsoidalDensityProjection:
         features = metatensor.rename_dimension(pairwise_ellip_feat, axis="keys", old="types_neighbor", new="neighbor_types")
         features = features.keys_to_properties(["neighbor_types"])
         features = metatensor.sum_over_samples(features, ['second_atom', 'cell_shift_a', 'cell_shift_b', 'cell_shift_c'])
-        features = metatensor.rename_dimension(features, axis="samples", old="first_atom", new="center")
-
-        # Rename the labels so that they're consistent with how they'll be used later.
-        # types_neighbors -> neighbor_types, first_atom -> center
-        
+        features = metatensor.rename_dimension(features, axis="samples", old="first_atom", new="center")        
 
         if normalize:
             normalized_features = self.radial_basis.orthonormalize_basis(features)
