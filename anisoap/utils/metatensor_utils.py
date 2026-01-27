@@ -196,19 +196,31 @@ def standardize_keys(descriptor):
             key = (1,) + key
         keys.append(key)
         property_names = _remove_suffix(block.properties.names, "_1")
-        blocks.append(
-            TensorBlock(
-                values=block.values,
-                samples=block.samples,
-                components=block.components,
+        std_block = TensorBlock(
+            values=block.values,
+            samples=block.samples,
+            components=block.components,
+            properties=Labels(
+                property_names,
+                np.asarray(block.properties, dtype=np.int32).reshape(
+                    -1, len(property_names)
+                )
+            )
+        )
+        if block.has_gradient("positions"):
+            std_block_grad = TensorBlock(
+                values=block.gradient("positions").values,
+                samples=block.gradient("positions").samples,
+                components=block.gradient("positions").components,
                 properties=Labels(
                     property_names,
                     np.asarray(block.properties, dtype=np.int32).reshape(
                         -1, len(property_names)
-                    ),
-                ),
+                    )
+                )
             )
-        )
+            std_block.add_gradient("positions", std_block_grad)
+        blocks.append(std_block)
 
     if not "order_nu" in key_names:
         key_names = ["order_nu"] + key_names
