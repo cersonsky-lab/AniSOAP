@@ -414,8 +414,8 @@ def cg_combine(
                 if grad_components is not None:
                     grad_a = block_a.gradient("positions")
                     grad_b = block_b.gradient("positions")
-                    grad_a_data = np.swapaxes(grad_a.data, 1, 2)
-                    grad_b_data = np.swapaxes(grad_b.data, 1, 2)
+                    grad_a_data = np.swapaxes(grad_a.values, 1, 2)
+                    grad_b_data = np.swapaxes(grad_b.values, 1, 2)
                     one_shot_grads = clebsch_gordan.combine_einsum(
                         block_a.values[grad_a.samples["sample"]][
                             neighbor_slice, :, sel_feats[:, 0]
@@ -463,10 +463,15 @@ def cg_combine(
         if grad_components is not None:
             grad_data = np.swapaxes(np.concatenate(X_grads[KEY], axis=-1), 2, 1)
             newblock.add_gradient(
-                "positions",
-                data=grad_data,
-                samples=X_grad_samples[KEY],
-                components=[grad_components[0], sph_components],
+                "positions", 
+                TensorBlock(
+                    values=grad_data,
+                    samples=X_grad_samples[KEY],
+                    components=[grad_components[0], sph_components],
+                    properties=Labels(
+                        feature_names, np.asarray(np.vstack(X_idx[KEY]), dtype=np.int32)
+                    ),
+                )
             )
         nz_blk.append(newblock)
     X = TensorMap(

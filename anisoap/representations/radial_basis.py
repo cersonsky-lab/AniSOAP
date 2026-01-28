@@ -626,6 +626,8 @@ class GTORadialBasis(_RadialBasis):
                     block.values[:, :, neighbor_mask],
                     orthonormalization_matrix,
                 )
+                if block.has_gradient("positions"):
+                    block.gradient("positions").values[:, :, :, neighbor_mask] = np.einsum('hijk,kl->hijl', block.gradient("positions").values[:, :, :, neighbor_mask], orthonormalization_matrix)
 
         return features
 
