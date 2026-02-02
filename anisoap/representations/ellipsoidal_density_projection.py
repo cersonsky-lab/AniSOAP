@@ -644,7 +644,7 @@ class EllipsoidalDensityProjection:
     def transform(self, frames, show_progress=False, normalize=True, rust_moments=True, compute_gradients=False):
         """Computes features and gradients for frames
 
-        Computes the features and (if compute_gradients == Truegradients
+        Computes the features and (if compute_gradients == True) gradients
         for all the provided frames. The features and gradients are stored in
         features and feature_gradients attribute.
 
