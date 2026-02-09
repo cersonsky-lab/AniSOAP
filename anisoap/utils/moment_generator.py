@@ -137,7 +137,7 @@ def compute_moments_diagonal_inefficient_implementation(
 # of the moment <x^n0 * y^n1 * z^n2> simply as moments[n0,n1,n2].
 # This leads to more intuitive code, at the cost of wasting around
 # a third of the memory in the array to store zeros.
-def compute_moments_inefficient_implementation(A, a, maxdeg, compute_gradients=False):
+def compute_moments_inefficient_implementation(A, a, maxdeg):
     r"""Computes all moments for a general dilation matrix.
 
     Parameters
@@ -189,10 +189,6 @@ def compute_moments_inefficient_implementation(A, a, maxdeg, compute_gradients=F
     # array elements will actually be relevant.
     # The advantage, however, is the simplicity in later use.
     moments = np.zeros((maxdeg + 1, maxdeg + 1, maxdeg + 1))
-    moments_grad_x = np.zeros((maxdeg + 1, maxdeg + 1, maxdeg + 1))
-    moments_grad_y = np.zeros((maxdeg + 1, maxdeg + 1, maxdeg + 1))
-    moments_grad_z = np.zeros((maxdeg + 1, maxdeg + 1, maxdeg + 1))
-
 
     # Initialize the first few elements
     moments[0, 0, 0] = 1.0
@@ -261,19 +257,32 @@ def compute_moments_inefficient_implementation(A, a, maxdeg, compute_gradients=F
                             + cov[2, 2] * n2 * moments[n0, n1, n2 - 1]
                         )
 
-                if compute_gradients:
-                    # Calculate moment gradients
-                    moments_grad_x[n0,n1,n2] =  -2*A[0,0]*moments[n0+1,n1,n2] + 2*A[0,0]*a[0]*moments[n0,n1,n2] \
-                                                -2*A[0,1]*moments[n0,n1+1,n2] + 2*A[0,1]*a[1]*moments[n0,n1,n2] \
-                                                -2*A[0,2]*moments[n0,n1,n2+1] + 2*A[0,2]*a[2]*moments[n0,n1,n2] 
-
-                    moments_grad_y[n0,n1,n2] =  -2*A[1,0]*moments[n0+1,n1,n2] + 2*A[1,0]*a[0]*moments[n0,n1,n2] \
-                                                -2*A[1,1]*moments[n0,n1+1,n2] + 2*A[1,1]*a[1]*moments[n0,n1,n2] \
-                                                -2*A[1,2]*moments[n0,n1,n2+1] + 2*A[1,2]*a[2]*moments[n0,n1,n2] 
-
-                    moments_grad_z[n0,n1,n2] =  -2*A[2,0]*moments[n0+1,n1,n2] + 2*A[2,0]*a[0]*moments[n0,n1,n2] \
-                                                -2*A[2,1]*moments[n0,n1+1,n2] + 2*A[2,1]*a[1]*moments[n0,n1,n2] \
-                                                -2*A[2,2]*moments[n0,n1,n2+1] + 2*A[2,2]*a[2]*moments[n0,n1,n2] 
-    if compute_gradients:
-        return global_factor * moments, global_factor*moments_grad_x, global_factor*moments_grad_y, global_factor*moments_grad_z
     return global_factor * moments
+
+def compute_moments_gradients_inefficient_implementation(A,a,maxdeg):
+    # Calculate moments to a higher max deg to ensure we have access to higher degree moments for our gradient computation.
+    moments = compute_moments_inefficient_implementation(A,a,maxdeg+2)
+
+    moments_grad_x = np.zeros((maxdeg + 2, maxdeg + 2, maxdeg + 2))
+    moments_grad_y = np.zeros((maxdeg + 2, maxdeg + 2, maxdeg + 2))
+    moments_grad_z = np.zeros((maxdeg + 2, maxdeg + 2, maxdeg + 2))
+    for deg in range(0, maxdeg+1):
+        for n0 in range(deg + 1):
+            for n1 in range(deg + 1 - n0):
+                # We consider monomials of degree "deg", and generate moments of degree deg+1.
+                n2 = deg - n0 - n1
+
+                # Calculate moment gradients
+                moments_grad_x[n0,n1,n2] =   A[0,0]*moments[n0+1,n1,n2] - A[0,0]*a[0]*moments[n0,n1,n2] \
+                                            +A[0,1]*moments[n0,n1+1,n2] - A[0,1]*a[1]*moments[n0,n1,n2] \
+                                            +A[0,2]*moments[n0,n1,n2+1] - A[0,2]*a[2]*moments[n0,n1,n2] 
+
+                moments_grad_y[n0,n1,n2] =  A[1,0]*moments[n0+1,n1,n2] - A[1,0]*a[0]*moments[n0,n1,n2] \
+                                           +A[1,1]*moments[n0,n1+1,n2] - A[1,1]*a[1]*moments[n0,n1,n2] \
+                                           +A[1,2]*moments[n0,n1,n2+1] - A[1,2]*a[2]*moments[n0,n1,n2] 
+
+                moments_grad_z[n0,n1,n2] =  A[2,0]*moments[n0+1,n1,n2] - A[2,0]*a[0]*moments[n0,n1,n2] \
+                                           +A[2,1]*moments[n0,n1+1,n2] - A[2,1]*a[1]*moments[n0,n1,n2] \
+                                           +A[2,2]*moments[n0,n1,n2+1] - A[2,2]*a[2]*moments[n0,n1,n2] 
+
+    return moments[:maxdeg+1, :maxdeg+1, :maxdeg+1], moments_grad_x[:maxdeg+1, :maxdeg+1, :maxdeg+1], moments_grad_y[:maxdeg+1, :maxdeg+1, :maxdeg+1], moments_grad_z[:maxdeg+1, :maxdeg+1, :maxdeg+1]
