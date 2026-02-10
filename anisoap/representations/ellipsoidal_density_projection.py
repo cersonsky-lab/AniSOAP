@@ -1,6 +1,7 @@
 import sys
 import warnings
 from itertools import product
+import pickle
 
 import metatensor
 import numpy as np
@@ -40,6 +41,7 @@ def pairwise_ellip_expansion(
     compute_gradients=False,
     show_progress=False,
     rust_moments=True,
+    output_values_ldicts=None,
 ):
     r"""Computes pairwise expansion
 
@@ -156,13 +158,13 @@ def pairwise_ellip_expansion(
 
                     if rust_moments:
                         moments = compute_moments(precision, center, maxdeg)
-                    else:
+                    elif not compute_gradients:
                         moments = compute_moments_inefficient_implementation(
-                            precision, center, maxdeg, compute_gradients 
+                            precision, center, maxdeg 
                         )
-                    if compute_gradients:
+                    elif compute_gradients:
                         # If compute_gradients, then moments is a tuple containing the moments and the three gradients.
-                        moments, moments_grad_x, moments_grad_y, moments_grad_z = moments
+                        moments, moments_grad_x, moments_grad_y, moments_grad_z = compute_moments_gradients_inefficient_implementation(precision, center, maxdeg)
                         moments *= np.exp(-0.5 * constant) * length_norm
                         moments_grad_x *= np.exp(-0.5 * constant) * length_norm
                         moments_grad_y *= np.exp(-0.5 * constant) * length_norm
@@ -205,7 +207,18 @@ def pairwise_ellip_expansion(
                                     moments_l_grad_z,
                                 )
                             )
-
+                if output_values_ldicts is not None:
+                    with open(f"/Users/alin62/Documents/Research/anisoap-finite-diff/values_ldict_{output_values_ldicts}.pkl", "wb") as f:
+                        pickle.dump(values_ldict, f)
+                    if compute_gradients:
+                        with open("/Users/alin62/Documents/Research/anisoap-finite-diff/values_ldict_grad_x.pkl", "wb") as f:
+                            pickle.dump(values_ldict_grad_x, f)
+                        with open("/Users/alin62/Documents/Research/anisoap-finite-diff/values_ldict_grad_y.pkl", "wb") as f:
+                            pickle.dump(values_ldict_grad_x, f)
+                        with open("/Users/alin62/Documents/Research/anisoap-finite-diff/values_ldict_grad_z.pkl", "wb") as f:
+                            pickle.dump(values_ldict_grad_x, f)
+                    print("Sucessfully outputted values_ldict and values_gradients")
+                    sys.exit(0)
                 for l in tqdm(
                     range(lmax + 1),
                     disable=(not show_progress),
@@ -641,7 +654,7 @@ class EllipsoidalDensityProjection:
 
         self.rotation_key = rotation_key
 
-    def transform(self, frames, show_progress=False, normalize=True, rust_moments=True, compute_gradients=False):
+    def transform(self, frames, show_progress=False, normalize=True, rust_moments=True, compute_gradients=False, return_pef=False, output_values_ldicts=1):
         """Computes features and gradients for frames
 
         Computes the features and (if compute_gradients == True) gradients
@@ -742,7 +755,10 @@ class EllipsoidalDensityProjection:
             compute_gradients=compute_gradients,
             show_progress=show_progress,
             rust_moments=rust_moments,
+            output_values_ldicts=output_values_ldicts
         )
+        if return_pef:
+            return pairwise_ellip_feat
 
         # features = contract_pairwise_feat(pairwise_ellip_feat, types, show_progress)
         # Instead of using contract_pairwise_feat, which doesn't propogate gradients, we use metatensor's capabilities.
