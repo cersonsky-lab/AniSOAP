@@ -139,9 +139,11 @@ def pairwise_ellip_expansion(
 
                     rot = rotation_matrices[j_global]
                     lengths = ellipsoid_lengths[j_global]
-                    length_norm = (
-                        np.prod(lengths) * (2.0 * np.pi) ** (3.0 / 2.0)
-                    ) ** -1.0
+                    # The normalizing constant of my 3d atom-density gaussian: (2pi)^-1.5 * det(cov)^-0.5
+                    # Here, we know that precision A = RDR^T = cov^-1, 
+                    # det(cov) = np.prod(D)^-1, and det(cov)^-0.5 = prod(D)^0.5
+
+                    rho_norm = np.prod(lengths) ** (0.5) * (2.0 * np.pi) ** (-1.5)
 
                     (
                         precision,
@@ -155,7 +157,9 @@ def pairwise_ellip_expansion(
                         moments = compute_moments_inefficient_implementation(
                             precision, center, maxdeg=maxdeg
                         )
-                    moments *= np.exp(-0.5 * constant) * length_norm
+                    # The moments needs to be scaled by the density normalization constant and the constant in
+                    # Eqn (A10) in https://pubs.aip.org/aip/jcp/article/161/7/074112/3308992.
+                    moments *= np.exp(-0.5 * constant) * rho_norm
 
                     for l in range(lmax + 1):
                         deg = l + 2 * (num_ns[l] - 1)
