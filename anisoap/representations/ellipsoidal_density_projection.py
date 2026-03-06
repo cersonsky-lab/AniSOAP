@@ -39,6 +39,7 @@ def pairwise_ellip_expansion(
     radial_basis,
     show_progress=False,
     rust_moments=True,
+    normalize=True
 ):
     r"""Computes pairwise expansion
 
@@ -144,7 +145,7 @@ def pairwise_ellip_expansion(
                     # det(cov) = np.prod(D)^-1, and det(cov)^-0.5 = prod(D)^0.5
 
                     rho_norm = np.prod(lengths) ** (0.5) * (2.0 * np.pi) ** (-1.5)
-
+                    rho_norm = 1
                     (
                         precision,
                         center,
@@ -203,6 +204,8 @@ def pairwise_ellip_expansion(
         ),
         tensorblock_list,
     )
+    if normalize:
+        pairwise_ellip_feat = radial_basis.orthonormalize_basis(pairwise_ellip_feat)
     return pairwise_ellip_feat
 
 
@@ -663,14 +666,16 @@ class EllipsoidalDensityProjection:
             self.radial_basis,
             show_progress,
             rust_moments=rust_moments,
+            normalize=normalize
         )
 
         features = contract_pairwise_feat(pairwise_ellip_feat, types, show_progress)
-        if normalize:
-            normalized_features = self.radial_basis.orthonormalize_basis(features)
-            return normalized_features
-        else:
-            return features
+        return pairwise_ellip_feat, features
+        # if normalize:
+        #     normalized_features = self.radial_basis.orthonormalize_basis(features)
+        #     return normalized_features
+        # else:
+        #     return pairwise_ellip_feat, features
 
     def power_spectrum(
         self, frames, mean_over_samples=True, show_progress=False, rust_moments=True
