@@ -410,30 +410,21 @@ class MonomialBasis(_RadialBasis):
         # In-place modification.
 
         for label, block in features.items():
-            # Each block's `properties` dimension contains radial channels for each neighbor types
-            # Hence we have to iterate through each neighbor types and orthonormalize the block in subblocks
-            # Each subblock is indexed using the neighbor_mask boolean array.
-            neighbors = np.unique(block.properties["neighbor_types"])
-            for neighbor in neighbors:
-                l = label["angular_channel"]
-                neighbor_mask = block.properties["neighbor_types"] == neighbor
-                n_arr = block.properties["n"][neighbor_mask].flatten()
-                l_2n_arr = l + 2 * n_arr
-                # normalize all the GTOs by the appropriate prefactor first, since the overlap matrix is in terms of
-                # normalized GTOs
-                prefactor_arr = monomial_prefactor(l_2n_arr, self.cutoff_radius)
-                block.values[:, :, neighbor_mask] *= prefactor_arr
+            l = label["angular_channel"]
+            n_arr = block.properties["n"]
+            l_2n_arr = l + 2 * n_arr
+            prefactor_arr = monomial_prefactor(l_2n_arr, self.cutoff_radius)
+            block.values[:, :, :] *= prefactor_arr
 
-                overlap_matrix_slice = self.overlap_matrix[l_2n_arr, :][:, l_2n_arr]
-                orthonormalization_matrix = inverse_matrix_sqrt(
-                    overlap_matrix_slice, self.rcond, self.tol
-                )
-                block.values[:, :, neighbor_mask] = np.einsum(
-                    "ijk,kl->ijl",
-                    block.values[:, :, neighbor_mask],
-                    orthonormalization_matrix,
-                )
-
+            mono_overlap_matrix_slice = self.overlap_matrix[l_2n_arr, :][:, l_2n_arr]
+            orthonormalization_matrix = inverse_matrix_sqrt(
+                mono_overlap_matrix_slice, self.rcond, self.tol
+            )
+            block.values[:, :, :] = np.einsum(
+                "ijk,kl->ijl",
+                block.values[:, :, :],
+                orthonormalization_matrix,
+            )
         return features
 
     def get_basis(self, rs):
@@ -619,32 +610,6 @@ class GTORadialBasis(_RadialBasis):
                 orthonormalization_matrix,
             )
         return features
-
-            # Each block's `properties` dimension contains radial channels for each neighbor types
-            # Hence we have to iterate through each neighbor types and orthonormalize the block in subblocks
-            # Each subblock is indexed using the neighbor_mask boolean array.
-        #     neighbors = np.unique(block.properties["neighbor_types"])
-        #     for neighbor in neighbors:
-        #         l = label["angular_channel"]
-        #         neighbor_mask = block.properties["neighbor_types"] == neighbor
-        #         n_arr = block.properties["n"][neighbor_mask].flatten()
-        #         l_2n_arr = l + 2 * n_arr
-        #         # normalize all the GTOs by the appropriate prefactor first, since the overlap matrix is in terms of
-        #         # normalized GTOs
-        #         prefactor_arr = gto_prefactor(l_2n_arr, self.radial_gaussian_width)
-        #         block.values[:, :, neighbor_mask] *= prefactor_arr
-
-        #         gto_overlap_matrix_slice = self.overlap_matrix[l_2n_arr, :][:, l_2n_arr]
-        #         orthonormalization_matrix = inverse_matrix_sqrt(
-        #             gto_overlap_matrix_slice, self.rcond, self.tol
-        #         )
-        #         block.values[:, :, neighbor_mask] = np.einsum(
-        #             "ijk,kl->ijl",
-        #             block.values[:, :, neighbor_mask],
-        #             orthonormalization_matrix,
-        #         )
-
-        # return features
 
     def get_basis(self, rs):
         r"""

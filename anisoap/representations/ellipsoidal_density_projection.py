@@ -39,7 +39,7 @@ def pairwise_ellip_expansion(
     radial_basis,
     show_progress=False,
     rust_moments=True,
-    normalize=True
+    normalize=True,
 ):
     r"""Computes pairwise expansion
 
@@ -141,7 +141,7 @@ def pairwise_ellip_expansion(
                     rot = rotation_matrices[j_global]
                     lengths = ellipsoid_lengths[j_global]
                     # The normalizing constant of my 3d atom-density gaussian: (2pi)^-1.5 * det(cov)^-0.5
-                    # Here, we know that precision A = RDR^T = cov^-1, 
+                    # Here, we know that precision A = RDR^T = cov^-1,
                     # det(cov) = np.prod(D)^-1, and det(cov)^-0.5 = prod(D)^0.5
 
                     rho_norm = np.prod(lengths) ** (0.5) * (2.0 * np.pi) ** (-1.5)
@@ -666,16 +666,11 @@ class EllipsoidalDensityProjection:
             self.radial_basis,
             show_progress,
             rust_moments=rust_moments,
-            normalize=normalize
+            normalize=normalize,
         )
 
         features = contract_pairwise_feat(pairwise_ellip_feat, types, show_progress)
-        return pairwise_ellip_feat, features
-        # if normalize:
-        #     normalized_features = self.radial_basis.orthonormalize_basis(features)
-        #     return normalized_features
-        # else:
-        #     return pairwise_ellip_feat, features
+        return features
 
     def power_spectrum(
         self, frames, mean_over_samples=True, show_progress=False, rust_moments=True
