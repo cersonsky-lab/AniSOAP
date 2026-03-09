@@ -566,7 +566,14 @@ class EllipsoidalDensityProjection:
 
         self.rotation_key = rotation_key
 
-    def transform(self, frames, show_progress=False, normalize=True, rust_moments=True):
+    def transform(
+        self,
+        frames,
+        show_progress=False,
+        normalize=True,
+        rust_moments=True,
+        return_pef=False,
+    ):
         """Computes features and gradients for frames
 
         Computes the features and (if compute_gradients == True) gradients
@@ -670,6 +677,8 @@ class EllipsoidalDensityProjection:
         )
 
         features = contract_pairwise_feat(pairwise_ellip_feat, types, show_progress)
+        if return_pef:
+            return features, pairwise_ellip_feat
         return features
 
     def power_spectrum(
