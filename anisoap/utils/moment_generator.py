@@ -182,7 +182,6 @@ def compute_moments_inefficient_implementation(A, a, maxdeg):
     global_factor = (2 * np.pi) ** 1.5 / np.sqrt(
         np.linalg.det(A)
     )  # normalization of Gaussian
-    global_factor = 1
 
     # Initialize the array in which to store the moments
     # moments[n0, n1, n2] will be set to <x^n0 * y^n1 * z^n2>
