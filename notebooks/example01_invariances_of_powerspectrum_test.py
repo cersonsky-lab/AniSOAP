@@ -8,6 +8,7 @@ This example demonstrates:
 2. How to convert ellipsoidal frames to AniSOAP vectors, via the power_spectrum convenience method and via manual calculations and combinations of expansion coefficients. We also demonstrate the Translational and Rotational invariance of these representations.
 3. How to create ellipsoidal frames with ``ase.Atoms``.
 """
+
 from ase.io import read
 from ase import Atoms
 
@@ -22,7 +23,6 @@ from anisoap.representations.ellipsoidal_density_projection import (
 )
 
 import matplotlib.pyplot as plt
-
 
 # %%
 # Read the first two frames of ellipsoids.xyz, which represent coarse-grained benzene molecules.

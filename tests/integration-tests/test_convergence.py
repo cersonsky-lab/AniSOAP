@@ -5,7 +5,7 @@ from numpy.testing import assert_allclose
 from anisoap.representations import EllipsoidalDensityProjection
 import metatensor
 
-from scipy.special import sph_harm
+from scipy.special import sph_harm_y
 
 
 class TestGaussianConvergence:
@@ -55,16 +55,16 @@ class TestGaussianConvergence:
                         return (
                             np.sqrt(2)
                             * (-1.0) ** m
-                            * np.imag(sph_harm(np.abs(m), l, theta, phi))
+                            * np.imag(sph_harm_y(l, np.abs(m), theta, phi))
                         )
                     elif m == 0:
                         # this is real anyway, just doing this so we don't get an annoying "discarding imaginary warning"
-                        return np.real(sph_harm(m, l, theta, phi))
+                        return np.real(sph_harm_y(l, m, theta, phi))
                     else:
                         return (
                             np.sqrt(2)
                             * (-1.0) ** m
-                            * np.real(sph_harm(m, l, theta, phi))
+                            * np.real(sph_harm_y(l, m, theta, phi))
                         )
 
                 bases = descriptor.copy()

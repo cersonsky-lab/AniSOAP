@@ -4,7 +4,6 @@ from scipy.spatial.transform import Rotation as R
 from ase.io import write
 from ase import Atoms
 
-
 # # Default Parameters and Functions
 
 a0 = c0 = 1.0

@@ -39,6 +39,7 @@ def pairwise_ellip_expansion(
     radial_basis,
     show_progress=False,
     rust_moments=True,
+    normalize=True,
 ):
     r"""Computes pairwise expansion
 
@@ -139,10 +140,13 @@ def pairwise_ellip_expansion(
 
                     rot = rotation_matrices[j_global]
                     lengths = ellipsoid_lengths[j_global]
+                    # The normalizing constant of my 3d atom-density gaussian: (2pi)^-1.5 * det(cov)^-0.5
+                    # Here, we know that precision A = RDR^T = cov^-1,
+                    # det(cov) = np.prod(lengths)^2, and det(cov)^-0.5 = np.prod(lengths)
+
                     length_norm = (
                         np.prod(lengths) * (2.0 * np.pi) ** (3.0 / 2.0)
                     ) ** -1.0
-
                     (
                         precision,
                         center,
@@ -155,6 +159,8 @@ def pairwise_ellip_expansion(
                         moments = compute_moments_inefficient_implementation(
                             precision, center, maxdeg=maxdeg
                         )
+                    # The moments needs to be scaled by the density normalization constant and the constant in
+                    # Eqn (A10) in https://pubs.aip.org/aip/jcp/article/161/7/074112/3308992.
                     moments *= np.exp(-0.5 * constant) * length_norm
 
                     for l in range(lmax + 1):
@@ -199,6 +205,8 @@ def pairwise_ellip_expansion(
         ),
         tensorblock_list,
     )
+    if normalize:
+        pairwise_ellip_feat = radial_basis.orthonormalize_basis(pairwise_ellip_feat)
     return pairwise_ellip_feat
 
 
@@ -559,7 +567,14 @@ class EllipsoidalDensityProjection:
 
         self.rotation_key = rotation_key
 
-    def transform(self, frames, show_progress=False, normalize=True, rust_moments=True):
+    def transform(
+        self,
+        frames,
+        show_progress=False,
+        normalize=True,
+        rust_moments=True,
+        return_pef=False,
+    ):
         """Computes features and gradients for frames
 
         Computes the features and (if compute_gradients == True) gradients
@@ -659,14 +674,13 @@ class EllipsoidalDensityProjection:
             self.radial_basis,
             show_progress,
             rust_moments=rust_moments,
+            normalize=normalize,
         )
 
         features = contract_pairwise_feat(pairwise_ellip_feat, types, show_progress)
-        if normalize:
-            normalized_features = self.radial_basis.orthonormalize_basis(features)
-            return normalized_features
-        else:
-            return features
+        if return_pef:
+            return features, pairwise_ellip_feat
+        return features
 
     def power_spectrum(
         self, frames, mean_over_samples=True, show_progress=False, rust_moments=True
