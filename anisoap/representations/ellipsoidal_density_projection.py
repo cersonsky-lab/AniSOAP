@@ -683,7 +683,12 @@ class EllipsoidalDensityProjection:
         return features
 
     def power_spectrum(
-        self, frames, mean_over_samples=True, show_progress=False, rust_moments=True, return_tensormap=False,
+        self,
+        frames,
+        mean_over_samples=True,
+        show_progress=False,
+        rust_moments=True,
+        return_tensormap=False,
     ):
         """Helper function to compute the power spectrum of AniSOAP
 
@@ -711,7 +716,9 @@ class EllipsoidalDensityProjection:
 
         """
 
-        assert not (mean_over_samples and return_tensormap)    # if mean over samples == return tmap then error out - return tmap can only be true when mean-over-samples is false.
+        assert not (
+            mean_over_samples and return_tensormap
+        )  # if mean over samples == return tmap then error out - return tmap can only be true when mean-over-samples is false.
         # Initialize the Clebsch Gordan calculator for the angular component.
         mycg = ClebschGordanReal(self.max_angular)
 
