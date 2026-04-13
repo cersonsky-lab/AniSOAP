@@ -716,9 +716,10 @@ class EllipsoidalDensityProjection:
 
         """
 
+        # if mean over samples == return tmap then error out - return tmap can only be true when mean-over-samples is false.
         assert not (
             mean_over_samples and return_tensormap
-        )  # if mean over samples == return tmap then error out - return tmap can only be true when mean-over-samples is false.
+        ), "cannot set return_tensormap to true if mean_over_samples is true"
         # Initialize the Clebsch Gordan calculator for the angular component.
         mycg = ClebschGordanReal(self.max_angular)
 
