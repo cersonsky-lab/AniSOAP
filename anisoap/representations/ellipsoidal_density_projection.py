@@ -683,7 +683,7 @@ class EllipsoidalDensityProjection:
         return features
 
     def power_spectrum(
-        self, frames, mean_over_samples=True, show_progress=False, rust_moments=True
+        self, frames, mean_over_samples=True, show_progress=False, rust_moments=True, return_tensormap=False,
     ):
         """Helper function to compute the power spectrum of AniSOAP
 
@@ -711,6 +711,7 @@ class EllipsoidalDensityProjection:
 
         """
 
+        assert not (mean_over_samples and return_tensormap)    # if mean over samples == return tmap then error out - return tmap can only be true when mean-over-samples is false.
         # Initialize the Clebsch Gordan calculator for the angular component.
         mycg = ClebschGordanReal(self.max_angular)
 
@@ -725,9 +726,6 @@ class EllipsoidalDensityProjection:
             "positions",
             "numbers",
         ]
-
-        n_particles = 0
-        types_and_centers = []
         # Checks if the sample contains all necessary information for computation of power spectrum
         for index, frame in enumerate(frames):
             array = frame.arrays
@@ -738,9 +736,6 @@ class EllipsoidalDensityProjection:
                     )
                 if "quaternion" in array:
                     raise ValueError(f"frame should contain c_q rather than quaternion")
-            for i in range(len(frame)):
-                n_particles += 1
-                types_and_centers.append((index, i))
 
         mvg_coeffs = self.transform(
             frames, show_progress=show_progress, rust_moments=rust_moments
@@ -765,9 +760,7 @@ class EllipsoidalDensityProjection:
                 [block.values.squeeze() for block in x_asoap_raw.blocks()]
             )
             return x_asoap_raw
+        elif return_tensormap:
+            return mvg_nu2
         else:
-            n_feat = mvg_nu2.block().values.squeeze().shape[1]
-            x_asoap_raw = np.zeros((n_particles, n_feat))
-            for v, t in zip(mvg_nu2.block(0).values, mvg_nu2.block(0).samples):
-                x_asoap_raw[types_and_centers.index((t["type"], t["center"]))] = v
-            return x_asoap_raw
+            return mvg_nu2.block().values.squeeze()
