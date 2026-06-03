@@ -36,6 +36,8 @@ dependencies = [
   "setuptools-rust",
   "tqdm",
   "metatensor",
+  "metatensor-torch",
+  "metatomic",
   "wigners",
   "matplotlib",
   "skmatter",
