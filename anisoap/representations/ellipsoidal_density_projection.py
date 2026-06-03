@@ -6,17 +6,34 @@ import math
 import re
 import warnings
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import (
+    Any,
+    Dict,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+)
 
 import numpy as np
 import torch
 import wigners
+from metatensor.torch import (
+    Labels,
+    TensorBlock,
+    TensorMap,
+)
 
-from metatensor.torch import Labels, TensorBlock, TensorMap
-
-from anisoap.representations.radial_basis import GTORadialBasis, MonomialBasis
+from anisoap.representations.radial_basis import (
+    GTORadialBasis,
+    MonomialBasis,
+)
 from anisoap.utils.spherical_to_cartesian import spherical_to_cartesian
-from .radial_basis import compute_gaussian_parameters, orthonormalization_matrix
+
+from .radial_basis import (
+    gaussian_parameters,
+    orthonormalization_matrix,
+)
 
 
 def _row_tuple(row: Any) -> Tuple[int, ...]:
@@ -638,8 +655,8 @@ def frames_to_anisoap_graph(
     quaternion conversion and ASE neighbor-list construction.
     """
 
-    from scipy.spatial.transform import Rotation
     from ase.neighborlist import neighbor_list
+    from scipy.spatial.transform import Rotation
 
     # Accept either a single ``ase.Atoms`` object or a sequence of frames.
     # Without this, iterating over a single Atoms object yields individual Atom

@@ -1,11 +1,11 @@
-import numpy as np
-from ase import Atoms
-import pytest
-from numpy.testing import assert_allclose
-from anisoap.representations import EllipsoidalDensityProjection
 import metatensor.torch as mts
-
+import numpy as np
+import pytest
+from ase import Atoms
+from numpy.testing import assert_allclose
 from scipy.special import sph_harm_y
+
+from anisoap.representations import EllipsoidalDensityProjection
 
 
 class TestGaussianConvergence:

@@ -1,8 +1,11 @@
-import numpy as np
-from typing import Any, Tuple
+from typing import (
+    Any,
+    Tuple,
+)
 
-from metatensor import TensorMap
+import numpy as np
 import torch
+from metatensor import TensorMap
 from scipy.special import gamma
 
 
@@ -51,7 +54,7 @@ def inverse_matrix_sqrt(matrix: torch.Tensor, rcond=1e-8, tol=1e-3) -> torch.Ten
     return result
 
 
-def compute_gaussian_parameters(
+def gaussian_parameters(
     radial_basis: Any,
     r_ij: torch.Tensor,
     lengths: torch.Tensor,
@@ -488,7 +491,7 @@ class MonomialBasis(_RadialBasis):
         -------
         TensorMap
             features containing values multiplied by proper normalization factors.
-        """               
+        """
 
         for label, block in features.items():
             l = int(label["angular_channel"])
@@ -691,7 +694,7 @@ class GTORadialBasis(_RadialBasis):
         TensorMap
             features containing values multiplied by normalization factors.
 
-        """       
+        """
         for label, block in features.items():
             l = int(label["angular_channel"])
             n_arr = block.properties["n"]

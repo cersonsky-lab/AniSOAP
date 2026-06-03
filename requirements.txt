@@ -1,13 +1,15 @@
-featomic==0.6.1
-ase==3.25.0
-coverage[toml]
-pytest==8.3.5
-scipy
-setuptools-rust==1.11.1
-tqdm==4.67.1
+featomic==0.6.6
+ase==3.28.0
+coverage[toml]==7.14.1
+pytest==9.0.3
+scipy==1.16.2
+setuptools-rust==1.12.1
+tqdm==4.67.2
 metatensor==0.2.0
-wigners==0.3.0
-matplotlib
-skmatter==0.2.0
-# Using older version of scikit-learn until skmatter becomes compatible with most recent version (1.7.0)
-scikit-learn==1.5.0
+wigners==0.3.1
+matplotlib==3.10.9
+skmatter==0.3.3
+scikit-learn==1.9.0
+torch==2.12.0
+chemiscope==1.0.3
+

@@ -5,7 +5,7 @@ import pytest
 from anisoap_rust_lib import compute_moments
 from scipy.spatial.transform import Rotation as R
 
-from anisoap.utils.moment_generator import compute_moments_inefficient_implementation
+from anisoap.utils.moment_generator import moments
 
 rng = np.random.default_rng(12345)
 

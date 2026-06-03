@@ -1,6 +1,5 @@
 import pytest
 import torch
-
 from metatensor.torch import TensorMap
 
 from anisoap.representations.ellipsoidal_density_projection import (
@@ -47,7 +46,7 @@ def _two_atom_graph(dtype=torch.float64):
             [0.0, 0.0, 0.0],  # self 0
             [0.0, 0.0, 0.0],  # self 1
             [1.0, 0.0, 0.0],  # 0 -> 1
-            [-1.0, 0.0, 0.0], # 1 -> 0
+            [-1.0, 0.0, 0.0],  # 1 -> 0
         ],
         dtype=dtype,
         requires_grad=True,
@@ -250,7 +249,9 @@ def test_dense_power_spectrum_features_are_torch_tensors():
     assert torch.isfinite(graph["ellipsoid_lengths"].grad).all()
 
 
-@pytest.mark.parametrize("requires_grad_field", ["R_ij", "rotations", "ellipsoid_lengths"])
+@pytest.mark.parametrize(
+    "requires_grad_field", ["R_ij", "rotations", "ellipsoid_lengths"]
+)
 def test_no_detach_for_core_differentiable_inputs(requires_grad_field):
     calc = _calculator(max_angular=1, max_radial=1)
     graph = _single_atom_graph()
