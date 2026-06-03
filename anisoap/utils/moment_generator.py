@@ -101,9 +101,9 @@ def moments_diagonal(principal_components, a, maxdeg):
     moments = np.zeros((maxdeg + 1, maxdeg + 1, maxdeg + 1))
 
     # Precompute the single variable moments in x- y- and z-directions:
-    moments_x = compute_moments_single_variable(principal_components[0], a[0], maxdeg)
-    moments_y = compute_moments_single_variable(principal_components[1], a[1], maxdeg)
-    moments_z = compute_moments_single_variable(principal_components[2], a[2], maxdeg)
+    moments_x = moments_single(principal_components[0], a[0], maxdeg)
+    moments_y = moments_single(principal_components[1], a[1], maxdeg)
+    moments_z = moments_single(principal_components[2], a[2], maxdeg)
 
     # Compute values for all relevant components for which the monomial degree is <= maxdeg
     for n0 in range(maxdeg + 1):

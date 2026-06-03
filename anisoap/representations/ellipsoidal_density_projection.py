@@ -842,7 +842,7 @@ def pairwise_ellip_expansion(
             (2.0 * math.pi) ** 1.5, device=device, dtype=dtype
         )
         length_norm = torch.reciprocal(torch.prod(lengths) * gaussian_norm)
-        precision, center, constant = compute_gaussian_parameters(
+        precision, center, constant = gaussian_parameters(
             radial_basis, R_ij[edge], lengths, rot
         )
         moments = compute_moments(precision, center, maxdeg)

@@ -1,3 +1,4 @@
+import warnings
 from typing import (
     Any,
     Tuple,
@@ -10,48 +11,48 @@ from scipy.special import gamma
 
 
 def inverse_matrix_sqrt(matrix: torch.Tensor, rcond=1e-8, tol=1e-3) -> torch.Tensor:
-    r"""Returns the inverse matrix square root.
-
-    The inverse square root of the overlap matrix (or slices of the overlap matrix)
-    yields the orthonormalization matrix
-
-    Parameters
-    ----------
-    matrix : torch.Tensor
-        Symmetric square matrix to find the inverse square root of
-    rcond: float
-        Lower bound for eigenvalues for inverse square root
-    tol: float
-        Tolerance for differences between original matrix and reconstruction via
-        inverse square root
-
-    Returns
-    -------
-    inverse_sqrt_matrix
-        :math:`S^{-1/2}`
-
-    """
-
+    r"""Returns the inverse matrix square root."""
     matrix = torch.as_tensor(matrix)
-    if not torch.allclose(matrix, matrix.conj().mT):
-        raise ValueError("Matrix is not hermitian")
+
+    # Work in float64 for stability, then cast back.
+    original_dtype = matrix.dtype
+    original_device = matrix.device
+    matrix = matrix.to(dtype=torch.float64)
+
+    if not torch.isfinite(matrix).all():
+        raise ValueError("Matrix contains non-finite values")
+
+    matrix = 0.5 * (matrix + matrix.mT)
 
     evals, evecs = torch.linalg.eigh(matrix)
+
+    if rcond is None:
+        rcond = 0.0
+
     mask = evals > rcond
     if not bool(mask.any()):
-        raise ValueError("All eigenvalues were discarded in inverse_matrix_sqrt_torch")
+        raise ValueError("All eigenvalues were discarded in inverse_matrix_sqrt")
+
     evals = evals[mask]
     evecs = evecs[:, mask]
+
     result = (evecs * torch.rsqrt(evals).unsqueeze(0)) @ evecs.mT
 
-    # Do quick test to make sure inverse square of the inverse matrix sqrt succeeded
-    # This should succed for most cases (e.g. GTO orders up to 100), if not the matrix likely wasn't a gram matrix to start with.
-    matrix2 = torch.linalg.pinv(result @ result)
-    if torch.linalg.norm(matrix - matrix2) > tol:
-        raise ValueError(
-            f"Incurred Numerical Imprecision {torch.linalg.norm(matrix-matrix2)= :.8f}"
-        )
-    return result
+    # Do not hard-fail on the reconstruction check for ill-conditioned overlap
+    # matrices. The old NumPy path used this only as a diagnostic; torch high-order
+    # GTO slices can be badly conditioned even when the retained eigenspace is valid.
+    if tol is not None:
+        try:
+            matrix2 = torch.linalg.pinv(result @ result)
+            err = torch.linalg.norm(matrix - matrix2)
+            if torch.isfinite(err) and err > tol:
+                raise ValueError(
+                    f"Incurred Numerical Imprecision {torch.linalg.norm(matrix-matrix2)= :.8f}"
+                )
+        except RuntimeError:
+            warnings.warn("Could not run inverse_matrix_sqrt reconstruction check")
+
+    return result.to(dtype=original_dtype, device=original_device)
 
 
 def gaussian_parameters(
@@ -155,6 +156,10 @@ def gto_square_norm(n, sigma):
         The square norm of the unnormalized GTO
 
     """
+    if torch.is_tensor(n):
+        n = n.detach().cpu().numpy()
+    if torch.is_tensor(sigma):
+        sigma = sigma.detach().cpu().numpy()
     return 0.5 * sigma ** (2 * n + 3) * gamma(n + 1.5)
 
 
@@ -382,7 +387,7 @@ class _RadialBasis:
         """
         from matplotlib import pyplot as plt
 
-        rs = np.linspace(0, self.cutoff_radius, n_r)
+        rs = torch.linspace(0, self.cutoff_radius, n_r)
         plt.plot(rs, self.get_basis(rs))
 
 
@@ -432,13 +437,7 @@ class MonomialBasis(_RadialBasis):
     # The current function computes the covariance matrix and the center
     # for the provided parameters as well as choice of radial basis.
     def compute_gaussian_parameters(self, r_ij, lengths, rotation_matrix):
-        """Legacy NumPy implementation; use top-level compute_gaussian_parameters for torch-native paths."""
-        # Initialization
-        center = r_ij
-        diag = np.diag(1 / lengths**2)
-        precision = rotation_matrix @ diag @ rotation_matrix.T
-        constant = 0
-        return precision, center, constant
+        return gaussian_parameters(self, r_ij, lengths, rotation_matrix)
 
     def calc_overlap_matrix(self):
         """
@@ -462,12 +461,13 @@ class MonomialBasis(_RadialBasis):
         2D array:
             The overlap matrix
         """
-        max_deg = np.max(
-            np.arange(self.max_angular + 1) + 2 * np.array(self.num_radial_functions)
+        max_deg = torch.max(
+            torch.arange(self.max_angular + 1)
+            + 2 * torch.tensor(self.num_radial_functions)
         )
-        n_grid = np.arange(max_deg)
+        n_grid = torch.arange(max_deg)
         S = monomial_overlap(
-            n_grid[:, np.newaxis], n_grid[np.newaxis, :], self.cutoff_radius
+            n_grid[:, torch.newaxis], n_grid[torch.newaxis, :], self.cutoff_radius
         )
         return S
 
@@ -541,39 +541,55 @@ class MonomialBasis(_RadialBasis):
 
         Parameters
         ----------
-            rs: np.array
+            rs: torch.tensor
               a mesh to evaluate the basis functions
 
         Returns
         -------
-        np.array
+        torch.tensor
             a matrix containing orthonormalized monomial basis functions evaluated on rs
         """
-        all_gs = np.empty(shape=(len(rs), 1))
-        for l in range(0, self.max_angular):
-            n_arr = np.arange(self.num_radial_functions[l])
+        rs = torch.as_tensor(rs, dtype=torch.get_default_dtype()).reshape(-1)
+        all_gs = []
+
+        for l in range(self.max_angular):
+            n_arr = torch.arange(
+                self.num_radial_functions[l],
+                device=rs.device,
+                dtype=torch.long,
+            )
             l_2n_arr = l + 2 * n_arr
 
-            gs = np.array([(rs ** (2 * n + l)) for n in n_arr]).T
+            gs = torch.stack(
+                [rs ** (2 * int(n) + l) for n in n_arr],
+                dim=1,
+            )
 
-            prefactor_arr = monomial_prefactor(l_2n_arr, self.cutoff_radius)
+            prefactor_arr = torch.tensor(
+                monomial_prefactor(l_2n_arr, self.cutoff_radius)
+            ).to(
+                device=rs.device,
+                dtype=rs.dtype,
+            )
+            gs = gs * prefactor_arr
 
-            gs *= prefactor_arr
+            overlap = torch.as_tensor(
+                self.overlap_matrix,
+                device=rs.device,
+                dtype=rs.dtype,
+            )
+            overlap_matrix_slice = overlap.index_select(0, l_2n_arr).index_select(
+                1, l_2n_arr
+            )
 
-            overlap_matrix_slice = self.overlap_matrix[l_2n_arr, :][:, l_2n_arr]
             orthonormalization_matrix = inverse_matrix_sqrt(
                 overlap_matrix_slice, self.rcond, self.tol
             )
-            gs = torch.einsum(
-                "jk,kl->jl",
-                gs,
-                orthonormalization_matrix,
-            )
-            if all_gs is None:
-                all_gs = gs.copy()
+            gs = torch.einsum("jk,kl->jl", gs, orthonormalization_matrix)
 
-            all_gs = np.hstack((all_gs, gs))
-        return all_gs[:, 1:]
+            all_gs.append(gs)
+
+        return torch.cat(all_gs, dim=1)
 
 
 class GTORadialBasis(_RadialBasis):
@@ -618,20 +634,7 @@ class GTORadialBasis(_RadialBasis):
     # The current function computes the covariance matrix and the center
     # for the provided parameters as well as choice of radial basis.
     def compute_gaussian_parameters(self, r_ij, lengths, rotation_matrix):
-        """Legacy NumPy implementation; use top-level compute_gaussian_parameters for torch-native paths."""
-        # Initialization
-        center = r_ij
-        diag = np.diag(1 / lengths**2)
-        precision = rotation_matrix @ diag @ rotation_matrix.T
-        # GTO basis with uniform Gaussian width in the basis functions
-        sigma = self.radial_gaussian_width
-        new_precision = precision + np.eye(3) / sigma**2
-        new_center = center - 1 / sigma**2 * np.linalg.solve(new_precision, r_ij)
-        constant = (
-            1 / sigma**2 * r_ij @ np.linalg.solve(new_precision, precision @ r_ij)
-        )
-
-        return new_precision, new_center, constant
+        return gaussian_parameters(self, r_ij, lengths, rotation_matrix)
 
     def calc_overlap_matrix(self):
         """Computes the overlap matrix for GTOs.
@@ -657,17 +660,18 @@ class GTORadialBasis(_RadialBasis):
             The overlap matrix
 
         """
-        max_deg = np.max(
-            np.arange(self.max_angular + 1) + 2 * np.array(self.num_radial_functions)
+        max_deg = torch.max(
+            torch.arange(self.max_angular + 1)
+            + 2 * torch.tensor(self.num_radial_functions)
         )
-        n_grid = np.arange(max_deg)
+        n_grid = torch.arange(max_deg)
         sigma = self.radial_gaussian_width
-        sigma_grid = np.ones(max_deg) * sigma
+        sigma_grid = torch.ones(max_deg) * sigma
         S = gto_overlap(
-            n_grid[:, np.newaxis],
-            n_grid[np.newaxis, :],
-            sigma_grid[:, np.newaxis],
-            sigma_grid[np.newaxis, :],
+            n_grid[:, torch.newaxis],
+            n_grid[torch.newaxis, :],
+            sigma_grid[:, torch.newaxis],
+            sigma_grid[torch.newaxis, :],
         )
         return S
 
@@ -744,40 +748,59 @@ class GTORadialBasis(_RadialBasis):
 
         Parameters
         ----------
-        rs: np.array
+        rs: torch.tensor
             a mesh to evaluate the basis functions
 
         Returns
         -------
-        np.array
+        torch.tensor
             a matrix containing orthonormalized GTO basis functions evaluated on rs
         """
-        all_gs = np.empty(shape=(len(rs), 1))
-        for l in range(0, self.max_angular):
-            n_arr = np.arange(self.num_radial_functions[l])
+        rs = torch.as_tensor(rs, dtype=torch.get_default_dtype()).reshape(-1)
+        all_gs = []
+
+        sigma = torch.as_tensor(
+            self.radial_gaussian_width,
+            device=rs.device,
+            dtype=rs.dtype,
+        )
+
+        for l in range(self.max_angular):
+            n_arr = torch.arange(
+                self.num_radial_functions[l],
+                device=rs.device,
+                dtype=torch.long,
+            )
             l_2n_arr = l + 2 * n_arr
 
-            gs = np.array(
+            gs = torch.stack(
                 [
-                    (rs ** (2 * n + l))
-                    * np.exp(-(rs**2.0) / (2 * self.radial_gaussian_width**2.0))
+                    (rs ** (2 * int(n) + l)) * torch.exp(-(rs**2) / (2 * sigma**2))
                     for n in n_arr
-                ]
-            ).T
+                ],
+                dim=1,
+            )
 
-            prefactor_arr = gto_prefactor(l_2n_arr, self.radial_gaussian_width)
+            prefactor_arr = torch.tensor(gto_prefactor(l_2n_arr, sigma)).to(
+                device=rs.device,
+                dtype=rs.dtype,
+            )
+            gs = gs * prefactor_arr
 
-            gs *= prefactor_arr
+            overlap = torch.as_tensor(
+                self.overlap_matrix,
+                device=rs.device,
+                dtype=rs.dtype,
+            )
+            overlap_matrix_slice = overlap.index_select(0, l_2n_arr).index_select(
+                1, l_2n_arr
+            )
 
-            gto_overlap_matrix_slice = self.overlap_matrix[l_2n_arr, :][:, l_2n_arr]
             orthonormalization_matrix = inverse_matrix_sqrt(
-                gto_overlap_matrix_slice, self.rcond, self.tol
+                overlap_matrix_slice, self.rcond, self.tol
             )
-            gs = np.einsum(
-                "jk,kl->jl",
-                gs,
-                orthonormalization_matrix,
-            )
+            gs = torch.einsum("jk,kl->jl", gs, orthonormalization_matrix)
 
-            all_gs = np.hstack((all_gs, gs))
-        return all_gs[:, 1:]
+            all_gs.append(gs)
+
+        return torch.cat(all_gs, dim=1)

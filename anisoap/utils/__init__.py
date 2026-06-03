@@ -1,3 +1,4 @@
+from .metatensor_utils import ClebschGordanReal
 from .moment_generator import (
     moments_diagonal,
     moments_ineff,

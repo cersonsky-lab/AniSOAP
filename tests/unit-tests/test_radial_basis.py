@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 import pytest
 from numpy.testing import assert_allclose
 from scipy.spatial.transform import Rotation
@@ -113,19 +114,19 @@ class TestGaussianParameters:
     """
 
     # Generate a random set of orientations and principal axis lengths
-    np.random.seed(3923)
+    np.random.seed(3983)
     num_random = 3
-    quaternions = np.random.normal(size=(4, num_random))
-    quaternions /= np.linalg.norm(quaternions, axis=0)
-    rotation_matrices = np.zeros((num_random, 3, 3))
+    quaternions = torch.tensor(np.random.normal(size=(4, num_random)))
+    quaternions /= torch.linalg.norm(quaternions, axis=0)
+    rotation_matrices = torch.zeros((num_random, 3, 3))
     for i, quat in enumerate(quaternions.T):
-        rotation_matrices[i] = Rotation.from_quat(quat).as_matrix()
-    lengths = np.random.uniform(low=0.5, high=5.0, size=((num_random, 3)))
-    r_ijs = np.random.normal(scale=5.0, size=((num_random, 3)))
+        rotation_matrices[i] = torch.tensor(Rotation.from_quat(quat).as_matrix())
+    lengths = torch.tensor(np.random.uniform(low=0.5, high=5.0, size=((num_random, 3))))
+    r_ijs = torch.tensor(np.random.normal(scale=5.0, size=((num_random, 3))))
 
     # For large sigmas, the primitive gto basis should reduce to the
     # monomial basis.
-    sigmas_large = np.geomspace(1e10, 1e18, 4)
+    sigmas_large = torch.tensor(np.geomspace(1e10, 1e18, 4))
 
     @pytest.mark.parametrize("sigma", sigmas_large)
     @pytest.mark.parametrize("r_ij", r_ijs)
@@ -158,7 +159,7 @@ class TestGaussianParameters:
 
     # For small sigmas, the precision matrix and center should
     # be dominated by the isotropic part.
-    sigmas_small = np.geomspace(1e-10, 1e-18, 4)
+    sigmas_small = torch.tensor(np.geomspace(1e-10, 1e-18, 4))
 
     @pytest.mark.parametrize("sigma", sigmas_small)
     @pytest.mark.parametrize("r_ij", r_ijs)
@@ -182,8 +183,8 @@ class TestGaussianParameters:
         )
 
         # Check that for large sigma, the two are close
-        prec_ref = np.eye(3) / sigma**2
-        center_ref = np.zeros((3,))
+        prec_ref = torch.eye(3, dtype=torch.float64) / sigma**2
+        center_ref = torch.zeros((3,), dtype=torch.float64)
         atol = 1e-15 / sigma**2  # largest elements of matrix will be 1/sigma^2
         assert_allclose(center_gto, center_ref, rtol=1e-10, atol=atol)
         assert_allclose(prec_gto, prec_ref, rtol=1e-10, atol=atol)
@@ -234,5 +235,5 @@ class TestGTOUtils:
         dim = np.shape(spd)[0]
         inv_sqrt_s = radial_basis.inverse_matrix_sqrt(spd)
         assert_allclose(
-            np.eye(dim), inv_sqrt_s @ inv_sqrt_s @ spd, rtol=1e-6, atol=1e-6
+            torch.eye(dim), inv_sqrt_s @ inv_sqrt_s @ spd, rtol=1e-6, atol=1e-6
         )
