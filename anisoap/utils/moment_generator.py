@@ -5,7 +5,7 @@ import numpy as np
 # anisoap.representations.ellipsoidal_density_projection.compute_moments.
 # Define function to compute all moments for a single
 # variable Gaussian.
-def compute_moments_single(A, a, maxdeg):
+def moments_single(A, a, maxdeg):
     r"""Legacy NumPy implementation: computes all moments for a single variable Gaussian.
 
     Parameters
@@ -54,7 +54,7 @@ def compute_moments_single(A, a, maxdeg):
 # of the moment <x^n0 * y^n1 * z^n2> simply as moments[n0,n1,n2].
 # This leads to more intuitive code, at the cost of wasting around
 # a third of the memory in the array to store zeros.
-def compute_moments_diagonal(principal_components, a, maxdeg):
+def moments_diagonal(principal_components, a, maxdeg):
     r"""Legacy NumPy implementation: computes all moments for a diagonal dilation matrix.
 
     The implementation focuses on conceptual simplicity, while sacrificing memory
@@ -132,7 +132,7 @@ def compute_moments_diagonal(principal_components, a, maxdeg):
 # of the moment <x^n0 * y^n1 * z^n2> simply as moments[n0,n1,n2].
 # This leads to more intuitive code, at the cost of wasting around
 # a third of the memory in the array to store zeros.
-def compute_moments(A, a, maxdeg):
+def moments_ineff(A, a, maxdeg):
     r"""Legacy NumPy implementation: computes all moments for a general dilation matrix.
 
     Parameters

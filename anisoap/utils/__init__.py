@@ -1,5 +1,5 @@
 from .moment_generator import (
-    moments,
+    moments_ineff,
     moments_diagonal,
     moments_single,
 )
