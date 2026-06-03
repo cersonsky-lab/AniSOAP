@@ -1,4 +1,3 @@
-from .metatensor_utils import *
 from .moment_generator import (
     moments,
     moments_diagonal,
