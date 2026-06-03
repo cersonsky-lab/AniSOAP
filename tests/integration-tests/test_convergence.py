@@ -3,7 +3,7 @@ from ase import Atoms
 import pytest
 from numpy.testing import assert_allclose
 from anisoap.representations import EllipsoidalDensityProjection
-import metatensor
+import metatensor.torch as mts
 
 from scipy.special import sph_harm_y
 
@@ -45,7 +45,7 @@ class TestGaussianConvergence:
             }
             representation = EllipsoidalDensityProjection(**HYPER_PARAMETERS)
             descriptor_raw = representation.transform(frames, normalize=True)
-            descriptor = metatensor.operations.sum_over_samples(
+            descriptor = mts.operations.sum_over_samples(
                 descriptor_raw, sample_names="center"
             )
 

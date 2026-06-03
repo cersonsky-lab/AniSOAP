@@ -20,12 +20,16 @@ from .radial_basis import compute_gaussian_parameters, orthonormalization_matrix
 
 
 def _row_tuple(row: Any) -> Tuple[int, ...]:
-    if hasattr(row, "values"):
-        row = row.values
+    values = getattr(row, "values", None)
+    if values is not None and not callable(values):
+        row = values
+
     if torch.is_tensor(row):
         return tuple(int(v) for v in row.detach().cpu().reshape(-1).tolist())
+
     if hasattr(row, "__iter__") and not isinstance(row, (str, bytes)):
         return tuple(int(v) for v in row)
+
     return (int(row),)
 
 
@@ -37,8 +41,13 @@ def _labels_to_tuples(labels: Labels) -> List[Tuple[int, ...]]:
 
 
 def _key_tuple(key: Any) -> Tuple[int, ...]:
-    if hasattr(key, "values"):
-        return _row_tuple(key.values)
+    if torch.is_tensor(key):
+        return _row_tuple(key)
+
+    values = getattr(key, "values", None)
+    if values is not None and not callable(values):
+        return _row_tuple(values)
+
     return _row_tuple(key)
 
 
@@ -988,7 +997,7 @@ def contract_pairwise_feat(
             TensorBlock(
                 values=values,
                 samples=Labels(
-                    ["system", "atom"],
+                    ["type", "center"],
                     torch.as_tensor(all_samples, device=device, dtype=torch.int32),
                 ),
                 components=components,
@@ -1365,9 +1374,13 @@ class EllipsoidalDensityProjection(torch.nn.Module):
         )
         if aggregate_by_system:
             names = list(samples.names)
-            if "system" not in names:
+            if "system" in names:
+                system_col = names.index("system")
+            elif "type" in names:
+                system_col = names.index("type")
+            else:
                 raise ValueError(
-                    "aggregate_by_system=True requires a 'system' sample label"
+                    "aggregate_by_system=True requires a 'system' or 'type' sample label"
                 )
             system_col = names.index("system")
             systems = samples.values[:, system_col].to(device=device, dtype=torch.long)
@@ -1426,9 +1439,10 @@ class EllipsoidalDensityProjection(torch.nn.Module):
             rotations=graph.rotations,
             ellipsoid_lengths=graph.ellipsoid_lengths,
         )
-        features, samples = self.power_spectrum_features_from_tensormap(
+        features, _ = self.power_spectrum_features_from_tensormap(
             nu2, target_samples=target_samples
         )
+
         self.shape = int(features.shape[1])
         return TensorMap(
             keys=Labels(
@@ -1437,7 +1451,7 @@ class EllipsoidalDensityProjection(torch.nn.Module):
             blocks=[
                 TensorBlock(
                     values=features,
-                    samples=samples,
+                    samples=target_samples,
                     components=[],
                     properties=Labels(
                         ["property"],
