@@ -4,8 +4,7 @@ from numpy.testing import assert_allclose
 from scipy.special import comb, gamma
 
 # Import the different versions of the moment generators
-from anisoap.utils import (assert_close, moments_diagonal, moments_ineff,
-                           moments_single)
+from anisoap.utils import assert_close, moments_diagonal, moments_ineff, moments_single
 
 
 class TestMomentsUnivariateGaussian:
