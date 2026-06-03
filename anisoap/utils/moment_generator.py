@@ -1,15 +1,12 @@
 import numpy as np
-from numpy.testing import assert_allclose
-from scipy.special import (
-    comb,
-    gamma,
-)
 
 
+# Legacy NumPy reference implementations. Torch-native runtime code uses
+# anisoap.representations.ellipsoidal_density_projection.compute_moments.
 # Define function to compute all moments for a single
 # variable Gaussian.
 def compute_moments_single_variable(A, a, maxdeg):
-    r"""Computes all moments for a single variable Gaussian.
+    r"""Legacy NumPy implementation: computes all moments for a single variable Gaussian.
 
     Parameters
     ----------
@@ -60,7 +57,7 @@ def compute_moments_single_variable(A, a, maxdeg):
 def compute_moments_diagonal_inefficient_implementation(
     principal_components, a, maxdeg
 ):
-    r"""Computes all moments for a diagonal dilation matrix.
+    r"""Legacy NumPy implementation: computes all moments for a diagonal dilation matrix.
 
     The implementation focuses on conceptual simplicity, while sacrificing memory
     efficiency.  To be specific, the `moments` array allows access to the value
@@ -138,7 +135,7 @@ def compute_moments_diagonal_inefficient_implementation(
 # This leads to more intuitive code, at the cost of wasting around
 # a third of the memory in the array to store zeros.
 def compute_moments_inefficient_implementation(A, a, maxdeg):
-    r"""Computes all moments for a general dilation matrix.
+    r"""Legacy NumPy implementation: computes all moments for a general dilation matrix.
 
     Parameters
     ----------
