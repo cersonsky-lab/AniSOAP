@@ -5,7 +5,7 @@ import pytest
 from anisoap_rust_lib import compute_moments
 from scipy.spatial.transform import Rotation as R
 
-from anisoap.utils.moment_generator import moments
+from anisoap.utils.moment_generator import moments_ineff
 
 rng = np.random.default_rng(12345)
 
@@ -21,9 +21,7 @@ class TestComputeMoments:
     @pytest.mark.parametrize("mat", TEST_MAT)
     @pytest.mark.parametrize("lmax", TEST_LMAX)
     def test_fixed_input(self, cen, mat, lmax):
-        res_ori: np.ndarray[np.float64] = compute_moments_inefficient_implementation(
-            mat, cen, lmax
-        )
+        res_ori: np.ndarray[np.float64] = moments_ineff(mat, cen, lmax)
         res_ffi: np.ndarray[np.float64] = compute_moments(mat, cen, lmax)
         assert np.allclose(res_ori, res_ffi)
 
@@ -37,7 +35,7 @@ class TestComputeMoments:
         start = timeit.default_timer()
         num_iter = 3
         for i in range(num_iter):
-            compute_moments_inefficient_implementation(mat, cen, lmax)
+            moments_ineff(mat, cen, lmax)
         time_ori = (timeit.default_timer() - start) / num_iter
 
         start = timeit.default_timer()
