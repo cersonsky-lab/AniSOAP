@@ -1,6 +1,6 @@
 from .moment_generator import (
-    moments_ineff,
     moments_diagonal,
+    moments_ineff,
     moments_single,
 )
 from .monomial_iterator import TrivariateMonomialIndices
