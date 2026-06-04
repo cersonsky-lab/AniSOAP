@@ -11,7 +11,7 @@ from typing import (
 import numpy as np
 import torch
 import wigners
-from metatensor import (
+from metatensor.torch import (
     Labels,
     TensorBlock,
     TensorMap,
