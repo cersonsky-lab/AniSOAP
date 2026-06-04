@@ -1400,7 +1400,7 @@ class EllipsoidalDensityProjection(torch.nn.Module):
                 raise ValueError(
                     "aggregate_by_system=True requires a 'system' or 'type' sample label"
                 )
-            system_col = names.index("system")
+
             systems = samples.values[:, system_col].to(device=device, dtype=torch.long)
             n_systems = (
                 int(systems.max().detach().cpu().item()) + 1 if systems.numel() else 0
