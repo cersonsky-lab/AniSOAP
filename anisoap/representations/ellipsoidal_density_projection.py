@@ -852,6 +852,7 @@ def pairwise_ellip_expansion(
             int(structures[i].detach().cpu().item()),
             int(atom_indices[i].detach().cpu().item()),
             int(atom_indices[j].detach().cpu().item()),
+            int(edge),
         )
         for l in range(lmax + 1):
             n_l = num_ns[l]
@@ -879,7 +880,7 @@ def pairwise_ellip_expansion(
                     TensorBlock(
                         values=block_values,
                         samples=Labels(
-                            ["system", "first_atom", "second_atom"],
+                            ["system", "first_atom", "second_atom", "pair"],
                             torch.as_tensor(
                                 samples[key], device=device, dtype=torch.int32
                             ),
