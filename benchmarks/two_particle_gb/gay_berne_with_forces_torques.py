@@ -475,7 +475,21 @@ chemiscope.write_input("gay_berne_all_frames.chemiscope.json",
                             environments = chemiscope.all_atomic_environments(structures=all_frames, cutoff=3.5)
                         ),
                         shapes = _build_chemiscope_shapes(all_frames),
-                        environments = chemiscope.all_atomic_environments(structures=all_frames, cutoff=3.5)
+                        environments = chemiscope.all_atomic_environments(structures=all_frames, cutoff=3.5),
+                        settings= {
+                            "target": "atom",
+                            "map": {
+                                "x": {"property": "torques[1]", "scale": "linear"},
+                                "y": {"property": "torques[3]", "scale": "linear"},
+                            },
+                            "structure": [
+                                {
+                                    "atoms": False,
+                                    "bonds": False,
+                                    "shape": "ellipsoids,forces,torques_x,torques_y,torques_z",
+                                }
+                            ],
+                        },
                         )
 
 verbose_write("all_frames.xyz", all_frames)
