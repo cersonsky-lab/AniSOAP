@@ -7,7 +7,10 @@ from typing import (
 import numpy as np
 import torch
 from metatensor import TensorMap
-from scipy.special import gamma, gammaln
+from scipy.special import (
+    gamma,
+    gammaln,
+)
 
 
 def inverse_matrix_sqrt(matrix: torch.Tensor, rcond=1e-8, tol=1e-3) -> torch.Tensor:
