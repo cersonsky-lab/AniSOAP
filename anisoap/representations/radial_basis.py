@@ -7,7 +7,7 @@ from typing import (
 import numpy as np
 import torch
 from metatensor import TensorMap
-from scipy.special import gamma
+from scipy.special import gamma, gammaln
 
 
 def inverse_matrix_sqrt(matrix: torch.Tensor, rcond=1e-8, tol=1e-3) -> torch.Tensor:
@@ -160,7 +160,12 @@ def gto_square_norm(n, sigma):
         n = n.detach().cpu().numpy()
     if torch.is_tensor(sigma):
         sigma = sigma.detach().cpu().numpy()
-    return 0.5 * sigma ** (2 * n + 3) * gamma(n + 1.5)
+    # Compute in log space to avoid intermediate overflow for large n or sigma.
+    # sigma=0 gives log(0)=-inf -> exp(-inf)=0, matching the original formula;
+    # suppress the benign divide-by-zero warning from log(0).
+    with np.errstate(divide="ignore"):
+        log_norm = np.log(0.5) + (2 * n + 3) * np.log(sigma) + gammaln(n + 1.5)
+    return np.exp(log_norm)
 
 
 def gto_prefactor(n, sigma):

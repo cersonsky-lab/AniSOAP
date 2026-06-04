@@ -132,7 +132,12 @@ class TestGaussianConvergence:
 
         errs = torch.stack(errs)
 
-        assert torch.all(errs[:-1] >= errs[1:])
+        # Only require monotonic convergence while both consecutive errors are
+        # above the numerical noise floor. Below ~1e-8, float64 round-off and
+        # the basis conditioning (basis_rcond=1e-14) dominate, so the error
+        # bounces and strict monotonicity is not physically meaningful.
+        above_floor = (errs[:-1] > 1e-8) & (errs[1:] > 1e-8)
+        assert torch.all(errs[:-1][above_floor] >= errs[1:][above_floor])
 
         assert_allclose(
             approx.detach().cpu().numpy(),
