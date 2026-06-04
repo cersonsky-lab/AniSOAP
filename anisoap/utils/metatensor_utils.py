@@ -1,6 +1,15 @@
 import re
+from typing import (
+    Any,
+    Dict,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+)
 
 import numpy as np
+import torch
 import wigners
 from metatensor import (
     Labels,
@@ -9,6 +18,57 @@ from metatensor import (
 )
 
 from .cyclic_list import CGRCacheList
+
+
+def _row_tuple(row: Any) -> Tuple[int, ...]:
+    values = getattr(row, "values", None)
+    if values is not None and not callable(values):
+        row = values
+
+    if torch.is_tensor(row):
+        return tuple(int(v) for v in row.detach().cpu().reshape(-1).tolist())
+
+    if hasattr(row, "__iter__") and not isinstance(row, (str, bytes)):
+        return tuple(int(v) for v in row)
+
+    return (int(row),)
+
+
+def _labels_to_tuples(labels: Labels) -> List[Tuple[int, ...]]:
+    values = labels.values.detach().cpu()
+    if values.ndim == 1:
+        values = values.reshape(-1, 1)
+    return [tuple(int(v) for v in row.tolist()) for row in values]
+
+
+def _key_tuple(key: Any) -> Tuple[int, ...]:
+    if torch.is_tensor(key):
+        return _row_tuple(key)
+
+    values = getattr(key, "values", None)
+    if values is not None and not callable(values):
+        return _row_tuple(values)
+
+    return _row_tuple(key)
+
+
+def _key_value(key: Any, key_names: Sequence[str], name: str) -> int:
+    try:
+        return int(key[name])
+    except Exception:
+        idx = list(key_names).index(name)
+        return _key_tuple(key)[idx]
+
+
+def _remove_suffix(names: Sequence[str], new_suffix: str = "") -> List[str]:
+    suffix = re.compile(r"_[0-9]?$")
+    out = []
+    for name in names:
+        match = suffix.search(name)
+        out.append(
+            name + new_suffix if match is None else name[: match.start()] + new_suffix
+        )
+    return out
 
 
 class ClebschGordanReal:
@@ -168,300 +228,310 @@ def _complex_clebsch_gordan_matrix(l1, l2, L):
         return wigners.clebsch_gordan_array(l1, l2, L)
 
 
-def _remove_suffix(names, new_suffix=""):
-    suffix = re.compile("_[0-9]?$")
-    rname = []
-    for name in names:
-        match = suffix.search(name)
-        if match is None:
-            rname.append(name + new_suffix)
-        else:
-            rname.append(name[: match.start()] + new_suffix)
-    return rname
+class TorchClebschGordanReal:
+    """Real Clebsch-Gordan coefficients with torch-valued contractions."""
 
+    def __init__(self, l_max: int):
+        self.l_max = int(l_max)
+        self._cg: Dict[
+            Tuple[int, int, int], List[Tuple[np.ndarray, np.ndarray, np.ndarray]]
+        ] = {}
+        self._init_cg()
 
-def standardize_keys(descriptor):
-    """Standardize the naming scheme of density expansion coefficient blocks (nu=1)"""
+    def _init_cg(self) -> None:
+        r2c = {L: _real2complex(L) for L in range(self.l_max + 1)}
+        c2r = {L: np.conjugate(r2c[L]).T for L in range(self.l_max + 1)}
+        for l1 in range(self.l_max + 1):
+            for l2 in range(self.l_max + 1):
+                for L in range(abs(l1 - l2), min(self.l_max, l1 + l2) + 1):
+                    complex_cg = _complex_clebsch_gordan_matrix(l1, l2, L)
+                    real_cg = (r2c[l1].T @ complex_cg.reshape(2 * l1 + 1, -1)).reshape(
+                        complex_cg.shape
+                    )
+                    real_cg = real_cg.swapaxes(0, 1)
+                    real_cg = (r2c[l2].T @ real_cg.reshape(2 * l2 + 1, -1)).reshape(
+                        real_cg.shape
+                    )
+                    real_cg = real_cg.swapaxes(0, 1)
+                    real_cg = real_cg @ c2r[L].T
+                    rcg = (
+                        np.real(real_cg) if (l1 + l2 + L) % 2 == 0 else np.imag(real_cg)
+                    )
+                    sparse_by_M = []
+                    for M in range(2 * L + 1):
+                        nz = np.where(np.abs(rcg[:, :, M]) > 1e-15)
+                        sparse_by_M.append(
+                            (
+                                nz[0].astype(np.int64),
+                                nz[1].astype(np.int64),
+                                rcg[nz[0], nz[1], M].astype(np.float64),
+                            )
+                        )
+                    self._cg[(l1, l2, L)] = sparse_by_M
 
-    key_names = descriptor.keys.names
-    if not "angular_channel" in key_names:
-        raise ValueError(
-            "Descriptor missing spherical harmonics channel key `angular_channel`"
+    def combine_einsum(
+        self,
+        rho1: torch.Tensor,
+        rho2: torch.Tensor,
+        L: int,
+        combination_string: str = "iq,iq->iq",
+    ) -> torch.Tensor:
+        l1 = (rho1.shape[1] - 1) // 2
+        l2 = (rho2.shape[1] - 1) // 2
+        if (l1, l2, L) not in self._cg:
+            raise ValueError(f"Requested CG entry {(l1, l2, L)} was not precomputed")
+        if rho1.shape[0] != rho2.shape[0]:
+            raise ValueError("Cannot combine blocks with different number of samples")
+
+        # The AniSOAP power spectrum path uses only this product form. Keeping the
+        # argument makes the implementation line up with the original utility.
+        if combination_string != "iq,iq->iq":
+            raise NotImplementedError(
+                "Only 'iq,iq->iq' is implemented on the torch path"
+            )
+
+        n_samples = rho1.shape[0]
+        n_features = rho1.shape[-1]
+        out = torch.zeros(
+            (n_samples, 2 * L + 1, n_features), device=rho1.device, dtype=rho1.dtype
         )
-    blocks = []
-    keys = []
+        for M, (m1s, m2s, cgs) in enumerate(self._cg[(l1, l2, L)]):
+            if len(cgs) == 0:
+                continue
+            val = torch.zeros(
+                (n_samples, n_features), device=rho1.device, dtype=rho1.dtype
+            )
+            for m1, m2, cg in zip(m1s, m2s, cgs):
+                val = val + rho1[:, int(m1), :] * rho2[:, int(m2), :] * torch.as_tensor(
+                    cg, device=rho1.device, dtype=rho1.dtype
+                )
+            out[:, M, :] = val
+        return out
+
+
+def standardize_keys(descriptor: TensorMap) -> TensorMap:
+    """Torch-native version of AniSOAP's ``standardize_keys``."""
+    key_names = descriptor.keys.names
+    if "angular_channel" not in key_names:
+        raise ValueError("Descriptor missing key 'angular_channel'")
+
+    blocks: List[TensorBlock] = []
+    keys: List[Tuple[int, ...]] = []
     for key, block in descriptor.items():
-        key = tuple(key)
-        if not "order_nu" in key_names:
-            key = (1,) + key
-        keys.append(key)
-        property_names = _remove_suffix(block.properties.names, "_1")
+        key_t = _key_tuple(key)
+        if "order_nu" not in key_names:
+            key_t = (1,) + key_t
+        keys.append(key_t)
+        prop_names = _remove_suffix(block.properties.names, "_1")
         blocks.append(
             TensorBlock(
                 values=block.values,
                 samples=block.samples,
                 components=block.components,
                 properties=Labels(
-                    property_names,
-                    np.asarray(block.properties, dtype=np.int32).reshape(
-                        -1, len(property_names)
-                    ),
+                    prop_names, block.properties.values.to(dtype=torch.int32)
                 ),
             )
         )
 
-    if not "order_nu" in key_names:
+    if "order_nu" not in key_names:
         key_names = ["order_nu"] + key_names
-
+    device = blocks[0].values.device if blocks else None
     return TensorMap(
-        keys=Labels(names=key_names, values=np.asarray(keys, dtype=np.int32)),
+        keys=Labels(
+            key_names,
+            torch.as_tensor(keys, device=device, dtype=torch.int32),
+        ),
         blocks=blocks,
     )
 
 
 def cg_combine(
-    x_a,
-    x_b,
-    feature_names=None,
-    clebsch_gordan=None,
-    lcut=None,
-    other_keys_match=None,
-):
-    """Performs a CG product of two sets of equivariants.
+    x_a: TensorMap,
+    x_b: TensorMap,
+    *,
+    feature_names: Optional[Sequence[str]] = None,
+    clebsch_gordan: Optional[TorchClebschGordanReal] = None,
+    lcut: Optional[int] = None,
+    other_keys_match: Optional[Sequence[str]] = None,
+) -> TensorMap:
+    """Torch-native port of AniSOAP's metatensor CG product.
 
-    The only requirement is that sparse indices are labeled as
-    ("inversion_sigma", "spherical_harmonics_l", "order_nu").
-
-    Parameters
-    ----------
-    x_a
-        First set of equivariants
-    x_b
-        Second set of equivariants
-    feature_names : list, optional
-        Overrides automatically-generated names of output features.  By default,
-        all other key labels are combined via their outer product, i.e. if there
-        is a key-side `neighbor-species` in both `x_a` and `x_b`, the returned
-        keys will have two `neighbor_species` labels, corresponding to the parent
-        features.
-    clebsch_gordan : ClebschGordanReal, optional
-    lcut : np.ndarray()
-        Cutoff in new features
-    other_keys_match : list, optional
-        List of keys that should match.  These will not need to have their outer
-        product taken, but will instead be merged into a new key.  For instance,
-        passing `["types center"]` will combine the keys with the same type
-        center, yielding a single key with the same types_center in the results.
-
-    Returns
-    -------
-    TensorMap
-        The Clebsch-Gordan product of `x_a` and `x_b`
-
+    This keeps the original key/property semantics while replacing NumPy products
+    with torch operations so gradients flow through coefficient values.
     """
-
-    # determines the cutoff in the new features
-    lmax_a = np.asarray(x_a.keys["angular_channel"], dtype="int32").max()
-    lmax_b = np.asarray(x_b.keys["angular_channel"], dtype="int32").max()
+    key_names_a = x_a.keys.names
+    key_names_b = x_b.keys.names
+    lmax_a = int(x_a.keys.values[:, key_names_a.index("angular_channel")].max().item())
+    lmax_b = int(x_b.keys.values[:, key_names_b.index("angular_channel")].max().item())
     if lcut is None:
         lcut = lmax_a + lmax_b
-
-    # creates a CG object, if needed
     if clebsch_gordan is None:
-        clebsch_gordan = ClebschGordanReal(lcut)
+        clebsch_gordan = TorchClebschGordanReal(lcut)
 
-    other_keys_a = tuple(
-        name for name in x_a.keys.names if name not in ["angular_channel", "order_nu"]
-    )
-    other_keys_b = tuple(
-        name for name in x_b.keys.names if name not in ["angular_channel", "order_nu"]
-    )
-
+    other_a = tuple(n for n in key_names_a if n not in ["angular_channel", "order_nu"])
+    other_b = tuple(n for n in key_names_b if n not in ["angular_channel", "order_nu"])
     if other_keys_match is None:
-        OTHER_KEYS = [k + "_a" for k in other_keys_a] + [k + "_b" for k in other_keys_b]
+        output_other_keys = [k + "_a" for k in other_a] + [k + "_b" for k in other_b]
     else:
-        OTHER_KEYS = (
-            other_keys_match
+        output_other_keys = (
+            list(other_keys_match)
             + [
-                k + ("_a" if k in other_keys_b else "")
-                for k in other_keys_a
+                k + ("_a" if k in other_b else "")
+                for k in other_a
                 if k not in other_keys_match
             ]
             + [
-                k + ("_b" if k in other_keys_a else "")
-                for k in other_keys_b
+                k + ("_b" if k in other_a else "")
+                for k in other_b
                 if k not in other_keys_match
             ]
         )
 
-    # we assume grad components are all the same
-    if x_a.block(0).has_gradient("positions"):
-        grad_components = x_a.block(0).gradient("positions").components
-    else:
-        grad_components = None
-
-    # automatic generation of the output features names
-    # "x1 x2 x3 ; x1 x2 -> x1_a x2_a x3_a k_nu x1_b x2_b l_nu"
     if feature_names is None:
-        NU = x_a.keys[0]["order_nu"] + x_b.keys[0]["order_nu"]
+        first_key = next(iter(x_a.keys))
+        second_key = next(iter(x_b.keys))
+        order_nu = _key_value(first_key, key_names_a, "order_nu") + _key_value(
+            second_key, key_names_b, "order_nu"
+        )
         feature_names = (
             tuple(n + "_a" for n in x_a.block(0).properties.names)
-            + ("k_" + str(NU),)
+            + ("k_" + str(order_nu),)
             + tuple(n + "_b" for n in x_b.block(0).properties.names)
-            + ("l_" + str(NU),)
+            + ("l_" + str(order_nu),)
         )
 
-    X_idx = {}
-    X_blocks = {}
-    X_samples = {}
-    X_grad_samples = {}
-    X_grads = {}
+    X_idx: Dict[Tuple[int, ...], List[torch.Tensor]] = {}
+    X_blocks: Dict[Tuple[int, ...], List[torch.Tensor]] = {}
+    X_samples: Dict[Tuple[int, ...], Labels] = {}
 
-    # loops over sparse blocks of x_a
     for index_a, block_a in x_a.items():
-        lam_a = index_a["angular_channel"]
-        order_a = index_a["order_nu"]
-        properties_a = (
-            block_a.properties
-        )  # pre-extract this block as accessing a c property has a non-zero cost
-        samples_a = block_a.samples
+        lam_a = _key_value(index_a, key_names_a, "angular_channel")
+        order_a = _key_value(index_a, key_names_a, "order_nu")
+        props_a = block_a.properties.values
 
-        # and x_b
         for index_b, block_b in x_b.items():
-            lam_b = index_b["angular_channel"]
-            order_b = index_b["order_nu"]
-            properties_b = block_b.properties
-            samples_b = block_b.samples
+            lam_b = _key_value(index_b, key_names_b, "angular_channel")
+            order_b = _key_value(index_b, key_names_b, "order_nu")
+            props_b = block_b.properties.values
 
             if other_keys_match is None:
-                OTHERS = tuple(index_a[name] for name in other_keys_a) + tuple(
-                    index_b[name] for name in other_keys_b
-                )
+                others = tuple(
+                    _key_value(index_a, key_names_a, k) for k in other_a
+                ) + tuple(_key_value(index_b, key_names_b, k) for k in other_b)
             else:
-                OTHERS = tuple(
-                    index_a[k] for k in other_keys_match if index_a[k] == index_b[k]
-                )
-                # skip combinations without matching key
-                if len(OTHERS) < len(other_keys_match):
+                matched = []
+                skip = False
+                for k in other_keys_match:
+                    va = _key_value(index_a, key_names_a, k)
+                    vb = _key_value(index_b, key_names_b, k)
+                    if va != vb:
+                        skip = True
+                        break
+                    matched.append(va)
+                if skip:
                     continue
-                # adds non-matching keys to build outer product
-                OTHERS = OTHERS + tuple(
-                    index_a[k] for k in other_keys_a if k not in other_keys_match
+                others = tuple(matched)
+                others += tuple(
+                    _key_value(index_a, key_names_a, k)
+                    for k in other_a
+                    if k not in other_keys_match
                 )
-                OTHERS = OTHERS + tuple(
-                    index_b[k] for k in other_keys_b if k not in other_keys_match
+                others += tuple(
+                    _key_value(index_b, key_names_b, k)
+                    for k in other_b
+                    if k not in other_keys_match
                 )
 
-            neighbor_slice = slice(None)
+            # Original code assumes matching samples. Enforce this explicitly.
+            if (
+                block_a.samples.values.shape != block_b.samples.values.shape
+                or not torch.equal(
+                    block_a.samples.values.to(block_b.samples.values.device),
+                    block_b.samples.values,
+                )
+            ):
+                raise ValueError(
+                    "CG combination requires matching samples in the two blocks"
+                )
 
-            # determines the properties that are in the select list
-            sel_feats = []
-            sel_idx = []
-            sel_feats = (
-                np.indices((len(properties_a), len(properties_b))).reshape(2, -1).T
-            )
-
-            prop_ids_a = []
-            prop_ids_b = []
-            for n_a, f_a in enumerate(properties_a):
-                prop_ids_a.append(tuple(f_a) + (lam_a,))
-            for n_b, f_b in enumerate(properties_b):
-                prop_ids_b.append(tuple(f_b) + (lam_b,))
-            prop_ids_a = np.asarray(prop_ids_a)
-            prop_ids_b = np.asarray(prop_ids_b)
-            sel_idx = np.hstack(
-                [prop_ids_a[sel_feats[:, 0]], prop_ids_b[sel_feats[:, 1]]]
-            )
-            if len(sel_feats) == 0:
+            n_pa = props_a.shape[0]
+            n_pb = props_b.shape[0]
+            if n_pa == 0 or n_pb == 0:
                 continue
-            # loops over all permissible output blocks. note that blocks will
-            # be filled from different la, lb
-            for L in range(np.abs(lam_a - lam_b), 1 + min(lam_a + lam_b, lcut)):
-                # determines parity of the block
-                NU = order_a + order_b
-                KEY = (
-                    NU,
-                    L,
-                ) + OTHERS
-                if not KEY in X_idx:
-                    X_idx[KEY] = []
-                    X_blocks[KEY] = []
-                    X_samples[KEY] = block_b.samples
-                    if grad_components is not None:
-                        X_grads[KEY] = []
-                        X_grad_samples[KEY] = block_b.gradient("positions").samples
-
-                # builds all products in one go
-                one_shot_blocks = clebsch_gordan.combine_einsum(
-                    block_a.values[neighbor_slice][:, :, sel_feats[:, 0]],
-                    block_b.values[:, :, sel_feats[:, 1]],
-                    L,
-                    combination_string="iq,iq->iq",
-                )
-                # do gradients, if they are present...
-                if grad_components is not None:
-                    grad_a = block_a.gradient("positions")
-                    grad_b = block_b.gradient("positions")
-                    grad_a_data = np.swapaxes(grad_a.data, 1, 2)
-                    grad_b_data = np.swapaxes(grad_b.data, 1, 2)
-                    one_shot_grads = clebsch_gordan.combine_einsum(
-                        block_a.values[grad_a.samples["sample"]][
-                            neighbor_slice, :, sel_feats[:, 0]
-                        ],
-                        grad_b_data[..., sel_feats[:, 1]],
-                        L=L,
-                        combination_string="iq,iaq->iaq",
-                    ) + clebsch_gordan.combine_einsum(
-                        block_b.values[grad_b.samples["sample"]][:, :, sel_feats[:, 1]],
-                        grad_a_data[neighbor_slice, ..., sel_feats[:, 0]],
-                        L=L,
-                        combination_string="iq,iaq->iaq",
-                    )
-
-                # now loop over the selected features to build the blocks
-
-                X_idx[KEY].append(sel_idx)
-                X_blocks[KEY].append(one_shot_blocks)
-                if grad_components is not None:
-                    X_grads[KEY].append(one_shot_grads)
-
-    # turns data into sparse storage format (and dumps any empty block in the process)
-    nz_idx = []
-    nz_blk = []
-    for KEY in X_blocks:
-        L = KEY[1]
-        # create blocks
-        if len(X_blocks[KEY]) == 0:
-            continue  # skips empty blocks
-        nz_idx.append(KEY)
-        block_data = np.concatenate(X_blocks[KEY], axis=-1)
-        sph_components = Labels(
-            ["spherical_harmonics_m"],
-            np.asarray(range(-L, L + 1), dtype=np.int32).reshape(-1, 1),
-        )
-        newblock = TensorBlock(
-            # feature index must be last
-            values=block_data,
-            samples=X_samples[KEY],
-            components=[sph_components],
-            properties=Labels(
-                feature_names, np.asarray(np.vstack(X_idx[KEY]), dtype=np.int32)
-            ),
-        )
-        if grad_components is not None:
-            grad_data = np.swapaxes(np.concatenate(X_grads[KEY], axis=-1), 2, 1)
-            newblock.add_gradient(
-                "positions",
-                data=grad_data,
-                samples=X_grad_samples[KEY],
-                components=[grad_components[0], sph_components],
+            grid = torch.cartesian_prod(
+                torch.arange(n_pa, device=block_a.values.device, dtype=torch.long),
+                torch.arange(n_pb, device=block_a.values.device, dtype=torch.long),
             )
-        nz_blk.append(newblock)
-    X = TensorMap(
-        Labels(
-            ["order_nu", "angular_channel"] + OTHER_KEYS,
-            np.asarray(nz_idx, dtype=np.int32),
+            prop_ids_a = torch.cat(
+                [
+                    props_a.to(block_a.values.device, dtype=torch.int32),
+                    torch.full(
+                        (n_pa, 1),
+                        lam_a,
+                        device=block_a.values.device,
+                        dtype=torch.int32,
+                    ),
+                ],
+                dim=1,
+            )
+            prop_ids_b = torch.cat(
+                [
+                    props_b.to(block_a.values.device, dtype=torch.int32),
+                    torch.full(
+                        (n_pb, 1),
+                        lam_b,
+                        device=block_a.values.device,
+                        dtype=torch.int32,
+                    ),
+                ],
+                dim=1,
+            )
+            sel_idx = torch.cat([prop_ids_a[grid[:, 0]], prop_ids_b[grid[:, 1]]], dim=1)
+
+            vals_a = block_a.values[:, :, grid[:, 0]]
+            vals_b = block_b.values[:, :, grid[:, 1]]
+            for L in range(abs(lam_a - lam_b), min(lam_a + lam_b, lcut) + 1):
+                key = (order_a + order_b, L) + tuple(int(v) for v in others)
+                if key not in X_blocks:
+                    X_idx[key] = []
+                    X_blocks[key] = []
+                    X_samples[key] = block_b.samples
+                X_idx[key].append(sel_idx)
+                X_blocks[key].append(
+                    clebsch_gordan.combine_einsum(vals_a, vals_b, L, "iq,iq->iq")
+                )
+
+    keys_out: List[Tuple[int, ...]] = []
+    blocks_out: List[TensorBlock] = []
+    for key in sorted(X_blocks):
+        if not X_blocks[key]:
+            continue
+        L = key[1]
+        values = torch.cat(X_blocks[key], dim=-1)
+        props = torch.cat(X_idx[key], dim=0).to(dtype=torch.int32)
+        keys_out.append(key)
+        blocks_out.append(
+            TensorBlock(
+                values=values,
+                samples=X_samples[key],
+                components=[
+                    Labels(
+                        ["spherical_harmonics_m"],
+                        torch.arange(
+                            -L, L + 1, dtype=torch.int32, device=values.device
+                        ).reshape(-1, 1),
+                    )
+                ],
+                properties=Labels(list(feature_names), props),
+            )
+        )
+
+    device = blocks_out[0].values.device if blocks_out else None
+    return TensorMap(
+        keys=Labels(
+            ["order_nu", "angular_channel"] + output_other_keys,
+            torch.as_tensor(keys_out, device=device, dtype=torch.int32),
         ),
-        nz_blk,
+        blocks=blocks_out,
     )
-    return X
