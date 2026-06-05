@@ -11,6 +11,7 @@ from scipy.special import sph_harm_y
 
 from anisoap.representations import EllipsoidalDensityProjection
 
+
 class TestTorchCorrectness:
     def test_benzene_correctness_5frames(self):
         """
@@ -42,5 +43,7 @@ class TestTorchCorrectness:
         calculator = EllipsoidalDensityProjection(**AniSOAP_HYPERS)
         x_anisoap_torch = calculator.power_spectrum(frames)
 
-        x_anisoap_numpy = np.load('./tests/integration-tests/benzene_numpy_impl_5frames.npy')
+        x_anisoap_numpy = np.load(
+            "./tests/integration-tests/benzene_numpy_impl_5frames.npy"
+        )
         assert_allclose(x_anisoap_torch, x_anisoap_numpy, rtol=0, atol=1e-2)
