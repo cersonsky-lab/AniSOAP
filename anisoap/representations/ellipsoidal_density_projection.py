@@ -35,6 +35,7 @@ from ..utils.metatensor_utils import (
     cg_combine,
     standardize_keys,
 )
+from ..utils.rotations import quaternion_to_matrix
 from .radial_basis import (
     gaussian_parameters,
     orthonormalization_matrix,
@@ -1108,6 +1109,86 @@ class EllipsoidalDensityProjection(torch.nn.Module):
     def forward(self, **kwargs: Any) -> TensorMap:
         """Default module output for AniSOAP-BPNN: per-atom scalar feature map."""
         return self.power_spectrum_feature_tensor_map(**kwargs)
+
+    def features_from_torch_state(
+        self,
+        *,
+        positions: torch.Tensor,
+        centers: torch.Tensor,
+        neighbors: torch.Tensor,
+        species: torch.Tensor,
+        ellipsoid_lengths: torch.Tensor,
+        orientation_quaternions: Optional[torch.Tensor] = None,
+        rotations: Optional[torch.Tensor] = None,
+        structures: Optional[torch.Tensor] = None,
+        atom_indices: Optional[torch.Tensor] = None,
+        cell: Optional[torch.Tensor] = None,
+        shifts: Optional[torch.Tensor] = None,
+    ) -> TensorMap:
+        """
+        Build AniSOAP-BPNN features from differentiable torch state.
+
+        This is the preferred API when gradients with respect to positions,
+        orientations, and ellipsoid lengths are needed.
+
+        Neighbor topology is treated as fixed metadata. Gradients flow through
+        positions via R_ij and through orientation_quaternions or rotations.
+        """
+        positions = torch.as_tensor(positions)
+        device = positions.device
+        dtype = positions.dtype
+
+        centers = torch.as_tensor(centers, device=device, dtype=torch.long)
+        neighbors = torch.as_tensor(neighbors, device=device, dtype=torch.long)
+        species = torch.as_tensor(species, device=device, dtype=torch.long)
+        ellipsoid_lengths = torch.as_tensor(
+            ellipsoid_lengths, device=device, dtype=dtype
+        )
+
+        if rotations is None:
+            if orientation_quaternions is None:
+                raise ValueError(
+                    "Provide either rotations=... or orientation_quaternions=..."
+                )
+            rotations = quaternion_to_matrix(
+                torch.as_tensor(orientation_quaternions, device=device, dtype=dtype)
+            )
+        else:
+            rotations = torch.as_tensor(rotations, device=device, dtype=dtype)
+
+        if shifts is None:
+            R_ij = positions[neighbors] - positions[centers]
+        else:
+            if cell is None:
+                raise ValueError("cell must be provided when shifts are provided")
+            shifts = torch.as_tensor(shifts, device=device, dtype=dtype)
+            cell = torch.as_tensor(cell, device=device, dtype=dtype)
+            R_ij = positions[neighbors] + shifts @ cell - positions[centers]
+
+        n_atoms = int(species.shape[0])
+
+        if structures is None:
+            structures = torch.zeros(n_atoms, device=device, dtype=torch.long)
+        else:
+            structures = torch.as_tensor(structures, device=device, dtype=torch.long)
+
+        if atom_indices is None:
+            atom_indices = torch.arange(n_atoms, device=device, dtype=torch.long)
+        else:
+            atom_indices = torch.as_tensor(
+                atom_indices, device=device, dtype=torch.long
+            )
+
+        return self.power_spectrum_feature_tensor_map(
+            R_ij=R_ij,
+            centers=centers,
+            neighbors=neighbors,
+            species=species,
+            structures=structures,
+            atom_indices=atom_indices,
+            rotations=rotations,
+            ellipsoid_lengths=ellipsoid_lengths,
+        )
 
 
 __all__ = [
