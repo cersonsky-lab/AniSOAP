@@ -36,9 +36,12 @@ dependencies = [
   "setuptools-rust",
   "tqdm",
   "metatensor",
+  "metatensor-torch",
+  "metatomic",
   "wigners",
   "matplotlib",
-  "skmatter"
+  "skmatter",
+  "torch"
 ]
 [build-system]
 requires = ["setuptools", "setuptools-rust"]

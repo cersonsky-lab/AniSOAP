@@ -1,15 +1,12 @@
 import numpy as np
-from numpy.testing import assert_allclose
-from scipy.special import (
-    comb,
-    gamma,
-)
 
 
+# Legacy NumPy reference implementations. Torch-native runtime code uses
+# anisoap.representations.ellipsoidal_density_projection.compute_moments.
 # Define function to compute all moments for a single
 # variable Gaussian.
-def compute_moments_single_variable(A, a, maxdeg):
-    r"""Computes all moments for a single variable Gaussian.
+def moments_single(A, a, maxdeg):
+    r"""Legacy NumPy implementation: computes all moments for a single variable Gaussian.
 
     Parameters
     ----------
@@ -57,10 +54,8 @@ def compute_moments_single_variable(A, a, maxdeg):
 # of the moment <x^n0 * y^n1 * z^n2> simply as moments[n0,n1,n2].
 # This leads to more intuitive code, at the cost of wasting around
 # a third of the memory in the array to store zeros.
-def compute_moments_diagonal_inefficient_implementation(
-    principal_components, a, maxdeg
-):
-    r"""Computes all moments for a diagonal dilation matrix.
+def moments_diagonal(principal_components, a, maxdeg):
+    r"""Legacy NumPy implementation: computes all moments for a diagonal dilation matrix.
 
     The implementation focuses on conceptual simplicity, while sacrificing memory
     efficiency.  To be specific, the `moments` array allows access to the value
@@ -106,9 +101,9 @@ def compute_moments_diagonal_inefficient_implementation(
     moments = np.zeros((maxdeg + 1, maxdeg + 1, maxdeg + 1))
 
     # Precompute the single variable moments in x- y- and z-directions:
-    moments_x = compute_moments_single_variable(principal_components[0], a[0], maxdeg)
-    moments_y = compute_moments_single_variable(principal_components[1], a[1], maxdeg)
-    moments_z = compute_moments_single_variable(principal_components[2], a[2], maxdeg)
+    moments_x = moments_single(principal_components[0], a[0], maxdeg)
+    moments_y = moments_single(principal_components[1], a[1], maxdeg)
+    moments_z = moments_single(principal_components[2], a[2], maxdeg)
 
     # Compute values for all relevant components for which the monomial degree is <= maxdeg
     for n0 in range(maxdeg + 1):
@@ -137,8 +132,8 @@ def compute_moments_diagonal_inefficient_implementation(
 # of the moment <x^n0 * y^n1 * z^n2> simply as moments[n0,n1,n2].
 # This leads to more intuitive code, at the cost of wasting around
 # a third of the memory in the array to store zeros.
-def compute_moments_inefficient_implementation(A, a, maxdeg):
-    r"""Computes all moments for a general dilation matrix.
+def moments_ineff(A, a, maxdeg):
+    r"""Legacy NumPy implementation: computes all moments for a general dilation matrix.
 
     Parameters
     ----------

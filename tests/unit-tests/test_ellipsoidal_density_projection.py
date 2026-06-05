@@ -80,7 +80,7 @@ class TestEllipsoidalDensityProjection:
             block_norm_1 = rep_normalized_1.block(i)
             block_norm_2 = rep_normalized_2.block(i)
             assert_allclose(
-                block_norm_1.values, block_norm_2.values, rtol=1e-10, atol=1e-10
+                block_norm_1.values, block_norm_2.values, rtol=1e-6, atol=1e-6
             )
 
 

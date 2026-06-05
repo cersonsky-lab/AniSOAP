@@ -1,18 +1,10 @@
 import numpy as np
 import pytest
 from numpy.testing import assert_allclose
-from scipy.special import (
-    comb,
-    gamma,
-)
+from scipy.special import comb, gamma
 
 # Import the different versions of the moment generators
-from anisoap.utils import (
-    assert_close,
-    compute_moments_diagonal_inefficient_implementation,
-    compute_moments_inefficient_implementation,
-    compute_moments_single_variable,
-)
+from anisoap.utils import assert_close, moments_diagonal, moments_ineff, moments_single
 
 
 class TestMomentsUnivariateGaussian:
@@ -32,7 +24,7 @@ class TestMomentsUnivariateGaussian:
     @pytest.mark.parametrize("sigma", sigmas)
     def test_moments_single_variable_centered(self, sigma, maxdeg):
         A = 1 / sigma**2
-        moments = compute_moments_single_variable(A, 0, maxdeg)
+        moments = moments_single(A, 0, maxdeg)
 
         moments_exact = np.zeros((maxdeg + 1,))
         for deg in range(maxdeg + 1):
@@ -77,7 +69,7 @@ class TestMomentsUnivariateGaussian:
 
         # Compare with the moments obtained from the iterative algorithm
         # used in the main code
-        moments_from_code = compute_moments_single_variable(A, center, maxdeg)
+        moments_from_code = moments_single(A, center, maxdeg)
         assert_allclose(moments_from_code, moments, rtol=1e-12, atol=1e-15)
 
 
@@ -147,10 +139,9 @@ class TestMomentsTrivariateGaussian:
     @pytest.mark.parametrize("principal_components", principal_components_list)
     def test_moments_diagonal_vs_exact(self, principal_components, center, maxdeg):
         A = np.diag(principal_components)
-        moments_diagonal = compute_moments_diagonal_inefficient_implementation(
-            principal_components, center, maxdeg
-        )
+        moments_diag = moments_diagonal(principal_components, center, maxdeg)
         moments_exact = get_exact_moments(A, center, maxdeg)
+        assert_allclose(moments_diag, moments_exact, rtol=1e-15, atol=3e-16)
 
     # For isotropic Gaussians, many moments will be the same due to symmetry.
     # e.g. <x^2y> = <x^2z> = <xy^2> = <xz^2> = <y^2z> = <yz^2>
@@ -164,26 +155,18 @@ class TestMomentsTrivariateGaussian:
     def test_moments_diagonal_permutation_symmetry(self, sigma, center_offset, maxdeg):
         center = center_offset * np.ones((3,))
         principal_components = np.ones((3,)) / sigma**2
-        moments_diagonal = compute_moments_diagonal_inefficient_implementation(
-            principal_components, center, maxdeg
-        )
+        moments_diag = moments_diagonal(principal_components, center, maxdeg)
         eps = 1e-12
         for n0 in range(maxdeg + 1):
             for n1 in range(maxdeg + 1):
                 for n2 in range(maxdeg + 1):
                     deg = n0 + n1 + n2
                     if deg > maxdeg:
-                        assert moments_diagonal[n0, n1, n2] == 0
+                        assert moments_diag[n0, n1, n2] == 0
                     else:
-                        assert_close(
-                            moments_diagonal[n0, n1, n2], moments_diagonal[n1, n0, n2]
-                        )
-                        assert_close(
-                            moments_diagonal[n0, n1, n2], moments_diagonal[n2, n1, n0]
-                        )
-                        assert_close(
-                            moments_diagonal[n0, n1, n2], moments_diagonal[n0, n2, n1]
-                        )
+                        assert_close(moments_diag[n0, n1, n2], moments_diag[n1, n0, n2])
+                        assert_close(moments_diag[n0, n1, n2], moments_diag[n2, n1, n0])
+                        assert_close(moments_diag[n0, n1, n2], moments_diag[n0, n2, n1])
 
     # For diagonal dilation matrices, the general algorithm to generate
     # the moments should lead to the same results as the specialized
@@ -193,11 +176,9 @@ class TestMomentsTrivariateGaussian:
     @pytest.mark.parametrize("principal_components", principal_components_list)
     def test_moments_diagonal_vs_general(self, principal_components, center, maxdeg):
         A = np.diag(principal_components)
-        moments_general = compute_moments_inefficient_implementation(A, center, maxdeg)
-        moments_diagonal = compute_moments_diagonal_inefficient_implementation(
-            principal_components, center, maxdeg
-        )
-        assert_allclose(moments_general, moments_diagonal, rtol=1e-15, atol=3e-16)
+        moments_general = moments_ineff(A, center, maxdeg)
+        moments_diag = moments_diagonal(principal_components, center, maxdeg)
+        assert_allclose(moments_general, moments_diag, rtol=1e-15, atol=3e-16)
 
     # Test the moments obtained from the general code against the exact analytical expression.
     # Generate two arbitrary positive definitive symmetric matrices
@@ -210,6 +191,6 @@ class TestMomentsTrivariateGaussian:
     @pytest.mark.parametrize("center", centers)
     @pytest.mark.parametrize("A", As)
     def test_moments_general_vs_exact(self, A, center, maxdeg):
-        moments_general = compute_moments_inefficient_implementation(A, center, maxdeg)
+        moments_general = moments_ineff(A, center, maxdeg)
         moments_exact = get_exact_moments(A, center, maxdeg)
         assert_allclose(moments_general, moments_exact)
