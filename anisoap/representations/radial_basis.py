@@ -6,6 +6,7 @@ from typing import (
 
 import numpy as np
 import torch
+import math
 from metatensor import TensorMap
 from scipy.special import (
     gamma,
@@ -45,15 +46,12 @@ def inverse_matrix_sqrt(matrix: torch.Tensor, rcond=1e-8, tol=1e-3) -> torch.Ten
     # matrices. The old NumPy path used this only as a diagnostic; torch high-order
     # GTO slices can be badly conditioned even when the retained eigenspace is valid.
     if tol is not None:
-        try:
-            matrix2 = torch.linalg.pinv(result @ result)
-            err = torch.linalg.norm(matrix - matrix2)
-            if torch.isfinite(err) and err > tol:
-                raise ValueError(
-                    f"Incurred Numerical Imprecision {torch.linalg.norm(matrix-matrix2)= :.8f}"
-                )
-        except RuntimeError:
-            warnings.warn("Could not run inverse_matrix_sqrt reconstruction check")
+        matrix2 = torch.linalg.pinv(result @ result)
+        err = torch.linalg.norm(matrix - matrix2)
+        if torch.isfinite(err) and err > tol:
+            raise ValueError(
+                f"Incurred Numerical Imprecision {torch.linalg.norm(matrix-matrix2)= :.8f}"
+            )
 
     return result.to(dtype=original_dtype, device=original_device)
 
@@ -191,7 +189,16 @@ def gto_prefactor(n, sigma):
         The normalization constant
 
     """
-    return np.sqrt(1 / gto_square_norm(n, sigma))
+    n = torch.as_tensor(n, dtype=torch.float64)
+    sigma = torch.as_tensor(sigma, device=n.device, dtype=torch.float64)
+
+    log_square_norm = (
+        math.log(0.5)
+        + (2.0 * n + 3.0) * torch.log(sigma)
+        + torch.lgamma(n + 1.5)
+    )
+
+    return torch.exp(-0.5 * log_square_norm)
 
 
 def gto_overlap(n, m, sigma_n, sigma_m):
@@ -225,12 +232,28 @@ def gto_overlap(n, m, sigma_n, sigma_m):
         overlap of the two normalized GTOs
 
     """
-    N_n = gto_prefactor(n, sigma_n)
-    N_m = gto_prefactor(m, sigma_m)
-    n_eff = (n + m) / 2
-    sigma_eff = np.sqrt(2 * sigma_n**2 * sigma_m**2 / (sigma_n**2 + sigma_m**2))
-    return N_n * N_m * gto_square_norm(n_eff, sigma_eff)
+    n = torch.as_tensor(n, dtype=torch.float64)
+    m = torch.as_tensor(m, device=n.device, dtype=torch.float64)
+    sigma_n = torch.as_tensor(sigma_n, device=n.device, dtype=torch.float64)
+    sigma_m = torch.as_tensor(sigma_m, device=n.device, dtype=torch.float64)
 
+    prefactor_n = gto_prefactor(n, sigma_n)
+    prefactor_m = gto_prefactor(m, sigma_m)
+
+    n_eff = (n + m) / 2.0
+    sigma_eff = torch.sqrt(
+        2.0 * sigma_n**2 * sigma_m**2 / (sigma_n**2 + sigma_m**2)
+    )
+
+    log_overlap = (
+        torch.log(prefactor_n)
+        + torch.log(prefactor_m)
+        + math.log(0.5)
+        + (2.0 * n_eff + 3.0) * torch.log(sigma_eff)
+        + torch.lgamma(n_eff + 1.5)
+    )
+
+    return torch.exp(log_overlap)
 
 def monomial_square_norm(n, r_cut):
     """

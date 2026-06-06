@@ -740,12 +740,8 @@ class EllipsoidalDensityProjection(torch.nn.Module):
         try:
             from metatomic.torch import NeighborListOptions
         except Exception:
-            try:
-                from metatomic.torch.system import NeighborListOptions
-            except Exception as exc:  # pragma: no cover
-                raise ImportError(
-                    "metatomic.torch is required for requested_neighbor_lists"
-                ) from exc
+            from metatomic.torch.system import NeighborListOptions
+            
         if self._neighbor_list_options is None:
             try:
                 self._neighbor_list_options = NeighborListOptions(
@@ -1003,7 +999,14 @@ class EllipsoidalDensityProjection(torch.nn.Module):
                 device=device,
                 dtype=torch.long,
             )
-            dense.index_copy_(0, rows, vals)
+
+            block_dense = dense[:, col : col + dim]
+            block_dense.index_copy_(0, rows, vals)
+            dense = torch.cat(
+                [dense[:, :col], block_dense, dense[:, col + dim :]],
+                dim=1,
+            )
+
             col += dim
 
         samples = (
@@ -1054,7 +1057,9 @@ class EllipsoidalDensityProjection(torch.nn.Module):
             nu2, aggregate_by_system=aggregate_by_system
         )
 
-    def power_spectrum_feature_tensor_map(self, **kwargs: Any) -> TensorMap:
+    def power_spectrum_feature_tensor_map(
+        self, *, normalize: bool = True, **kwargs: Any
+    ) -> TensorMap:
         """Return a single-block per-atom feature TensorMap for AniSOAP-BPNN.
 
         The block layout is ``samples=['system', 'atom']`` and
@@ -1080,6 +1085,7 @@ class EllipsoidalDensityProjection(torch.nn.Module):
             atom_indices=graph.atom_indices,
             rotations=graph.rotations,
             ellipsoid_lengths=graph.ellipsoid_lengths,
+            normalize=normalize,
         )
         features, _ = self.power_spectrum_features_from_tensormap(
             nu2, target_samples=target_samples
