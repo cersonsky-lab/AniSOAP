@@ -41,84 +41,138 @@ from .radial_basis import (
 )
 
 
-def compute_moments(A: torch.Tensor, a: torch.Tensor, maxdeg: int) -> torch.Tensor:
-    r"""Differentiable trivariate Gaussian moments.
-
-    Computes moments of ``exp(-1/2 (x-a)^T A (x-a))`` up to total polynomial
-    degree ``maxdeg``. This replaces the original Rust ``compute_moments`` call
-    on the torch path.
-    """
-    A = torch.as_tensor(A)
-    a = torch.as_tensor(a, device=A.device, dtype=A.dtype)
-    if A.shape != (3, 3):
-        raise ValueError(f"A must have shape (3, 3), got {tuple(A.shape)}")
-    if a.shape != (3,):
-        raise ValueError(f"a must have shape (3,), got {tuple(a.shape)}")
-    if maxdeg < 0:
-        raise ValueError("maxdeg must be non-negative")
-
-    device, dtype = A.device, A.dtype
-    cov = torch.linalg.inv(A)
-    norm = torch.as_tensor(
-        (2.0 * math.pi) ** 1.5, device=device, dtype=dtype
-    ) / torch.sqrt(torch.linalg.det(A))
-
-    # Store normalized raw moments first; multiply by the Gaussian integral at end.
-    M: Dict[Tuple[int, int, int], torch.Tensor] = {
-        (0, 0, 0): torch.ones((), device=device, dtype=dtype)
-    }
-    if maxdeg >= 1:
-        M[(1, 0, 0)] = a[0]
-        M[(0, 1, 0)] = a[1]
-        M[(0, 0, 1)] = a[2]
-    if maxdeg >= 2:
-        M[(2, 0, 0)] = cov[0, 0] + a[0] * a[0]
-        M[(0, 2, 0)] = cov[1, 1] + a[1] * a[1]
-        M[(0, 0, 2)] = cov[2, 2] + a[2] * a[2]
-        M[(1, 1, 0)] = cov[0, 1] + a[0] * a[1]
-        M[(0, 1, 1)] = cov[1, 2] + a[1] * a[2]
-        M[(1, 0, 1)] = cov[0, 2] + a[0] * a[2]
-
-    def get(i: int, j: int, k: int) -> torch.Tensor:
-        if i < 0 or j < 0 or k < 0 or i + j + k > maxdeg:
-            return torch.zeros((), device=device, dtype=dtype)
-        return M.get((i, j, k), torch.zeros((), device=device, dtype=dtype))
-
-    # Isserlis/Stein recurrence: E[X_p f(X)] = mu_p E[f] + sum_q Sigma_pq E[df/dx_q]
-    for degree in range(2, maxdeg):
-        updates: Dict[Tuple[int, int, int], torch.Tensor] = {}
+def _moment_index_maps(maxdeg: int, device=None):
+    """Build compact monomial maps for all exponents with total degree <= maxdeg."""
+    exponents_list: List[Tuple[int, int, int]] = []
+    for degree in range(maxdeg + 1):
         for n0 in range(degree + 1):
             for n1 in range(degree + 1 - n0):
                 n2 = degree - n0 - n1
-                base = get(n0, n1, n2)
-                updates[(n0 + 1, n1, n2)] = (
-                    a[0] * base
-                    + cov[0, 0] * n0 * get(n0 - 1, n1, n2)
-                    + cov[0, 1] * n1 * get(n0, n1 - 1, n2)
-                    + cov[0, 2] * n2 * get(n0, n1, n2 - 1)
-                )
-                if n0 == 0:
-                    updates[(n0, n1 + 1, n2)] = (
-                        a[1] * base
-                        + cov[1, 0] * n0 * get(n0 - 1, n1, n2)
-                        + cov[1, 1] * n1 * get(n0, n1 - 1, n2)
-                        + cov[1, 2] * n2 * get(n0, n1, n2 - 1)
-                    )
-                    if n1 == 0:
-                        updates[(n0, n1, n2 + 1)] = (
-                            a[2] * base
-                            + cov[2, 0] * n0 * get(n0 - 1, n1, n2)
-                            + cov[2, 1] * n1 * get(n0, n1 - 1, n2)
-                            + cov[2, 2] * n2 * get(n0, n1, n2 - 1)
-                        )
-        M.update(updates)
+                exponents_list.append((n0, n1, n2))
 
-    out = torch.zeros((maxdeg + 1, maxdeg + 1, maxdeg + 1), device=device, dtype=dtype)
-    if M:
-        idx = torch.tensor(list(M.keys()), device=device, dtype=torch.long).T
-        vals = torch.stack(list(M.values())) * norm
-        out = out.index_put(tuple(idx), vals, accumulate=False)
-    return out
+    index = {exp: i for i, exp in enumerate(exponents_list)}
+    exponents = torch.tensor(exponents_list, device=device, dtype=torch.long)
+    degrees = exponents.sum(dim=1)
+
+    parent = torch.full((len(exponents_list),), -1, device=device, dtype=torch.long)
+    direction = torch.full((len(exponents_list),), -1, device=device, dtype=torch.long)
+    decrement = torch.full(
+        (len(exponents_list), 3), -1, device=device, dtype=torch.long
+    )
+
+    for i, (n0, n1, n2) in enumerate(exponents_list):
+        if n0 + n1 + n2 == 0:
+            continue
+        if n0 > 0:
+            k = 0
+            p = (n0 - 1, n1, n2)
+        elif n1 > 0:
+            k = 1
+            p = (n0, n1 - 1, n2)
+        else:
+            k = 2
+            p = (n0, n1, n2 - 1)
+
+        parent[i] = index[p]
+        direction[i] = k
+        p_list = list(p)
+        for j in range(3):
+            if p_list[j] > 0:
+                q = p_list.copy()
+                q[j] -= 1
+                decrement[i, j] = index[tuple(q)]
+
+    return exponents, degrees, parent, direction, decrement
+
+
+def compute_moments_batched(
+    A: torch.Tensor,
+    a: torch.Tensor,
+    maxdeg: int,
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    r"""Batched unnormalized trivariate Gaussian raw moments.
+
+    Computes moments of ``exp(-1/2 (x-a)^T A (x-a))`` up to total polynomial
+    degree ``maxdeg``. The result is compact: only exponents with total degree
+    <= maxdeg are stored.
+
+    Returns
+    -------
+    moments
+        Shape ``(batch, n_monomials)``.
+    exponents
+        Shape ``(n_monomials, 3)``; each row is ``(n0, n1, n2)``.
+    """
+    A = torch.as_tensor(A)
+    if A.ndim == 2:
+        A = A.reshape(1, 3, 3)
+    a = torch.as_tensor(a, device=A.device, dtype=A.dtype)
+    if a.ndim == 1:
+        a = a.reshape(1, 3)
+    if A.shape[-2:] != (3, 3):
+        raise ValueError(f"A must have shape (..., 3, 3), got {tuple(A.shape)}")
+    if a.shape[-1] != 3:
+        raise ValueError(f"a must have shape (..., 3), got {tuple(a.shape)}")
+    if A.shape[0] != a.shape[0]:
+        raise ValueError("A and a must have the same batch dimension")
+    if maxdeg < 0:
+        raise ValueError("maxdeg must be non-negative")
+
+    device = A.device
+    dtype = A.dtype
+    batch = A.shape[0]
+    exponents, degrees, parent, direction, decrement = _moment_index_maps(
+        maxdeg, device=device
+    )
+
+    cov = torch.linalg.inv(A)
+    sign, logabsdet = torch.linalg.slogdet(A)
+    if not bool((sign > 0).all()):
+        raise ValueError("Gaussian precision matrices must be positive definite")
+    norm = torch.exp(1.5 * math.log(2.0 * math.pi) - 0.5 * logabsdet)
+
+    moments = torch.zeros((batch, exponents.shape[0]), device=device, dtype=dtype)
+    moments[:, 0] = 1.0
+
+    for degree in range(1, maxdeg + 1):
+        ids = torch.nonzero(degrees == degree, as_tuple=False).reshape(-1)
+        p = parent[ids]
+        k = direction[ids]
+        values = a[:, k] * moments[:, p]
+        parent_exponents = exponents[p]
+
+        for j in range(3):
+            dec = decrement[ids, j]
+            valid = dec >= 0
+            if bool(valid.any()):
+                coeff = parent_exponents[valid, j].to(dtype=dtype)
+                values[:, valid] = values[:, valid] + (
+                    coeff.reshape(1, -1) * cov[:, k[valid], j] * moments[:, dec[valid]]
+                )
+
+        moments[:, ids] = values
+
+    return norm.reshape(-1, 1) * moments, exponents
+
+
+def _compact_moments_to_cube(
+    moments: torch.Tensor,
+    exponents: torch.Tensor,
+    maxdeg: int,
+) -> torch.Tensor:
+    cube = torch.zeros(
+        (moments.shape[0], maxdeg + 1, maxdeg + 1, maxdeg + 1),
+        device=moments.device,
+        dtype=moments.dtype,
+    )
+    cube[:, exponents[:, 0], exponents[:, 1], exponents[:, 2]] = moments
+    return cube
+
+
+def compute_moments(A: torch.Tensor, a: torch.Tensor, maxdeg: int) -> torch.Tensor:
+    r"""Compatibility wrapper returning the historical dense moment cube."""
+    moments, exponents = compute_moments_batched(A, a, maxdeg)
+    return _compact_moments_to_cube(moments, exponents, maxdeg)[0]
 
 
 @dataclass
@@ -741,7 +795,7 @@ class EllipsoidalDensityProjection(torch.nn.Module):
             from metatomic.torch import NeighborListOptions
         except Exception:
             from metatomic.torch.system import NeighborListOptions
-            
+
         if self._neighbor_list_options is None:
             try:
                 self._neighbor_list_options = NeighborListOptions(

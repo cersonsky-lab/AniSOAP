@@ -1,3 +1,4 @@
+import math
 import warnings
 from typing import (
     Any,
@@ -6,7 +7,6 @@ from typing import (
 
 import numpy as np
 import torch
-import math
 from metatensor import TensorMap
 from scipy.special import (
     gamma,
@@ -193,9 +193,7 @@ def gto_prefactor(n, sigma):
     sigma = torch.as_tensor(sigma, device=n.device, dtype=torch.float64)
 
     log_square_norm = (
-        math.log(0.5)
-        + (2.0 * n + 3.0) * torch.log(sigma)
-        + torch.lgamma(n + 1.5)
+        math.log(0.5) + (2.0 * n + 3.0) * torch.log(sigma) + torch.lgamma(n + 1.5)
     )
 
     return torch.exp(-0.5 * log_square_norm)
@@ -241,9 +239,7 @@ def gto_overlap(n, m, sigma_n, sigma_m):
     prefactor_m = gto_prefactor(m, sigma_m)
 
     n_eff = (n + m) / 2.0
-    sigma_eff = torch.sqrt(
-        2.0 * sigma_n**2 * sigma_m**2 / (sigma_n**2 + sigma_m**2)
-    )
+    sigma_eff = torch.sqrt(2.0 * sigma_n**2 * sigma_m**2 / (sigma_n**2 + sigma_m**2))
 
     log_overlap = (
         torch.log(prefactor_n)
@@ -254,6 +250,7 @@ def gto_overlap(n, m, sigma_n, sigma_m):
     )
 
     return torch.exp(log_overlap)
+
 
 def monomial_square_norm(n, r_cut):
     """
