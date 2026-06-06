@@ -167,13 +167,22 @@ def main() -> None:
     parser.add_argument("--n", type=int, default=512, help="number of Gaussians")
     parser.add_argument("--maxdeg", type=int, default=8)
     parser.add_argument("--device", type=str, default="cpu")
-    parser.add_argument("--dtype", type=str, default="float64", choices=["float32", "float64"])
+    parser.add_argument(
+        "--dtype", type=str, default="float64", choices=["float32", "float64"]
+    )
     parser.add_argument("--warmup", type=int, default=3)
     parser.add_argument("--repeats", type=int, default=10)
     parser.add_argument("--seed", type=int, default=0)
-    parser.add_argument("--check", type=int, default=8, help="number of entries used for correctness check")
+    parser.add_argument(
+        "--check",
+        type=int,
+        default=8,
+        help="number of entries used for correctness check",
+    )
     parser.add_argument("--no-compile", action="store_true")
-    parser.add_argument("--skip-legacy", action="store_true", help="skip slow legacy loop timing")
+    parser.add_argument(
+        "--skip-legacy", action="store_true", help="skip slow legacy loop timing"
+    )
     args = parser.parse_args()
 
     device = torch.device(args.device)
@@ -202,7 +211,9 @@ def main() -> None:
         rtol=5e-5 if dtype is torch.float32 else 1e-10,
         atol=5e-6 if dtype is torch.float32 else 1e-10,
     )
-    print(f"correctness: batched matches legacy on first {min(args.check, args.n)} Gaussians")
+    print(
+        f"correctness: batched matches legacy on first {min(args.check, args.n)} Gaussians"
+    )
     print()
 
     results = []
@@ -228,6 +239,7 @@ def main() -> None:
     if not args.no_compile:
         compiled_batched = maybe_compile(compute_moments_batched)
         if compiled_batched is not None:
+
             def compiled_fn() -> torch.Tensor:
                 out, _ = compiled_batched(A, centers, args.maxdeg)
                 return out
@@ -237,20 +249,28 @@ def main() -> None:
             )
             results.append(("batched torch.compile", t_min, t_med, t_max))
         else:
-            print("torch.compile unavailable or failed to initialize; skipping compiled benchmark")
+            print(
+                "torch.compile unavailable or failed to initialize; skipping compiled benchmark"
+            )
             print()
 
     if not args.skip_legacy:
+
         def legacy_fn() -> torch.Tensor:
             return legacy_loop_valid_only(A, centers, args.maxdeg, exponents)
 
         t_min, t_med, t_max = time_callable(
-            legacy_fn, device=device, warmup=max(1, args.warmup // 2), repeats=args.repeats
+            legacy_fn,
+            device=device,
+            warmup=max(1, args.warmup // 2),
+            repeats=args.repeats,
         )
         results.append(("legacy loop", t_min, t_med, t_max))
 
     print("timings")
-    print("  scheme                    min [ms]   median [ms]   max [ms]   speedup vs legacy")
+    print(
+        "  scheme                    min [ms]   median [ms]   max [ms]   speedup vs legacy"
+    )
     legacy_med = None
     for name, _, med, _ in results:
         if name == "legacy loop":
