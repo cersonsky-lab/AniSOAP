@@ -581,10 +581,15 @@ def pairwise_ellip_expansion(
                 )
                 keys.append(key)
 
+    if len(keys) == 0:
+        key_values = torch.empty((0, 3), device=device, dtype=torch.int32)
+    else:
+        key_values = torch.as_tensor(keys, device=device, dtype=torch.int32)
+
     return TensorMap(
         keys=Labels(
             ["types_center", "types_neighbor", "angular_channel"],
-            torch.as_tensor(keys, device=device, dtype=torch.int32),
+            key_values,
         ),
         blocks=blocks,
     )
@@ -1111,6 +1116,30 @@ class EllipsoidalDensityProjection(torch.nn.Module):
             nu2, aggregate_by_system=aggregate_by_system
         )
 
+    def _feature_size(self, *, device=None, dtype=None) -> int:
+        """Infer the dense power-spectrum feature dimension from one dummy edge."""
+        if self.shape is not None:
+            return int(self.shape)
+
+        if dtype is None:
+            dtype = self.dtype
+        if device is None:
+            device = torch.device("cpu")
+
+        center_type = self.species[0] if self.species is not None else 0
+        dummy_features = self.power_spectrum_feature_tensor_map(
+            R_ij=torch.zeros((1, 3), device=device, dtype=dtype),
+            centers=torch.tensor([0], device=device, dtype=torch.long),
+            neighbors=torch.tensor([0], device=device, dtype=torch.long),
+            species=torch.tensor([center_type], device=device, dtype=torch.long),
+            structures=torch.tensor([0], device=device, dtype=torch.long),
+            atom_indices=torch.tensor([0], device=device, dtype=torch.long),
+            rotations=torch.eye(3, device=device, dtype=dtype).reshape(1, 3, 3),
+            ellipsoid_lengths=torch.ones((1, 3), device=device, dtype=dtype),
+        )
+        self.shape = int(dummy_features.block(0).values.shape[1])
+        return self.shape
+
     def power_spectrum_feature_tensor_map(
         self, *, normalize: bool = True, **kwargs: Any
     ) -> TensorMap:
@@ -1128,6 +1157,68 @@ class EllipsoidalDensityProjection(torch.nn.Module):
                 dim=1,
             ).to(device=graph.R_ij.device, dtype=torch.int32),
         )
+
+        if graph.R_ij.shape[0] == 0:
+            if self.shape is None:
+                self.shape = self._feature_size()
+
+            all_species = (
+                self.species
+                if self.species is not None
+                else sorted(
+                    int(x) for x in torch.unique(graph.species).detach().cpu().tolist()
+                )
+            )
+
+            blocks = []
+            keys = []
+
+            for center_type in all_species:
+                mask = graph.species == int(center_type)
+                if not bool(mask.any()):
+                    continue
+
+                sample_values = torch.stack(
+                    [
+                        graph.structures[mask].to(
+                            device=graph.R_ij.device, dtype=torch.int32
+                        ),
+                        graph.atom_indices[mask].to(
+                            device=graph.R_ij.device, dtype=torch.int32
+                        ),
+                    ],
+                    dim=1,
+                )
+
+                blocks.append(
+                    TensorBlock(
+                        values=torch.zeros(
+                            (sample_values.shape[0], self.shape),
+                            device=graph.R_ij.device,
+                            dtype=graph.R_ij.dtype,
+                        ),
+                        samples=Labels(["system", "atom"], sample_values),
+                        components=[],
+                        properties=Labels(
+                            ["property"],
+                            torch.arange(
+                                self.shape,
+                                device=graph.R_ij.device,
+                                dtype=torch.int32,
+                            ).reshape(-1, 1),
+                        ),
+                    )
+                )
+                keys.append((int(center_type),))
+
+            return TensorMap(
+                keys=Labels(
+                    ["center_type"],
+                    torch.as_tensor(keys, device=graph.R_ij.device, dtype=torch.int32),
+                ),
+                blocks=blocks,
+            )
+
         # Reuse graph tensors to avoid reconstructing systems/frames.
         nu2 = self.power_spectrum(
             mean_over_samples=False,
@@ -1146,26 +1237,85 @@ class EllipsoidalDensityProjection(torch.nn.Module):
         )
 
         self.shape = int(features.shape[1])
-        return TensorMap(
-            keys=Labels(
-                ["_"], torch.tensor([[0]], device=features.device, dtype=torch.int32)
-            ),
-            blocks=[
+
+        blocks = []
+        keys = []
+
+        all_species = (
+            self.species
+            if self.species is not None
+            else sorted(
+                int(x) for x in torch.unique(graph.species).detach().cpu().tolist()
+            )
+        )
+
+        for center_type in all_species:
+            mask = graph.species == int(center_type)
+            if not bool(mask.any()):
+                continue
+
+            sample_values = torch.stack(
+                [
+                    graph.structures[mask].to(
+                        device=features.device, dtype=torch.int32
+                    ),
+                    graph.atom_indices[mask].to(
+                        device=features.device, dtype=torch.int32
+                    ),
+                ],
+                dim=1,
+            )
+
+            target_rows = {
+                tuple(int(v) for v in row.detach().cpu().tolist()): idx
+                for idx, row in enumerate(target_samples.values)
+            }
+            row_indices = torch.tensor(
+                [
+                    target_rows[tuple(int(v) for v in row.detach().cpu().tolist())]
+                    for row in sample_values
+                ],
+                device=features.device,
+                dtype=torch.long,
+            )
+
+            blocks.append(
                 TensorBlock(
-                    values=features,
-                    samples=target_samples,
+                    values=features.index_select(0, row_indices),
+                    samples=Labels(["system", "atom"], sample_values),
                     components=[],
                     properties=Labels(
                         ["property"],
                         torch.arange(
-                            features.shape[1], device=features.device, dtype=torch.int32
+                            features.shape[1],
+                            device=features.device,
+                            dtype=torch.int32,
                         ).reshape(-1, 1),
                     ),
                 )
-            ],
+            )
+            keys.append((int(center_type),))
+
+        return TensorMap(
+            keys=Labels(
+                ["center_type"],
+                torch.as_tensor(keys, device=features.device, dtype=torch.int32),
+            ),
+            blocks=blocks,
         )
 
-    def forward(self, **kwargs: Any) -> TensorMap:
+    def forward(
+        self,
+        R_ij: torch.Tensor,
+        centers: torch.Tensor,
+        neighbors: torch.Tensor,
+        species: torch.Tensor,
+        structures: torch.Tensor,
+        atom_indices: torch.Tensor,
+        rotations: torch.Tensor,
+        ellipsoid_lengths: torch.Tensor,
+        normalize: bool = True,
+    ) -> TensorMap:
         """Default module output for AniSOAP-BPNN: per-atom scalar feature map."""
         return self.power_spectrum_feature_tensor_map(**kwargs)
 
