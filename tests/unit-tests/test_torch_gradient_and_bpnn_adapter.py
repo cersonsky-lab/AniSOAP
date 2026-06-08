@@ -173,19 +173,37 @@ def test_anisoap_bpnn_feature_tensormap_layout_and_gradients():
     assert hasattr(features, "keys")
     assert hasattr(features, "blocks")
     assert hasattr(features, "block")
-    assert len(features.blocks()) == 1
+    assert list(features.keys.names) == ["center_type"]
+    assert features.keys.values.ndim == 2
+    assert features.keys.values.shape[1] == 1
 
-    assert list(features.keys.names) == ["_"]
-    assert features.keys.values.shape == (1, 1)
+    all_values = []
+    all_samples = []
 
-    block = features.block(0)
+    for _, block in features.items():
+        assert list(block.samples.names) == ["system", "atom"]
+        assert block.components == []
+        assert list(block.properties.names) == ["property"]
 
-    assert list(block.samples.names) == ["system", "atom"]
-    assert block.samples.values.shape == (2, 2)
+        all_values.append(block.values)
+        all_samples.append(block.samples.values)
+
+    samples = torch.cat(all_samples, dim=0)
+    values = torch.cat(all_values, dim=0)
+
+    assert samples.shape == (2, 2)
     assert torch.equal(
-        block.samples.values,
-        torch.tensor([[0, 0], [0, 1]], dtype=torch.int32),
+        samples,
+        torch.tensor([[0, 0], [0, 1]], dtype=torch.int32, device=samples.device),
     )
+
+    assert values.ndim == 2
+    assert values.shape[0] == 2
+    assert values.shape[1] > 0
+    assert calc.shape == values.shape[1]
+    assert torch.is_tensor(values)
+    assert values.requires_grad
+    assert torch.isfinite(values).all()
 
     assert block.components == []
     assert list(block.properties.names) == ["property"]
