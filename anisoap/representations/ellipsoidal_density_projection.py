@@ -16,17 +16,17 @@ from typing import (
 
 import numpy as np
 import torch
+from anisoap.representations.radial_basis import (
+    GTORadialBasis,
+    MonomialBasis,
+    _RadialBasis,
+)
+from anisoap.utils.spherical_to_cartesian import spherical_to_cartesian
 from metatensor.torch import (
     Labels,
     TensorBlock,
     TensorMap,
 )
-
-from anisoap.representations.radial_basis import (
-    GTORadialBasis,
-    MonomialBasis,
-)
-from anisoap.utils.spherical_to_cartesian import spherical_to_cartesian
 
 from ..utils.metatensor_utils import (
     TorchClebschGordanReal,
@@ -467,10 +467,10 @@ def pairwise_ellip_expansion(
     atom_indices: torch.Tensor,
     rotation_matrices: torch.Tensor,
     ellipsoid_lengths: torch.Tensor,
-    sph_to_cart: Sequence[np.ndarray],
-    radial_basis: Any,
-    *,
-    types: Optional[Sequence[int]] = None,
+    sph_to_cart,
+    radial_basis,
+    types: List[int],
+    num_ns: List[int],
     normalize: bool = True,
 ) -> TensorMap:
     r"""Torch-native pairwise expansion ``<a n l m | rho_ij>``.
@@ -493,8 +493,12 @@ def pairwise_ellip_expansion(
     else:
         types = [int(x) for x in types]
 
-    num_ns = radial_basis.get_num_radial_functions()
-    maxdeg = int(np.max(np.arange(lmax + 1) + 2 * np.array(num_ns)))
+    # num_ns = radial_basis.get_num_radial_functions()
+    maxdeg = 0
+    for l in range(lmax + 1):
+        candidate = l + 2 * (int(num_ns[l]) - 1)
+        if candidate > maxdeg:
+            maxdeg = candidate
     scaled_sph_to_cart = []
     for l in range(lmax + 1):
         prefactor = math.sqrt((4.0 * math.pi) / (2 * l + 1))
@@ -595,6 +599,7 @@ def pairwise_ellip_expansion(
     )
 
 
+@torch.jit.ignore
 def contract_pairwise_feat(
     pair_ellip_feat: TensorMap, types: Sequence[int]
 ) -> TensorMap:
@@ -794,6 +799,7 @@ class EllipsoidalDensityProjection(torch.nn.Module):
         self._cg = TorchClebschGordanReal(self.max_angular)
         self._neighbor_list_options = None
 
+    @torch.jit.ignore
     def requested_neighbor_lists(self) -> List[Any]:
         """Return the metatomic neighbor-list request for this descriptor."""
         try:
@@ -817,9 +823,8 @@ class EllipsoidalDensityProjection(torch.nn.Module):
 
     def _graph_from_inputs(
         self,
-        *,
-        systems: Optional[Sequence[Any]] = None,
-        frames: Optional[Sequence[Any]] = None,
+        systems=None,
+        frames=None,
         R_ij: Optional[torch.Tensor] = None,
         centers: Optional[torch.Tensor] = None,
         neighbors: Optional[torch.Tensor] = None,
@@ -866,11 +871,12 @@ class EllipsoidalDensityProjection(torch.nn.Module):
             ),
         )
 
+    @torch.jit.ignore
     def pairwise_expansion(
         self,
-        frames: Optional[Sequence[Any]] = None,
+        frames=None,
         *,
-        systems: Optional[Sequence[Any]] = None,
+        systems=None,
         R_ij: Optional[torch.Tensor] = None,
         centers: Optional[torch.Tensor] = None,
         neighbors: Optional[torch.Tensor] = None,
@@ -918,13 +924,14 @@ class EllipsoidalDensityProjection(torch.nn.Module):
             self.radial_basis,
             types=types,
             normalize=normalize,
+            num_ns=self.radial_basis.get_num_radial_functions(),
         )
 
     def transform(
         self,
-        frames: Optional[Sequence[Any]] = None,
+        frames=None,
         *,
-        systems: Optional[Sequence[Any]] = None,
+        systems=None,
         R_ij: Optional[torch.Tensor] = None,
         centers: Optional[torch.Tensor] = None,
         neighbors: Optional[torch.Tensor] = None,
@@ -972,17 +979,19 @@ class EllipsoidalDensityProjection(torch.nn.Module):
             self.radial_basis,
             types=types,
             normalize=normalize,
+            num_ns=self.radial_basis.get_num_radial_functions(),
         )
         coeffs = contract_pairwise_feat(pairwise, types)
         if return_pairwise:
             return coeffs, pairwise
         return coeffs
 
+    @torch.jit.ignore
     def power_spectrum(
         self,
-        frames: Optional[Sequence[Any]] = None,
+        frames=None,
         *,
-        systems: Optional[Sequence[Any]] = None,
+        systems=None,
         mean_over_samples: bool = True,
         show_progress: bool = False,
         normalize: bool = True,
@@ -1107,6 +1116,7 @@ class EllipsoidalDensityProjection(torch.nn.Module):
             )
         return dense, samples
 
+    @torch.jit.ignore
     def power_spectrum_features(
         self, aggregate_by_system: bool = False, **kwargs: Any
     ) -> Tuple[torch.Tensor, Labels]:
@@ -1128,20 +1138,31 @@ class EllipsoidalDensityProjection(torch.nn.Module):
 
         center_type = self.species[0] if self.species is not None else 0
         dummy_features = self.power_spectrum_feature_tensor_map(
-            R_ij=torch.zeros((1, 3), device=device, dtype=dtype),
-            centers=torch.tensor([0], device=device, dtype=torch.long),
-            neighbors=torch.tensor([0], device=device, dtype=torch.long),
-            species=torch.tensor([center_type], device=device, dtype=torch.long),
-            structures=torch.tensor([0], device=device, dtype=torch.long),
-            atom_indices=torch.tensor([0], device=device, dtype=torch.long),
-            rotations=torch.eye(3, device=device, dtype=dtype).reshape(1, 3, 3),
-            ellipsoid_lengths=torch.ones((1, 3), device=device, dtype=dtype),
+            torch.zeros((1, 3), device=device, dtype=dtype),
+            torch.tensor([0], device=device, dtype=torch.long),
+            torch.tensor([0], device=device, dtype=torch.long),
+            torch.tensor([center_type], device=device, dtype=torch.long),
+            torch.tensor([0], device=device, dtype=torch.long),
+            torch.tensor([0], device=device, dtype=torch.long),
+            torch.eye(3, device=device, dtype=dtype).reshape(1, 3, 3),
+            torch.ones((1, 3), device=device, dtype=dtype),
+            True,
         )
         self.shape = int(dummy_features.block(0).values.shape[1])
         return self.shape
 
+    @torch.jit.export
     def power_spectrum_feature_tensor_map(
-        self, *, normalize: bool = True, **kwargs: Any
+        self,
+        R_ij: torch.Tensor,
+        centers: torch.Tensor,
+        neighbors: torch.Tensor,
+        species: torch.Tensor,
+        structures: torch.Tensor,
+        atom_indices: torch.Tensor,
+        rotations: torch.Tensor,
+        ellipsoid_lengths: torch.Tensor,
+        normalize: bool = True,
     ) -> TensorMap:
         """Return a single-block per-atom feature TensorMap for AniSOAP-BPNN.
 
@@ -1149,16 +1170,34 @@ class EllipsoidalDensityProjection(torch.nn.Module):
         ``properties=['property']``, matching the SOAP-BPNN scalar descriptor
         interface.
         """
-        graph = self._graph_from_inputs(**kwargs)
+        R_ij = torch.as_tensor(R_ij)
+        device = R_ij.device
+        dtype = R_ij.dtype
+
+        centers = torch.as_tensor(centers, device=device, dtype=torch.long)
+        neighbors = torch.as_tensor(neighbors, device=device, dtype=torch.long)
+        species = torch.as_tensor(species, device=device, dtype=torch.long)
+        structures = torch.as_tensor(structures, device=device, dtype=torch.long)
+        atom_indices = torch.as_tensor(atom_indices, device=device, dtype=torch.long)
+        rotations = torch.as_tensor(rotations, device=device, dtype=dtype)
+        ellipsoid_lengths = torch.as_tensor(
+            ellipsoid_lengths,
+            device=device,
+            dtype=dtype,
+        )
+
         target_samples = Labels(
             ["system", "atom"],
             torch.stack(
-                [graph.structures.to(torch.int32), graph.atom_indices.to(torch.int32)],
+                [
+                    structures.to(dtype=torch.int32),
+                    atom_indices.to(dtype=torch.int32),
+                ],
                 dim=1,
-            ).to(device=graph.R_ij.device, dtype=torch.int32),
+            ),
         )
 
-        if graph.R_ij.shape[0] == 0:
+        if R_ij.shape[0] == 0:
             if self.shape is None:
                 self.shape = self._feature_size()
 
@@ -1166,26 +1205,22 @@ class EllipsoidalDensityProjection(torch.nn.Module):
                 self.species
                 if self.species is not None
                 else sorted(
-                    int(x) for x in torch.unique(graph.species).detach().cpu().tolist()
+                    int(x) for x in torch.unique(species).detach().cpu().tolist()
                 )
             )
 
-            blocks = []
-            keys = []
+            blocks = torch.jit.annotate(List[TensorBlock], [])
+            keys = torch.jit.annotate(List[Tuple[int]], [])
 
             for center_type in all_species:
-                mask = graph.species == int(center_type)
+                mask = species == int(center_type)
                 if not bool(mask.any()):
                     continue
 
                 sample_values = torch.stack(
                     [
-                        graph.structures[mask].to(
-                            device=graph.R_ij.device, dtype=torch.int32
-                        ),
-                        graph.atom_indices[mask].to(
-                            device=graph.R_ij.device, dtype=torch.int32
-                        ),
+                        structures[mask].to(device=R_ij.device, dtype=torch.int32),
+                        atom_indices[mask].to(device=R_ij.device, dtype=torch.int32),
                     ],
                     dim=1,
                 )
@@ -1194,8 +1229,8 @@ class EllipsoidalDensityProjection(torch.nn.Module):
                     TensorBlock(
                         values=torch.zeros(
                             (sample_values.shape[0], self.shape),
-                            device=graph.R_ij.device,
-                            dtype=graph.R_ij.dtype,
+                            device=R_ij.device,
+                            dtype=R_ij.dtype,
                         ),
                         samples=Labels(["system", "atom"], sample_values),
                         components=[],
@@ -1203,7 +1238,7 @@ class EllipsoidalDensityProjection(torch.nn.Module):
                             ["property"],
                             torch.arange(
                                 self.shape,
-                                device=graph.R_ij.device,
+                                device=R_ij.device,
                                 dtype=torch.int32,
                             ).reshape(-1, 1),
                         ),
@@ -1214,23 +1249,42 @@ class EllipsoidalDensityProjection(torch.nn.Module):
             return TensorMap(
                 keys=Labels(
                     ["center_type"],
-                    torch.as_tensor(keys, device=graph.R_ij.device, dtype=torch.int32),
+                    torch.as_tensor(keys, device=R_ij.device, dtype=torch.int32),
                 ),
                 blocks=blocks,
             )
 
-        # Reuse graph tensors to avoid reconstructing systems/frames.
-        nu2 = self.power_spectrum(
-            mean_over_samples=False,
-            R_ij=graph.R_ij,
-            centers=graph.centers,
-            neighbors=graph.neighbors,
-            species=graph.species,
-            structures=graph.structures,
-            atom_indices=graph.atom_indices,
-            rotations=graph.rotations,
-            ellipsoid_lengths=graph.ellipsoid_lengths,
+        if self.species is None:
+            raise RuntimeError(
+                "TorchScript path requires EllipsoidalDensityProjection.species to be set."
+            )
+        types = self.species
+
+        pairwise = pairwise_ellip_expansion(
+            self.max_angular,
+            R_ij,
+            centers,
+            neighbors,
+            species,
+            structures,
+            atom_indices,
+            rotations,
+            ellipsoid_lengths,
+            self.sph_to_cart,
+            self.radial_basis,
+            types=types,
             normalize=normalize,
+            num_ns=self.radial_basis.get_num_radial_functions(),
+        )
+
+        coeffs = contract_pairwise_feat(pairwise, types)
+        nu1 = standardize_keys(coeffs)
+        nu2 = cg_combine(
+            nu1,
+            nu1,
+            clebsch_gordan=self._cg,
+            lcut=0,
+            other_keys_match=["types_center"],
         )
         features, _ = self.power_spectrum_features_from_tensormap(
             nu2, target_samples=target_samples
@@ -1238,30 +1292,24 @@ class EllipsoidalDensityProjection(torch.nn.Module):
 
         self.shape = int(features.shape[1])
 
-        blocks = []
-        keys = []
+        blocks = torch.jit.annotate(List[TensorBlock], [])
+        keys = torch.jit.annotate(List[Tuple[int]], [])
 
         all_species = (
             self.species
             if self.species is not None
-            else sorted(
-                int(x) for x in torch.unique(graph.species).detach().cpu().tolist()
-            )
+            else sorted(int(x) for x in torch.unique(species).detach().cpu().tolist())
         )
 
         for center_type in all_species:
-            mask = graph.species == int(center_type)
+            mask = species == int(center_type)
             if not bool(mask.any()):
                 continue
 
             sample_values = torch.stack(
                 [
-                    graph.structures[mask].to(
-                        device=features.device, dtype=torch.int32
-                    ),
-                    graph.atom_indices[mask].to(
-                        device=features.device, dtype=torch.int32
-                    ),
+                    structures[mask].to(device=features.device, dtype=torch.int32),
+                    atom_indices[mask].to(device=features.device, dtype=torch.int32),
                 ],
                 dim=1,
             )
@@ -1317,7 +1365,17 @@ class EllipsoidalDensityProjection(torch.nn.Module):
         normalize: bool = True,
     ) -> TensorMap:
         """Default module output for AniSOAP-BPNN: per-atom scalar feature map."""
-        return self.power_spectrum_feature_tensor_map(**kwargs)
+        return self.power_spectrum_feature_tensor_map(
+            R_ij=R_ij,
+            centers=centers,
+            neighbors=neighbors,
+            species=species,
+            structures=structures,
+            atom_indices=atom_indices,
+            rotations=rotations,
+            ellipsoid_lengths=ellipsoid_lengths,
+            normalize=normalize,
+        )
 
 
 __all__ = [

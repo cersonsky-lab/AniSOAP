@@ -1,11 +1,10 @@
 import numpy as np
+from anisoap.utils import monomial_iterator
 from scipy.special import (
     comb,
     factorial,
     factorial2,
 )
-
-from anisoap.utils import monomial_iterator
 
 # Here we are implementing recurrence of the form R_{l}^m = prefact_minus1* z * T_{l-1} + prefact_minus2* r2 * T_{l-2}
 # where R_l^m is a solid harmonic, when expressed on a monomial basis - R_l^m = \sum_{n0+n1+n2=l} T_{l}[n0,n1,n2] x^n0 y^n1 z^n2
@@ -83,7 +82,7 @@ def binom(n, k):
 
 
 def spherical_to_cartesian(lmax, num_ns):
-    """
+    r"""
     Finds the coefficients for the cartesian polynomial form of solid harmonics
     :math:`R_{lm} = \sqrt{(4\pi)/(2l+1)}*r^l*Y_{lm}`.  Note that our AniSOAP
     expansion does not contain the :math:`\sqrt{(4\pi)/(2l+1)}` prefactor, so in calculating
