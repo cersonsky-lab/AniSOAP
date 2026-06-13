@@ -1,4 +1,3 @@
-
 import torch
 from ase.io import read
 from metatensor.torch import Labels, TensorBlock, TensorMap
@@ -10,6 +9,7 @@ from metatrain.utils.data.target_info import get_energy_target_info
 from omegaconf import OmegaConf
 from torch.utils.data import random_split
 import numpy as np
+
 target_cfg = OmegaConf.create(
     {
         "quantity": "energy",
