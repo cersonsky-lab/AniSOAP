@@ -352,6 +352,8 @@ def build_frame(rx, ry, rz, A1, A2, quaternions=None, separation_distance=None, 
 
     if separation_distance is not None:
         frame.info["separation_distance"] = separation_distance
+    else:
+        frame.info['separation_distance'] = frame.get_all_distances(mic=True)[0, 1]
     if angles is not None:
         frame.arrays["angles"] = np.array(angles)
 
