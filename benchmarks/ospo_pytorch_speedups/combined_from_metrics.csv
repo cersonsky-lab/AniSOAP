@@ -1,0 +1,11 @@
+file,mode,wall_s,N,species
+ellipsoids,torch,0.21896767616271973,,
+one_species,numpy,0.49042439460754395,,1.0
+benzenes,torch,0.1308887004852295,,2.0
+three_species,numpy,0.39318180084228516,,3.0
+four_species,torch,0.22287511825561523,,4.0
+three_species,torch,0.18306541442871094,,3.0
+benzenes,numpy,0.24216747283935547,,2.0
+ellipsoids,numpy,0.21300196647644043,,
+one_species,torch,0.13603806495666504,,1.0
+four_species,numpy,0.2523961067199707,,4.0
