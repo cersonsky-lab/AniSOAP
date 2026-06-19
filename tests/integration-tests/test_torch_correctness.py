@@ -1,4 +1,5 @@
 import metatensor.torch as mts
+from pathlib import Path
 import torch
 import pytest
 import numpy as np
@@ -19,7 +20,8 @@ class TestTorchCorrectness:
         """
         lmax = 9
         nmax = 6
-        frames = read("./notebooks/ellipsoids.xyz", ":5")
+        repo_root = Path(__file__).resolve().parents[1]
+        frames = read(repo_root / "../notebooks" / "ellipsoids.xyz", ":5")
 
         a1, a2, a3 = 4.0, 4.0, 0.5
         for frame in frames:
@@ -44,6 +46,6 @@ class TestTorchCorrectness:
         x_anisoap_torch = calculator.power_spectrum(frames)
 
         x_anisoap_numpy = np.load(
-            "./tests/integration-tests/benzene_numpy_impl_5frames.npy"
+            repo_root / "integration-tests/benzene_numpy_impl_5frames.npy"
         )
         assert_allclose(x_anisoap_torch, x_anisoap_numpy, rtol=0, atol=1e-2)

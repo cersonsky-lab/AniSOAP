@@ -1,3 +1,4 @@
+import math
 import warnings
 from typing import (
     Any,
@@ -45,15 +46,12 @@ def inverse_matrix_sqrt(matrix: torch.Tensor, rcond=1e-8, tol=1e-3) -> torch.Ten
     # matrices. The old NumPy path used this only as a diagnostic; torch high-order
     # GTO slices can be badly conditioned even when the retained eigenspace is valid.
     if tol is not None:
-        try:
-            matrix2 = torch.linalg.pinv(result @ result)
-            err = torch.linalg.norm(matrix - matrix2)
-            if torch.isfinite(err) and err > tol:
-                raise ValueError(
-                    f"Incurred Numerical Imprecision {torch.linalg.norm(matrix-matrix2)= :.8f}"
-                )
-        except RuntimeError:
-            warnings.warn("Could not run inverse_matrix_sqrt reconstruction check")
+        matrix2 = torch.linalg.pinv(result @ result)
+        err = torch.linalg.norm(matrix - matrix2)
+        if torch.isfinite(err) and err > tol:
+            raise ValueError(
+                f"Incurred Numerical Imprecision {torch.linalg.norm(matrix-matrix2)= :.8f}"
+            )
 
     return result.to(dtype=original_dtype, device=original_device)
 
@@ -123,7 +121,7 @@ def orthonormalization_matrix(
     device=None,
     dtype=None,
 ) -> torch.Tensor:
-    """Return the original Lowdin radial orthonormalization matrix as torch."""
+    r"""Return the original Lowdin radial orthonormalization matrix as torch."""
     n_l = radial_basis.num_radial_functions[angular_channel]
     l_2n = angular_channel + 2 * torch.arange(n_l, device=device, dtype=torch.long)
     overlap = torch.as_tensor(radial_basis.overlap_matrix, device=device, dtype=dtype)
@@ -172,9 +170,9 @@ def gto_square_norm(n, sigma):
 
 
 def gto_prefactor(n, sigma):
-    """Computes the normalization prefactor of an unnormalized GTO.
+    r"""Computes the normalization prefactor of an unnormalized GTO.
 
-    This prefactor is simply :math:`\\frac{1}{\\sqrt{\\text{square_norm_area}}}`.
+    This prefactor is simply :math:`\frac{1}{\sqrt{\text{square_norm_area}}}`.
     Scaling a GTO by this prefactor will ensure that the GTO has square norm
     equal to 1.
 
@@ -191,7 +189,14 @@ def gto_prefactor(n, sigma):
         The normalization constant
 
     """
-    return np.sqrt(1 / gto_square_norm(n, sigma))
+    n = torch.as_tensor(n, dtype=torch.float64)
+    sigma = torch.as_tensor(sigma, device=n.device, dtype=torch.float64)
+
+    log_square_norm = (
+        math.log(0.5) + (2.0 * n + 3.0) * torch.log(sigma) + torch.lgamma(n + 1.5)
+    )
+
+    return torch.exp(-0.5 * log_square_norm)
 
 
 def gto_overlap(n, m, sigma_n, sigma_m):
@@ -225,15 +230,30 @@ def gto_overlap(n, m, sigma_n, sigma_m):
         overlap of the two normalized GTOs
 
     """
-    N_n = gto_prefactor(n, sigma_n)
-    N_m = gto_prefactor(m, sigma_m)
-    n_eff = (n + m) / 2
-    sigma_eff = np.sqrt(2 * sigma_n**2 * sigma_m**2 / (sigma_n**2 + sigma_m**2))
-    return N_n * N_m * gto_square_norm(n_eff, sigma_eff)
+    n = torch.as_tensor(n, dtype=torch.float64)
+    m = torch.as_tensor(m, device=n.device, dtype=torch.float64)
+    sigma_n = torch.as_tensor(sigma_n, device=n.device, dtype=torch.float64)
+    sigma_m = torch.as_tensor(sigma_m, device=n.device, dtype=torch.float64)
+
+    prefactor_n = gto_prefactor(n, sigma_n)
+    prefactor_m = gto_prefactor(m, sigma_m)
+
+    n_eff = (n + m) / 2.0
+    sigma_eff = torch.sqrt(2.0 * sigma_n**2 * sigma_m**2 / (sigma_n**2 + sigma_m**2))
+
+    log_overlap = (
+        torch.log(prefactor_n)
+        + torch.log(prefactor_m)
+        + math.log(0.5)
+        + (2.0 * n_eff + 3.0) * torch.log(sigma_eff)
+        + torch.lgamma(n_eff + 1.5)
+    )
+
+    return torch.exp(log_overlap)
 
 
 def monomial_square_norm(n, r_cut):
-    """
+    r"""
     Compute the square norm of monomials (inner product of itself over R^3).
 
     Parameters
@@ -250,7 +270,7 @@ def monomial_square_norm(n, r_cut):
 
 
 def monomial_prefactor(n, r_cut):
-    """
+    r"""
     Computes the normalization prefactor of an unnormalized monomial basis.
     This prefactor is simply :math:`1/\sqrt{square\_norm\_area}`.
     Scaling a basis by this prefactor will ensure that the basis has square norm equal to 1.
@@ -304,7 +324,7 @@ def monomial_overlap(n, m, r_cut):
 
 
 class _RadialBasis:
-    """
+    r"""
     Class for precomputing and storing all results related to the radial basis.
     This helps to keep a cleaner main code by avoiding if-else clauses
     related to the radial basis.
@@ -367,7 +387,7 @@ class _RadialBasis:
 
     # Get number of radial functions
     def get_num_radial_functions(self):
-        """
+        r"""
         Output the number of radial basis functions considered per value of l.
         If max_angular and max_radial are both specified, then the list will contain repeated values of max_radial
         Otherwise, the outputted list will specify the number of radial basis functions per l, which may be automatically
@@ -383,7 +403,7 @@ class _RadialBasis:
         return self.num_radial_functions
 
     def plot_basis(self, n_r=100):
-        """
+        r"""
         Plot the normalized basis functions used in calculating the expansion
         coefficients
 
@@ -448,7 +468,7 @@ class MonomialBasis(_RadialBasis):
         return gaussian_parameters(self, r_ij, lengths, rotation_matrix)
 
     def calc_overlap_matrix(self):
-        """
+        r"""
         Computes the overlap matrix for Monomnials over a fixed interval.
 
         The overlap matrix is a Gram matrix whose entries are the overlap:
@@ -480,7 +500,7 @@ class MonomialBasis(_RadialBasis):
         return S
 
     def orthonormalize_basis(self, features: TensorMap):
-        """
+        r"""
         Apply an in-place orthonormalization on the features, using Lodwin Symmetric Orthonormalization.
         Each block in the features TensorMap uses a basis set of l + 2n, so we must take the appropriate slices of
         the overlap matrix to compute the orthonormalization matrix.
@@ -540,7 +560,7 @@ class MonomialBasis(_RadialBasis):
         return features
 
     def get_basis(self, rs):
-        """
+        r"""
         Evaluate orthonormalized monomial basis functions on mesh rs.
 
         If lmax and nmax defined, then the number of functions outputted is lmax*(nmax+1)
@@ -601,7 +621,7 @@ class MonomialBasis(_RadialBasis):
 
 
 class GTORadialBasis(_RadialBasis):
-    """
+    r"""
     A subclass of _RadialBasis that contains attributes and methods required for the GTO basis.
 
     The GTO basis of order n is defined to be :math:`R(r) = r^n e^{(-r^2/(2\sigma^2))}`.
@@ -645,7 +665,7 @@ class GTORadialBasis(_RadialBasis):
         return gaussian_parameters(self, r_ij, lengths, rotation_matrix)
 
     def calc_overlap_matrix(self):
-        """Computes the overlap matrix for GTOs.
+        r"""Computes the overlap matrix for GTOs.
 
         The overlap matrix is a Gram matrix whose entries are the overlap:
 
@@ -684,7 +704,7 @@ class GTORadialBasis(_RadialBasis):
         return S
 
     def orthonormalize_basis(self, features: TensorMap):
-        """Applies in-place orthonormalization on the features.
+        r"""Applies in-place orthonormalization on the features.
 
         Apply an in-place orthonormalization on the features, using Lodwin Symmetric
         Orthonormalization. Each block in the features TensorMap uses a GTO set

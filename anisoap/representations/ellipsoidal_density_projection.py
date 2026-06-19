@@ -25,6 +25,7 @@ from metatensor.torch import (
 from anisoap.representations.radial_basis import (
     GTORadialBasis,
     MonomialBasis,
+    _RadialBasis,
 )
 from anisoap.utils.spherical_to_cartesian import spherical_to_cartesian
 
@@ -41,84 +42,138 @@ from .radial_basis import (
 )
 
 
-def compute_moments(A: torch.Tensor, a: torch.Tensor, maxdeg: int) -> torch.Tensor:
-    r"""Differentiable trivariate Gaussian moments.
-
-    Computes moments of ``exp(-1/2 (x-a)^T A (x-a))`` up to total polynomial
-    degree ``maxdeg``. This replaces the original Rust ``compute_moments`` call
-    on the torch path.
-    """
-    A = torch.as_tensor(A)
-    a = torch.as_tensor(a, device=A.device, dtype=A.dtype)
-    if A.shape != (3, 3):
-        raise ValueError(f"A must have shape (3, 3), got {tuple(A.shape)}")
-    if a.shape != (3,):
-        raise ValueError(f"a must have shape (3,), got {tuple(a.shape)}")
-    if maxdeg < 0:
-        raise ValueError("maxdeg must be non-negative")
-
-    device, dtype = A.device, A.dtype
-    cov = torch.linalg.inv(A)
-    norm = torch.as_tensor(
-        (2.0 * math.pi) ** 1.5, device=device, dtype=dtype
-    ) / torch.sqrt(torch.linalg.det(A))
-
-    # Store normalized raw moments first; multiply by the Gaussian integral at end.
-    M: Dict[Tuple[int, int, int], torch.Tensor] = {
-        (0, 0, 0): torch.ones((), device=device, dtype=dtype)
-    }
-    if maxdeg >= 1:
-        M[(1, 0, 0)] = a[0]
-        M[(0, 1, 0)] = a[1]
-        M[(0, 0, 1)] = a[2]
-    if maxdeg >= 2:
-        M[(2, 0, 0)] = cov[0, 0] + a[0] * a[0]
-        M[(0, 2, 0)] = cov[1, 1] + a[1] * a[1]
-        M[(0, 0, 2)] = cov[2, 2] + a[2] * a[2]
-        M[(1, 1, 0)] = cov[0, 1] + a[0] * a[1]
-        M[(0, 1, 1)] = cov[1, 2] + a[1] * a[2]
-        M[(1, 0, 1)] = cov[0, 2] + a[0] * a[2]
-
-    def get(i: int, j: int, k: int) -> torch.Tensor:
-        if i < 0 or j < 0 or k < 0 or i + j + k > maxdeg:
-            return torch.zeros((), device=device, dtype=dtype)
-        return M.get((i, j, k), torch.zeros((), device=device, dtype=dtype))
-
-    # Isserlis/Stein recurrence: E[X_p f(X)] = mu_p E[f] + sum_q Sigma_pq E[df/dx_q]
-    for degree in range(2, maxdeg):
-        updates: Dict[Tuple[int, int, int], torch.Tensor] = {}
+def _moment_index_maps(maxdeg: int, device=None):
+    """Build compact monomial maps for all exponents with total degree <= maxdeg."""
+    exponents_list: List[Tuple[int, int, int]] = []
+    for degree in range(maxdeg + 1):
         for n0 in range(degree + 1):
             for n1 in range(degree + 1 - n0):
                 n2 = degree - n0 - n1
-                base = get(n0, n1, n2)
-                updates[(n0 + 1, n1, n2)] = (
-                    a[0] * base
-                    + cov[0, 0] * n0 * get(n0 - 1, n1, n2)
-                    + cov[0, 1] * n1 * get(n0, n1 - 1, n2)
-                    + cov[0, 2] * n2 * get(n0, n1, n2 - 1)
-                )
-                if n0 == 0:
-                    updates[(n0, n1 + 1, n2)] = (
-                        a[1] * base
-                        + cov[1, 0] * n0 * get(n0 - 1, n1, n2)
-                        + cov[1, 1] * n1 * get(n0, n1 - 1, n2)
-                        + cov[1, 2] * n2 * get(n0, n1, n2 - 1)
-                    )
-                    if n1 == 0:
-                        updates[(n0, n1, n2 + 1)] = (
-                            a[2] * base
-                            + cov[2, 0] * n0 * get(n0 - 1, n1, n2)
-                            + cov[2, 1] * n1 * get(n0, n1 - 1, n2)
-                            + cov[2, 2] * n2 * get(n0, n1, n2 - 1)
-                        )
-        M.update(updates)
+                exponents_list.append((n0, n1, n2))
 
-    out = torch.zeros((maxdeg + 1, maxdeg + 1, maxdeg + 1), device=device, dtype=dtype)
-    if M:
-        idx = torch.tensor(list(M.keys()), device=device, dtype=torch.long).T
-        vals = torch.stack(list(M.values())) * norm
-        out = out.index_put(tuple(idx), vals, accumulate=False)
-    return out
+    index = {exp: i for i, exp in enumerate(exponents_list)}
+    exponents = torch.tensor(exponents_list, device=device, dtype=torch.long)
+    degrees = exponents.sum(dim=1)
+
+    parent = torch.full((len(exponents_list),), -1, device=device, dtype=torch.long)
+    direction = torch.full((len(exponents_list),), -1, device=device, dtype=torch.long)
+    decrement = torch.full(
+        (len(exponents_list), 3), -1, device=device, dtype=torch.long
+    )
+
+    for i, (n0, n1, n2) in enumerate(exponents_list):
+        if n0 + n1 + n2 == 0:
+            continue
+        if n0 > 0:
+            k = 0
+            p = (n0 - 1, n1, n2)
+        elif n1 > 0:
+            k = 1
+            p = (n0, n1 - 1, n2)
+        else:
+            k = 2
+            p = (n0, n1, n2 - 1)
+
+        parent[i] = index[p]
+        direction[i] = k
+        p_list = list(p)
+        for j in range(3):
+            if p_list[j] > 0:
+                q = p_list.copy()
+                q[j] -= 1
+                decrement[i, j] = index[tuple(q)]
+
+    return exponents, degrees, parent, direction, decrement
+
+
+def compute_moments_batched(
+    A: torch.Tensor,
+    a: torch.Tensor,
+    maxdeg: int,
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    r"""Batched unnormalized trivariate Gaussian raw moments.
+
+    Computes moments of ``exp(-1/2 (x-a)^T A (x-a))`` up to total polynomial
+    degree ``maxdeg``. The result is compact: only exponents with total degree
+    <= maxdeg are stored.
+
+    Returns
+    -------
+    moments
+        Shape ``(batch, n_monomials)``.
+    exponents
+        Shape ``(n_monomials, 3)``; each row is ``(n0, n1, n2)``.
+    """
+    A = torch.as_tensor(A)
+    if A.ndim == 2:
+        A = A.reshape(1, 3, 3)
+    a = torch.as_tensor(a, device=A.device, dtype=A.dtype)
+    if a.ndim == 1:
+        a = a.reshape(1, 3)
+    if A.shape[-2:] != (3, 3):
+        raise ValueError(f"A must have shape (..., 3, 3), got {tuple(A.shape)}")
+    if a.shape[-1] != 3:
+        raise ValueError(f"a must have shape (..., 3), got {tuple(a.shape)}")
+    if A.shape[0] != a.shape[0]:
+        raise ValueError("A and a must have the same batch dimension")
+    if maxdeg < 0:
+        raise ValueError("maxdeg must be non-negative")
+
+    device = A.device
+    dtype = A.dtype
+    batch = A.shape[0]
+    exponents, degrees, parent, direction, decrement = _moment_index_maps(
+        maxdeg, device=device
+    )
+
+    cov = torch.linalg.inv(A)
+    sign, logabsdet = torch.linalg.slogdet(A)
+    if not bool((sign > 0).all()):
+        raise ValueError("Gaussian precision matrices must be positive definite")
+    norm = torch.exp(1.5 * math.log(2.0 * math.pi) - 0.5 * logabsdet)
+
+    moments = torch.zeros((batch, exponents.shape[0]), device=device, dtype=dtype)
+    moments[:, 0] = 1.0
+
+    for degree in range(1, maxdeg + 1):
+        ids = torch.nonzero(degrees == degree, as_tuple=False).reshape(-1)
+        p = parent[ids]
+        k = direction[ids]
+        values = a[:, k] * moments[:, p]
+        parent_exponents = exponents[p]
+
+        for j in range(3):
+            dec = decrement[ids, j]
+            valid = dec >= 0
+            if bool(valid.any()):
+                coeff = parent_exponents[valid, j].to(dtype=dtype)
+                values[:, valid] = values[:, valid] + (
+                    coeff.reshape(1, -1) * cov[:, k[valid], j] * moments[:, dec[valid]]
+                )
+
+        moments[:, ids] = values
+
+    return norm.reshape(-1, 1) * moments, exponents
+
+
+def _compact_moments_to_cube(
+    moments: torch.Tensor,
+    exponents: torch.Tensor,
+    maxdeg: int,
+) -> torch.Tensor:
+    cube = torch.zeros(
+        (moments.shape[0], maxdeg + 1, maxdeg + 1, maxdeg + 1),
+        device=moments.device,
+        dtype=moments.dtype,
+    )
+    cube[:, exponents[:, 0], exponents[:, 1], exponents[:, 2]] = moments
+    return cube
+
+
+def compute_moments(A: torch.Tensor, a: torch.Tensor, maxdeg: int) -> torch.Tensor:
+    r"""Compatibility wrapper returning the historical dense moment cube."""
+    moments, exponents = compute_moments_batched(A, a, maxdeg)
+    return _compact_moments_to_cube(moments, exponents, maxdeg)[0]
 
 
 @dataclass
@@ -413,10 +468,10 @@ def pairwise_ellip_expansion(
     atom_indices: torch.Tensor,
     rotation_matrices: torch.Tensor,
     ellipsoid_lengths: torch.Tensor,
-    sph_to_cart: Sequence[np.ndarray],
-    radial_basis: Any,
-    *,
-    types: Optional[Sequence[int]] = None,
+    sph_to_cart,
+    radial_basis,
+    types: List[int],
+    num_ns: List[int],
     normalize: bool = True,
 ) -> TensorMap:
     r"""Torch-native pairwise expansion ``<a n l m | rho_ij>``.
@@ -439,8 +494,12 @@ def pairwise_ellip_expansion(
     else:
         types = [int(x) for x in types]
 
-    num_ns = radial_basis.get_num_radial_functions()
-    maxdeg = int(np.max(np.arange(lmax + 1) + 2 * np.array(num_ns)))
+    # num_ns = radial_basis.get_num_radial_functions()
+    maxdeg = 0
+    for l in range(lmax + 1):
+        candidate = l + 2 * (int(num_ns[l]) - 1)
+        if candidate > maxdeg:
+            maxdeg = candidate
     scaled_sph_to_cart = []
     for l in range(lmax + 1):
         prefactor = math.sqrt((4.0 * math.pi) / (2 * l + 1))
@@ -527,15 +586,21 @@ def pairwise_ellip_expansion(
                 )
                 keys.append(key)
 
+    if len(keys) == 0:
+        key_values = torch.empty((0, 3), device=device, dtype=torch.int32)
+    else:
+        key_values = torch.as_tensor(keys, device=device, dtype=torch.int32)
+
     return TensorMap(
         keys=Labels(
             ["types_center", "types_neighbor", "angular_channel"],
-            torch.as_tensor(keys, device=device, dtype=torch.int32),
+            key_values,
         ),
         blocks=blocks,
     )
 
 
+@torch.jit.ignore
 def contract_pairwise_feat(
     pair_ellip_feat: TensorMap, types: Sequence[int]
 ) -> TensorMap:
@@ -735,17 +800,14 @@ class EllipsoidalDensityProjection(torch.nn.Module):
         self._cg = TorchClebschGordanReal(self.max_angular)
         self._neighbor_list_options = None
 
+    @torch.jit.ignore
     def requested_neighbor_lists(self) -> List[Any]:
         """Return the metatomic neighbor-list request for this descriptor."""
         try:
             from metatomic.torch import NeighborListOptions
         except Exception:
-            try:
-                from metatomic.torch.system import NeighborListOptions
-            except Exception as exc:  # pragma: no cover
-                raise ImportError(
-                    "metatomic.torch is required for requested_neighbor_lists"
-                ) from exc
+            from metatomic.torch.system import NeighborListOptions
+
         if self._neighbor_list_options is None:
             try:
                 self._neighbor_list_options = NeighborListOptions(
@@ -762,9 +824,8 @@ class EllipsoidalDensityProjection(torch.nn.Module):
 
     def _graph_from_inputs(
         self,
-        *,
-        systems: Optional[Sequence[Any]] = None,
-        frames: Optional[Sequence[Any]] = None,
+        systems=None,
+        frames=None,
         R_ij: Optional[torch.Tensor] = None,
         centers: Optional[torch.Tensor] = None,
         neighbors: Optional[torch.Tensor] = None,
@@ -811,11 +872,12 @@ class EllipsoidalDensityProjection(torch.nn.Module):
             ),
         )
 
+    @torch.jit.ignore
     def pairwise_expansion(
         self,
-        frames: Optional[Sequence[Any]] = None,
+        frames=None,
         *,
-        systems: Optional[Sequence[Any]] = None,
+        systems=None,
         R_ij: Optional[torch.Tensor] = None,
         centers: Optional[torch.Tensor] = None,
         neighbors: Optional[torch.Tensor] = None,
@@ -863,13 +925,14 @@ class EllipsoidalDensityProjection(torch.nn.Module):
             self.radial_basis,
             types=types,
             normalize=normalize,
+            num_ns=self.radial_basis.get_num_radial_functions(),
         )
 
     def transform(
         self,
-        frames: Optional[Sequence[Any]] = None,
+        frames=None,
         *,
-        systems: Optional[Sequence[Any]] = None,
+        systems=None,
         R_ij: Optional[torch.Tensor] = None,
         centers: Optional[torch.Tensor] = None,
         neighbors: Optional[torch.Tensor] = None,
@@ -917,17 +980,19 @@ class EllipsoidalDensityProjection(torch.nn.Module):
             self.radial_basis,
             types=types,
             normalize=normalize,
+            num_ns=self.radial_basis.get_num_radial_functions(),
         )
         coeffs = contract_pairwise_feat(pairwise, types)
         if return_pairwise:
             return coeffs, pairwise
         return coeffs
 
+    @torch.jit.ignore
     def power_spectrum(
         self,
-        frames: Optional[Sequence[Any]] = None,
+        frames=None,
         *,
-        systems: Optional[Sequence[Any]] = None,
+        systems=None,
         mean_over_samples: bool = True,
         show_progress: bool = False,
         normalize: bool = True,
@@ -1003,7 +1068,14 @@ class EllipsoidalDensityProjection(torch.nn.Module):
                 device=device,
                 dtype=torch.long,
             )
-            dense.index_copy_(0, rows, vals)
+
+            block_dense = dense[:, col : col + dim]
+            block_dense.index_copy_(0, rows, vals)
+            dense = torch.cat(
+                [dense[:, :col], block_dense, dense[:, col + dim :]],
+                dim=1,
+            )
+
             col += dim
 
         samples = (
@@ -1045,6 +1117,7 @@ class EllipsoidalDensityProjection(torch.nn.Module):
             )
         return dense, samples
 
+    @torch.jit.ignore
     def power_spectrum_features(
         self, aggregate_by_system: bool = False, **kwargs: Any
     ) -> Tuple[torch.Tensor, Labels]:
@@ -1054,60 +1127,256 @@ class EllipsoidalDensityProjection(torch.nn.Module):
             nu2, aggregate_by_system=aggregate_by_system
         )
 
-    def power_spectrum_feature_tensor_map(self, **kwargs: Any) -> TensorMap:
+    def _feature_size(self, *, device=None, dtype=None) -> int:
+        """Infer the dense power-spectrum feature dimension from one dummy edge."""
+        if self.shape is not None:
+            return int(self.shape)
+
+        if dtype is None:
+            dtype = self.dtype
+        if device is None:
+            device = torch.device("cpu")
+
+        center_type = self.species[0] if self.species is not None else 0
+        dummy_features = self.power_spectrum_feature_tensor_map(
+            torch.zeros((1, 3), device=device, dtype=dtype),
+            torch.tensor([0], device=device, dtype=torch.long),
+            torch.tensor([0], device=device, dtype=torch.long),
+            torch.tensor([center_type], device=device, dtype=torch.long),
+            torch.tensor([0], device=device, dtype=torch.long),
+            torch.tensor([0], device=device, dtype=torch.long),
+            torch.eye(3, device=device, dtype=dtype).reshape(1, 3, 3),
+            torch.ones((1, 3), device=device, dtype=dtype),
+            True,
+        )
+        self.shape = int(dummy_features.block(0).values.shape[1])
+        return self.shape
+
+    @torch.jit.export
+    def power_spectrum_feature_tensor_map(
+        self,
+        R_ij: torch.Tensor,
+        centers: torch.Tensor,
+        neighbors: torch.Tensor,
+        species: torch.Tensor,
+        structures: torch.Tensor,
+        atom_indices: torch.Tensor,
+        rotations: torch.Tensor,
+        ellipsoid_lengths: torch.Tensor,
+        normalize: bool = True,
+    ) -> TensorMap:
         """Return a single-block per-atom feature TensorMap for AniSOAP-BPNN.
 
         The block layout is ``samples=['system', 'atom']`` and
         ``properties=['property']``, matching the SOAP-BPNN scalar descriptor
         interface.
         """
-        graph = self._graph_from_inputs(**kwargs)
+        R_ij = torch.as_tensor(R_ij)
+        device = R_ij.device
+        dtype = R_ij.dtype
+
+        centers = torch.as_tensor(centers, device=device, dtype=torch.long)
+        neighbors = torch.as_tensor(neighbors, device=device, dtype=torch.long)
+        species = torch.as_tensor(species, device=device, dtype=torch.long)
+        structures = torch.as_tensor(structures, device=device, dtype=torch.long)
+        atom_indices = torch.as_tensor(atom_indices, device=device, dtype=torch.long)
+        rotations = torch.as_tensor(rotations, device=device, dtype=dtype)
+        ellipsoid_lengths = torch.as_tensor(
+            ellipsoid_lengths,
+            device=device,
+            dtype=dtype,
+        )
+
         target_samples = Labels(
             ["system", "atom"],
             torch.stack(
-                [graph.structures.to(torch.int32), graph.atom_indices.to(torch.int32)],
+                [
+                    structures.to(dtype=torch.int32),
+                    atom_indices.to(dtype=torch.int32),
+                ],
                 dim=1,
-            ).to(device=graph.R_ij.device, dtype=torch.int32),
+            ),
         )
-        # Reuse graph tensors to avoid reconstructing systems/frames.
-        nu2 = self.power_spectrum(
-            mean_over_samples=False,
-            R_ij=graph.R_ij,
-            centers=graph.centers,
-            neighbors=graph.neighbors,
-            species=graph.species,
-            structures=graph.structures,
-            atom_indices=graph.atom_indices,
-            rotations=graph.rotations,
-            ellipsoid_lengths=graph.ellipsoid_lengths,
+
+        if R_ij.shape[0] == 0:
+            if self.shape is None:
+                self.shape = self._feature_size()
+
+            all_species = (
+                self.species
+                if self.species is not None
+                else sorted(
+                    int(x) for x in torch.unique(species).detach().cpu().tolist()
+                )
+            )
+
+            blocks = torch.jit.annotate(List[TensorBlock], [])
+            keys = torch.jit.annotate(List[Tuple[int]], [])
+
+            for center_type in all_species:
+                mask = species == int(center_type)
+                if not bool(mask.any()):
+                    continue
+
+                sample_values = torch.stack(
+                    [
+                        structures[mask].to(device=R_ij.device, dtype=torch.int32),
+                        atom_indices[mask].to(device=R_ij.device, dtype=torch.int32),
+                    ],
+                    dim=1,
+                )
+
+                blocks.append(
+                    TensorBlock(
+                        values=torch.zeros(
+                            (sample_values.shape[0], self.shape),
+                            device=R_ij.device,
+                            dtype=R_ij.dtype,
+                        ),
+                        samples=Labels(["system", "atom"], sample_values),
+                        components=[],
+                        properties=Labels(
+                            ["property"],
+                            torch.arange(
+                                self.shape,
+                                device=R_ij.device,
+                                dtype=torch.int32,
+                            ).reshape(-1, 1),
+                        ),
+                    )
+                )
+                keys.append((int(center_type),))
+
+            return TensorMap(
+                keys=Labels(
+                    ["center_type"],
+                    torch.as_tensor(keys, device=R_ij.device, dtype=torch.int32),
+                ),
+                blocks=blocks,
+            )
+
+        if self.species is None:
+            raise RuntimeError(
+                "TorchScript path requires EllipsoidalDensityProjection.species to be set."
+            )
+        types = self.species
+
+        pairwise = pairwise_ellip_expansion(
+            self.max_angular,
+            R_ij,
+            centers,
+            neighbors,
+            species,
+            structures,
+            atom_indices,
+            rotations,
+            ellipsoid_lengths,
+            self.sph_to_cart,
+            self.radial_basis,
+            types=types,
+            normalize=normalize,
+            num_ns=self.radial_basis.get_num_radial_functions(),
+        )
+
+        coeffs = contract_pairwise_feat(pairwise, types)
+        nu1 = standardize_keys(coeffs)
+        nu2 = cg_combine(
+            nu1,
+            nu1,
+            clebsch_gordan=self._cg,
+            lcut=0,
+            other_keys_match=["types_center"],
         )
         features, _ = self.power_spectrum_features_from_tensormap(
             nu2, target_samples=target_samples
         )
 
         self.shape = int(features.shape[1])
-        return TensorMap(
-            keys=Labels(
-                ["_"], torch.tensor([[0]], device=features.device, dtype=torch.int32)
-            ),
-            blocks=[
+
+        blocks = torch.jit.annotate(List[TensorBlock], [])
+        keys = torch.jit.annotate(List[Tuple[int]], [])
+
+        all_species = (
+            self.species
+            if self.species is not None
+            else sorted(int(x) for x in torch.unique(species).detach().cpu().tolist())
+        )
+
+        for center_type in all_species:
+            mask = species == int(center_type)
+            if not bool(mask.any()):
+                continue
+
+            sample_values = torch.stack(
+                [
+                    structures[mask].to(device=features.device, dtype=torch.int32),
+                    atom_indices[mask].to(device=features.device, dtype=torch.int32),
+                ],
+                dim=1,
+            )
+
+            target_rows = {
+                tuple(int(v) for v in row.detach().cpu().tolist()): idx
+                for idx, row in enumerate(target_samples.values)
+            }
+            row_indices = torch.tensor(
+                [
+                    target_rows[tuple(int(v) for v in row.detach().cpu().tolist())]
+                    for row in sample_values
+                ],
+                device=features.device,
+                dtype=torch.long,
+            )
+
+            blocks.append(
                 TensorBlock(
-                    values=features,
-                    samples=target_samples,
+                    values=features.index_select(0, row_indices),
+                    samples=Labels(["system", "atom"], sample_values),
                     components=[],
                     properties=Labels(
                         ["property"],
                         torch.arange(
-                            features.shape[1], device=features.device, dtype=torch.int32
+                            features.shape[1],
+                            device=features.device,
+                            dtype=torch.int32,
                         ).reshape(-1, 1),
                     ),
                 )
-            ],
+            )
+            keys.append((int(center_type),))
+
+        return TensorMap(
+            keys=Labels(
+                ["center_type"],
+                torch.as_tensor(keys, device=features.device, dtype=torch.int32),
+            ),
+            blocks=blocks,
         )
 
-    def forward(self, **kwargs: Any) -> TensorMap:
+    def forward(
+        self,
+        R_ij: torch.Tensor,
+        centers: torch.Tensor,
+        neighbors: torch.Tensor,
+        species: torch.Tensor,
+        structures: torch.Tensor,
+        atom_indices: torch.Tensor,
+        rotations: torch.Tensor,
+        ellipsoid_lengths: torch.Tensor,
+        normalize: bool = True,
+    ) -> TensorMap:
         """Default module output for AniSOAP-BPNN: per-atom scalar feature map."""
-        return self.power_spectrum_feature_tensor_map(**kwargs)
+        return self.power_spectrum_feature_tensor_map(
+            R_ij=R_ij,
+            centers=centers,
+            neighbors=neighbors,
+            species=species,
+            structures=structures,
+            atom_indices=atom_indices,
+            rotations=rotations,
+            ellipsoid_lengths=ellipsoid_lengths,
+            normalize=normalize,
+        )
 
 
 __all__ = [

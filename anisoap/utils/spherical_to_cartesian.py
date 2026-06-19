@@ -83,7 +83,7 @@ def binom(n, k):
 
 
 def spherical_to_cartesian(lmax, num_ns):
-    """
+    r"""
     Finds the coefficients for the cartesian polynomial form of solid harmonics
     :math:`R_{lm} = \sqrt{(4\pi)/(2l+1)}*r^l*Y_{lm}`.  Note that our AniSOAP
     expansion does not contain the :math:`\sqrt{(4\pi)/(2l+1)}` prefactor, so in calculating
