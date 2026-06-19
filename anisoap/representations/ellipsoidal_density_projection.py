@@ -16,17 +16,18 @@ from typing import (
 
 import numpy as np
 import torch
+from metatensor.torch import (
+    Labels,
+    TensorBlock,
+    TensorMap,
+)
+
 from anisoap.representations.radial_basis import (
     GTORadialBasis,
     MonomialBasis,
     _RadialBasis,
 )
 from anisoap.utils.spherical_to_cartesian import spherical_to_cartesian
-from metatensor.torch import (
-    Labels,
-    TensorBlock,
-    TensorMap,
-)
 
 from ..utils.metatensor_utils import (
     TorchClebschGordanReal,
