@@ -146,7 +146,7 @@ def normalized_quaternions(q: torch.Tensor) -> torch.Tensor:
 def build_hypers(
     lmax: int = 3,
     nmax: int = 4,
-    cutoff: float = 4.5,
+    cutoff: float = 5.0,
     width: float = 0.5,
 ) -> dict:
     """Build AniSOAP-BPNN hypers in the format expected by this architecture."""
@@ -205,7 +205,7 @@ def energy_target(atoms, system_i: int) -> TensorMap:
 
     block = TensorBlock(
         values=torch.tensor([[atoms.get_potential_energy()]], dtype=torch.float64),
-        samples=Labels(["system"], torch.tensor([[0]], dtype=torch.int32)),
+        samples=Labels(["system"], torch.tensor([[system_i]], dtype=torch.int32)),
         components=[],
         properties=properties,
     )
@@ -240,7 +240,7 @@ def torque_target(atoms, system_i: int) -> TensorMap:
         values=torques.reshape(n_atoms, 3, 1),
         samples=Labels(
             ["system", "atom"],
-            torch.tensor([[0, i] for i in range(n_atoms)], dtype=torch.int32),
+            torch.tensor([[system_i, i] for i in range(n_atoms)], dtype=torch.int32),
         ),
         components=[Labels(["xyz"], torch.tensor([[0], [1], [2]], dtype=torch.int32))],
         properties=Labels(["torque"], torch.tensor([[0]], dtype=torch.int32)),
@@ -269,6 +269,7 @@ def load_dataset(path: Path, stride: int = 6) -> tuple[list, list]:
             raise KeyError("ASE frame is missing frame.arrays['quaternions']")
         for name in ["c_diameter[1]", "c_diameter[2]", "c_diameter[3]"]:
             if name not in frame.arrays:
+                print(frame.arrays)
                 raise KeyError(f"ASE frame is missing frame.arrays[{name!r}]")
 
         q = np.asarray(frame.arrays["quaternions"], dtype=np.float64)
@@ -332,9 +333,9 @@ def build_trainer(
             "num_epochs": num_epochs,
             "batch_size": batch_size,
             "learning_rate": learning_rate,
-            "atomic_baseline": {ENERGY_TARGET: {0: 0}},
-            "scale_targets": True,
-            "fixed_scaling_weights": {ENERGY_TARGET: 1.0},
+            "atomic_baseline": {},
+            "scale_targets": False,
+            "fixed_scaling_weights": {},
             "batch_atom_bounds": [None, None],
             "num_workers": 0,
             "loss": {
@@ -912,6 +913,17 @@ def train_model(
     model = model.to(dtype=torch.float64)
 
     params_before = flattened_parameters(model)
+    print("\n=== target sample labels debug ===")
+    for i in range(min(8, len(train_dataset))):
+        labels = train_dataset[i]["energy"].block().samples
+        print(i, labels.names, labels.values.reshape(-1).tolist())
+
+    print("\n=== target sample labels debug ===")
+    for i in range(min(8, len(train_dataset))):
+        e_labels = train_dataset[i]["energy"].block().samples
+        t_labels = train_dataset[i]["torques"].block().samples
+        print("energy", i, e_labels.names, e_labels.values.tolist())
+        print("torque", i, t_labels.names, t_labels.values.tolist())
     result = trainer.train(
         model=model,
         dtype=torch.float64,
@@ -978,7 +990,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--learning-rate", type=float, default=1e-3)
     parser.add_argument("--lmax", type=int, default=3)
     parser.add_argument("--nmax", type=int, default=4)
-    parser.add_argument("--cutoff", type=float, default=4.5)
+    parser.add_argument("--cutoff", type=float, default=5.0)
     parser.add_argument("--fd-delta", type=float, default=1e-4)
     parser.add_argument(
         "--fd-max-systems", type=int, default=2, help="Use -1 for all systems."
