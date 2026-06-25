@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import argparse
 import copy
+import logging
+import time
 from pathlib import Path
 from typing import Iterable
 
@@ -449,6 +451,17 @@ def print_parameter_change(
     print("num changed > 1e-14:", int((diff > 1e-14).sum().item()))
 
 
+def print_progress(label: str, current: int, total: int, start_time: float) -> None:
+    """Print simple elapsed-time progress for long loops."""
+    elapsed = time.time() - start_time
+    rate = current / elapsed if elapsed > 0.0 else 0.0
+    remaining = (total - current) / rate if rate > 0.0 else float("nan")
+    print(
+        f"{label}: {current}/{total} elapsed={elapsed:.1f}s eta={remaining:.1f}s",
+        flush=True,
+    )
+
+
 def rmse_mae(y_true: np.ndarray, y_pred: np.ndarray) -> tuple[float, float]:
     diff = y_pred - y_true
     return float(np.sqrt(np.mean(diff**2))), float(np.mean(np.abs(diff)))
@@ -679,17 +692,30 @@ def check_single_component_force_consistency(
 
 
 def exported_energy_parity_with_model(
-    exported, model: BPNN, dataset, output_dir: Path
+    exported,
+    model: BPNN,
+    dataset,
+    output_dir: Path,
+    progress_interval: int,
 ) -> None:
     """Check exported-model energy parity with neighbor lists explicitly attached."""
     y_true = []
     y_pred = []
+    samples = list(dataset)
+    total = len(samples)
+    start_time = time.time()
+    print(f"energy parity: starting {total} systems", flush=True)
 
-    for sample in dataset:
+    for sample_i, sample in enumerate(samples, start=1):
         system = with_neighbor_lists(model, [copy.deepcopy(sample["system"])])[0]
         pred = exported([system], exported_energy_options(), check_consistency=True)
         y_true.append(true_energy(sample))
         y_pred.append(pred[ENERGY_TARGET].block(0).values.item())
+
+        if progress_interval > 0 and (
+            sample_i == 1 or sample_i == total or sample_i % progress_interval == 0
+        ):
+            print_progress("energy parity", sample_i, total, start_time)
 
     plot_parity(
         np.asarray(y_true),
@@ -701,15 +727,24 @@ def exported_energy_parity_with_model(
     )
 
 
-def autograd_force_parity(model: BPNN, dataset, output_dir: Path) -> None:
+def autograd_force_parity(
+    model: BPNN,
+    dataset,
+    output_dir: Path,
+    progress_interval: int,
+) -> None:
     """Compute forces by differentiating the non-exported torch model."""
     f_true = []
     f_pred = []
+    samples = list(dataset)
+    total = len(samples)
+    start_time = time.time()
+    print(f"autograd force parity: starting {total} systems", flush=True)
 
     was_training = model.training
     model.train()
     try:
-        for sample_i, sample in enumerate(dataset):
+        for sample_i, sample in enumerate(samples):
             system = copy.deepcopy(sample["system"])
             system.positions.requires_grad_(True)
             system = with_neighbor_lists(model, [system])[0]
@@ -733,11 +768,18 @@ def autograd_force_parity(model: BPNN, dataset, output_dir: Path) -> None:
 
             if sample_i < 5:
                 print(
-                    f"force autograd system {sample_i}: energy requires_grad={energy.requires_grad}"
+                    f"force autograd system {sample_i}: energy requires_grad={energy.requires_grad}",
+                    flush=True,
                 )
 
             f_true.append(forces_true.cpu().numpy().ravel())
             f_pred.append(forces_pred.cpu().numpy().ravel())
+
+            done = sample_i + 1
+            if progress_interval > 0 and (
+                done == 1 or done == total or done % progress_interval == 0
+            ):
+                print_progress("autograd force parity", done, total, start_time)
     finally:
         if not was_training:
             model.eval()
@@ -775,11 +817,15 @@ def finite_difference_force_parity(
     output_dir: Path,
     delta: float,
     max_systems: int | None,
+    progress_interval: int,
 ) -> None:
     """Compute finite-difference forces from exported model energies."""
     f_true = []
     f_pred = []
     samples = list(dataset)[:max_systems] if max_systems is not None else list(dataset)
+    total = len(samples)
+    start_time = time.time()
+    print(f"finite-difference forces: starting {total} systems", flush=True)
 
     for sample_i, sample in enumerate(samples):
         system = copy.deepcopy(sample["system"])
@@ -794,9 +840,12 @@ def finite_difference_force_parity(
 
         f_true.append(forces_true.cpu().numpy().ravel())
         f_pred.append(forces_fd.cpu().numpy().ravel())
-        print(
-            f"finite-difference forces: completed system {sample_i + 1}/{len(samples)}"
-        )
+
+        done = sample_i + 1
+        if progress_interval > 0 and (
+            done == 1 or done == total or done % progress_interval == 0
+        ):
+            print_progress("finite-difference forces", done, total, start_time)
 
     plot_parity(
         np.concatenate(f_true),
@@ -838,12 +887,20 @@ def finite_difference_torque_component(
 
 
 def finite_difference_torque_parity(
-    model: BPNN, dataset, output_dir: Path, delta: float, max_systems: int | None
+    model: BPNN,
+    dataset,
+    output_dir: Path,
+    delta: float,
+    max_systems: int | None,
+    progress_interval: int,
 ) -> None:
     """Evaluate model torques by finite-differencing energy w.r.t. rotations."""
     tau_true = []
     tau_pred = []
     samples = list(dataset)[:max_systems] if max_systems is not None else list(dataset)
+    total = len(samples)
+    start_time = time.time()
+    print(f"finite-difference torques: starting {total} systems", flush=True)
 
     for sample_i, sample in enumerate(samples):
         system = copy.deepcopy(sample["system"])
@@ -858,9 +915,12 @@ def finite_difference_torque_parity(
 
         tau_true.append(true.cpu().numpy().ravel())
         tau_pred.append(pred.cpu().numpy().ravel())
-        print(
-            f"finite-difference torques: completed system {sample_i + 1}/{len(samples)}"
-        )
+
+        done = sample_i + 1
+        if progress_interval > 0 and (
+            done == 1 or done == total or done % progress_interval == 0
+        ):
+            print_progress("finite-difference torques", done, total, start_time)
 
     plot_parity(
         np.concatenate(tau_true),
@@ -917,13 +977,13 @@ def train_model(
     for i in range(min(8, len(train_dataset))):
         labels = train_dataset[i]["energy"].block().samples
         print(i, labels.names, labels.values.reshape(-1).tolist())
+    print(
+        f"trainer.train: starting epochs={num_epochs}, batch_size={batch_size}, "
+        f"train={len(train_dataset)}, val={len(val_dataset)}",
+        flush=True,
+    )
+    train_start = time.time()
 
-    print("\n=== target sample labels debug ===")
-    for i in range(min(8, len(train_dataset))):
-        e_labels = train_dataset[i]["energy"].block().samples
-        t_labels = train_dataset[i]["torques"].block().samples
-        print("energy", i, e_labels.names, e_labels.values.tolist())
-        print("torque", i, t_labels.names, t_labels.values.tolist())
     result = trainer.train(
         model=model,
         dtype=torch.float64,
@@ -932,6 +992,8 @@ def train_model(
         val_datasets=[val_dataset],
         checkpoint_dir=str(output_dir),
     )
+
+    print(f"trainer.train: finished in {time.time() - train_start:.1f}s", flush=True)
 
     if isinstance(result, BPNN):
         model = result
@@ -959,22 +1021,31 @@ def evaluate_split(
     skip_autograd: bool,
     skip_fd: bool,
     skip_torque: bool,
+    progress_interval: int,
 ) -> None:
     """Run all requested parity checks for one split."""
     split_dir = output_dir / split_name
     print(f"\n=== evaluating split: {split_name} ({len(dataset)} systems) ===")
 
     if not skip_energy:
-        exported_energy_parity_with_model(exported, model, dataset, split_dir)
+        exported_energy_parity_with_model(
+            exported, model, dataset, split_dir, progress_interval
+        )
     if not skip_autograd:
-        autograd_force_parity(model, dataset, split_dir)
+        autograd_force_parity(model, dataset, split_dir, progress_interval)
     if not skip_fd:
         finite_difference_force_parity(
-            exported, model, dataset, split_dir, fd_delta, fd_max_systems
+            exported,
+            model,
+            dataset,
+            split_dir,
+            fd_delta,
+            fd_max_systems,
+            progress_interval,
         )
     if not skip_torque:
         finite_difference_torque_parity(
-            model, dataset, split_dir, fd_delta, fd_max_systems
+            model, dataset, split_dir, fd_delta, fd_max_systems, progress_interval
         )
 
 
@@ -1018,11 +1089,29 @@ def parse_args() -> argparse.Namespace:
         help="If >0, train and evaluate only the first N structures.",
     )
     parser.add_argument("--force-weight", type=float, default=10.0)
+    parser.add_argument(
+        "--progress-interval",
+        type=int,
+        default=50,
+        help="Print progress every N systems in parity/evaluation loops. Use 0 to disable.",
+    )
+    parser.add_argument(
+        "--quiet-trainer-logs",
+        action="store_true",
+        help="Disable INFO-level metatrain Trainer logs.",
+    )
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
+    if not args.quiet_trainer_logs:
+        logging.basicConfig(
+            level=logging.INFO,
+            format="%(asctime)s %(levelname)s:%(name)s:%(message)s",
+            force=True,
+        )
+
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
 
@@ -1119,6 +1208,7 @@ def main() -> None:
             skip_autograd=args.skip_autograd,
             skip_fd=args.skip_fd,
             skip_torque=args.skip_torque,
+            progress_interval=args.progress_interval,
         )
 
     print("done")

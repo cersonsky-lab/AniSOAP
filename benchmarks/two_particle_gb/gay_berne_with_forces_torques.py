@@ -8,15 +8,17 @@ import chemiscope
 
 # # Default Parameters and Functions
 
-a0 = c0 = 1.0
-b0 = 2.0
+a0 = 1.0
+b0 = 1.5
+c0 = 2.0
 S0 = np.diagflat([a0, b0, c0])
 
 sigma0 = min(a0, b0, c0)
 
-e_a0 = sigma0 * (a0 / (b0 * c0))
-e_b0 = sigma0 * (b0 / (a0 * c0))
-e_c0 = sigma0 * (c0 / (b0 * a0))
+# e_a0 = sigma0 * (a0 / (b0 * c0))
+# e_b0 = sigma0 * (b0 / (a0 * c0))
+# e_c0 = sigma0 * (c0 / (b0 * a0))
+e_a0, e_b0, e_c0 = 1,.5,.5
 e0 = np.array([e_a0, e_b0, e_c0])
 
 A0 = np.eye(3)
@@ -25,63 +27,70 @@ L = 20
 ry = 0
 rz = 0
 ENERGY_THRESHOLD = 0.01
-FORCE_THRESHOLD = 8
+FORCE_THRESHOLD = 20
+DISTANCE_THRESHOLD = 5.0
 
 # Small functions for rotating matrices
 def rot_y(A, angle):
-    return A @ np.array(
+    return np.array(
         [
             [np.cos(angle), 0.0, np.sin(angle)],
             [0.0, 1.0, 0.0],
             [-np.sin(angle), 0.0, np.cos(angle)],
         ]
-    )
-
+    ) @ A
 
 def rot_z(A, angle):
-    return A @ np.array(
+    return np.array(
         [
             [np.cos(angle), -np.sin(angle), 0.0],
             [np.sin(angle), np.cos(angle), 0.0],
             [0.0, 0.0, 1.0],
         ]
-    )
+    ) @ A
 
 
 # Gay-Berne Potential, as defined by Everaers and Ejtehadi
 def gay_berne(
-    A1, A2, S1, S2, r12, e, sigma=None, nu=1.0, mu=1.0, gamma=1.0, eps_GB=1.0
+        A1, A2, S1, S2, r12, e, sigma=None, nu=1.0, mu=2.0, gamma=1.0, eps_GB=1.0
 ):
+    ''' This is the generalized gay-berne formalism for two ellipsoids, as outlined in the paper by Everaers:
+        https://journals.aps.org/pre/pdf/10.1103/PhysRevE.67.041710
+        
+    '''
     if sigma is None:
         sigma = np.min([np.diag(S1).min(), np.diag(S2).min()])
 
     def G1(A, S):
-        return A.T @ S**2.0 @ A
+        # return A.T @ S**2.0 @ A
+        return A.T @ np.linalg.matrix_power(S, 2) @ A
 
     def B(A, E):
         return A.T @ E @ A
 
     def s(S):
         a, b, c = np.diag(S)
-        return (a * b + c * c) * (a * b) ** (0.5)
+        return (a * b + c * c) * ((a * b) ** (0.5))
+    
+    r12_hat = r12 / np.linalg.norm(r12)
 
     G12 = G1(A1, S1) + G1(A2, S2)
-    sigma_12 = (0.5 * r12.T @ np.linalg.pinv(G12) @ r12) ** (-0.5)
-    h12 = np.linalg.norm(r12) - sigma_12
+    sigma_12 = (0.5*r12_hat.T @ np.linalg.pinv(G12) @ r12_hat) ** (-0.5) #<---- should be r12_hat!!!! AND SHOULD HAVE A 0.5* prefactor
+    # sigma_12 = (2*r12_hat.T @ np.linalg.pinv(G12) @ r12_hat) ** (-0.5) #<---- should be r12_hat!!!! AND SHOULD HAVE A 2* PREFACTOR?? (SEE BFZ)
+    h12 = np.linalg.norm(r12) - sigma_12    
 
     rho = sigma / (h12 + gamma * sigma)
+    # rho = sigma_12 / (h12 + gamma * sigma_12)
     Ur = 4 * eps_GB * ((rho) ** 12.0 - rho**6.0)
 
     E = np.diagflat(e ** (-1 / mu))
     B12 = B(A1, E) + B(A2, E)
-    chi_12 = (2 * r12.T @ np.linalg.pinv(B12) @ r12) ** mu
+    chi_12 = (2 * r12_hat.T @ np.linalg.pinv(B12) @ r12_hat) ** mu  #<---- should be r12_hat!!!!
 
     s1 = s(S1)
     s2 = s(S2)
     eta_12 = ((2 * s1 * s2) / np.linalg.det(G12)) ** (nu / 2.0)
     return Ur * eta_12 * chi_12
-
-
 # Numerical forces and torques from the existing Gay-Berne potential.
 # This intentionally leaves gay_berne(), the quaternion conventions, and frame construction unchanged.
 def gay_berne_force_torque(
@@ -93,7 +102,7 @@ def gay_berne_force_torque(
     e,
     sigma=None,
     nu=1.0,
-    mu=1.0,
+    mu=2.0,
     gamma=1.0,
     eps_GB=1.0,
     dr=1.0e-5,
@@ -181,18 +190,18 @@ def accumulate_frames(frames):
 # Classic Gay-Berne Plots to show the Class Side-to-Side, Face-to-Face,
 # and Side-to-Face
 
-rs = np.linspace(1.25 * sigma0, 3 * sigma0, 100)
-side_side = np.array([gay_berne(A0, A0, S0, S0, np.array([r, 0, 0]), e0) for r in rs])
+rs = np.linspace(1.25 * sigma0, 5 * sigma0, 100)
+side_side = np.array([gay_berne(np.linalg.inv(A0), np.linalg.inv(A0), S0, S0, np.array([r, 0, 0]), e0) for r in rs])
 face_face = np.array(
     [
         gay_berne(
-            rot_z(A0, np.pi / 2), rot_z(A0, np.pi / 2), S0, S0, np.array([r, 0, 0]), e0
+            np.linalg.inv(rot_z(A0, np.pi / 2)), np.linalg.inv(rot_z(A0, np.pi / 2)), S0, S0, np.array([r, 0, 0]), e0
         )
         for r in rs
     ]
 )
 side_face = np.array(
-    [gay_berne(A0, rot_z(A0, np.pi / 2), S0, S0, np.array([r, 0, 0]), e0) for r in rs]
+    [gay_berne(np.linalg.inv(A0), np.linalg.inv(rot_z(A0, np.pi / 2)), S0, S0, np.array([r, 0, 0]), e0) for r in rs]
 )
 
 plt.plot(
@@ -214,7 +223,8 @@ plt.legend()
 
 plt.gca().set_ylabel("U [Energy Units]")
 plt.gca().set_xlabel("r [Distance Units]")
-plt.gca().set_ylim([4 * min(-e0), 1])
+# plt.gca().set_ylim([4 * min(-e0), 1])
+plt.gca().set_ylim([-6,10])
 plt.show()
 
 # Minimum distance to use for each of these
@@ -354,11 +364,13 @@ def build_frame(rx, ry, rz, A1, A2, quaternions=None, separation_distance=None, 
         frame.info["separation_distance"] = separation_distance
     else:
         frame.info['separation_distance'] = frame.get_all_distances(mic=True)[0, 1]
+        separation_distance = frame.info['separation_distance']
+
     if angles is not None:
         frame.arrays["angles"] = np.array(angles)
 
     add_energy_forces_torques(frame, A1, A2, S0, S0, np.array([rx, ry, rz]), e0, sigma0)
-    if frame.info['energy'] < ENERGY_THRESHOLD and np.linalg.norm(frame.arrays['forces'], axis=1).max() < FORCE_THRESHOLD:
+    if separation_distance <= DISTANCE_THRESHOLD and frame.info['energy'] < ENERGY_THRESHOLD and np.linalg.norm(frame.arrays['forces'], axis=1).max() < FORCE_THRESHOLD:
         return frame
 
 
@@ -458,7 +470,7 @@ verbose_write("both_rotating_in_z.xyz", frames)
 
 # ## Random Rotations and Distances
 frames = []
-for _ in range(1000):
+for _ in range(10000):
     rx, ry_random, rz_random = np.random.uniform(sigma0, 2 * sigma0, size=3)
 
     A1 = R.random().as_matrix()
@@ -469,28 +481,28 @@ for _ in range(1000):
 
 verbose_write("random_rotations.xyz", frames)
 
-# ## Combined Chemiscope Dataset
+## Combined Chemiscope Dataset
 chemiscope.write_input("gay_berne_all_frames.chemiscope.json", 
                         all_frames,
                         properties=chemiscope.extract_properties(
-                            all_frames, only=["torques", "forces"],
-                            environments = chemiscope.all_atomic_environments(structures=all_frames, cutoff=3.5)
+                            all_frames, only=["energy", "separation_distance", "torques", "forces"],
+                            # environments = chemiscope.all_atomic_environments(structures=all_frames, cutoff=3.5)
                         ),
                         shapes = _build_chemiscope_shapes(all_frames),
-                        environments = chemiscope.all_atomic_environments(structures=all_frames, cutoff=3.5),
+                        # environments = chemiscope.all_atomic_environments(structures=all_frames, cutoff=3.5),
                         settings= {
-                            "target": "atom",
-                            "map": {
-                                "x": {"property": "torques[1]", "scale": "linear"},
-                                "y": {"property": "torques[3]", "scale": "linear"},
-                            },
-                            "structure": [
-                                {
-                                    "atoms": False,
-                                    "bonds": False,
-                                    "shape": "ellipsoids,forces,torques_x,torques_y,torques_z",
-                                }
-                            ],
+                            # "target": "atom",
+                            # "map": {
+                            #     "x": {"property": "torques[1]", "scale": "linear"},
+                            #     "y": {"property": "torques[3]", "scale": "linear"},
+                            # },
+                            # "structure": [
+                            #     {
+                            #         "atoms": False,
+                            #         "bonds": False,
+                            #         "shape": "ellipsoids,forces,torques_x,torques_y,torques_z",
+                            #     }
+                            # ],
                         },
                         )
 
