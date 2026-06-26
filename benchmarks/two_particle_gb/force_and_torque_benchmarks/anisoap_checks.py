@@ -1314,7 +1314,10 @@ def evaluate_split(
     skip_autograd: bool,
     skip_fd: bool,
     skip_torque: bool,
+<<<<<<< HEAD
     progress_interval: int,
+=======
+>>>>>>> 50bb946cf5046bf31b9fbf3f80db93db573c9927
 ) -> None:
     """Run all requested parity checks for one split."""
     split_dir = output_dir / split_name
