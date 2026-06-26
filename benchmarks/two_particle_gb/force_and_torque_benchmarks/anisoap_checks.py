@@ -92,8 +92,14 @@ def replace_system_data(system, name: str, values: torch.Tensor):
 
 
 def replace_system_quaternions(system, quaternions: torch.Tensor):
-    """Replace per-atom AniSOAP quaternions on a System."""
-    return replace_system_data(system, ANISOAP_QUATERNIONS, quaternions)
+    """Replace per-atom AniSOAP quaternions on a System.
+
+    Update both the diagnostic key and the model-visible custom key when present.
+    """
+    system = replace_system_data(system, ANISOAP_QUATERNIONS, quaternions)
+    if "anisoap::quaternions_plain" in system.known_data():
+        system = replace_system_data(system, "anisoap::quaternions_plain", quaternions)
+    return system
 
 
 # -----------------------------------------------------------------------------
@@ -150,6 +156,11 @@ def build_hypers(
     nmax: int = 4,
     cutoff: float = 5.0,
     width: float = 0.5,
+    hidden_layers: int = 2,
+    hidden_neurons: int = 32,
+    layernorm: bool = True,
+    head: str = "mlp",
+    add_lambda_basis: bool = False,
 ) -> dict:
     """Build AniSOAP-BPNN hypers in the format expected by this architecture."""
     hypers = {
@@ -169,12 +180,12 @@ def build_hypers(
         "zbl": False,
         "legacy": False,
         "long_range": {"enable": False},
-        "heads": "mlp",
-        "add_lambda_basis": False,
+        "heads": head,
+        "add_lambda_basis": add_lambda_basis,
         "bpnn": {
-            "num_hidden_layers": 2,
-            "num_neurons_per_layer": 32,
-            "layernorm": True,
+            "num_hidden_layers": hidden_layers,
+            "num_neurons_per_layer": hidden_neurons,
+            "layernorm": layernorm,
         },
     }
 
@@ -185,13 +196,17 @@ def build_hypers(
     return hypers
 
 
-def build_dataset_info() -> DatasetInfo:
-    """Build DatasetInfo for one pseudo-species system with energy+forces."""
-    target_cfg = OmegaConf.create({"quantity": "energy", "unit": "eV"})
+def build_dataset_info(add_forces: bool = True) -> DatasetInfo:
+    target_cfg = OmegaConf.create(
+        {
+            "quantity": "energy",
+            "unit": "eV",
+        }
+    )
     energy_info = get_energy_target_info(
         target_name=ENERGY_TARGET,
         target=target_cfg,
-        add_position_gradients=True,
+        add_position_gradients=add_forces,
     )
     return DatasetInfo(
         length_unit="angstrom",
@@ -200,8 +215,8 @@ def build_dataset_info() -> DatasetInfo:
     )
 
 
-def energy_target(atoms, system_i: int) -> TensorMap:
-    """Build energy target with position gradient dE/dr = -forces."""
+def energy_target(atoms, system_i: int, add_forces: bool = True) -> TensorMap:
+    """Build energy target, optionally with position gradient dE/dr = -forces."""
     n_atoms = len(atoms)
     properties = Labels(["energy"], torch.tensor([[0]], dtype=torch.int32))
 
@@ -212,17 +227,21 @@ def energy_target(atoms, system_i: int) -> TensorMap:
         properties=properties,
     )
 
-    forces = torch.tensor(atoms.get_forces(), dtype=torch.float64)
-    grad_block = TensorBlock(
-        values=-forces.reshape(n_atoms, 3, 1),
-        samples=Labels(
-            ["sample", "atom"],
-            torch.tensor([[0, i] for i in range(n_atoms)], dtype=torch.int32),
-        ),
-        components=[Labels(["xyz"], torch.tensor([[0], [1], [2]], dtype=torch.int32))],
-        properties=properties,
-    )
-    block.add_gradient("positions", grad_block)
+    if add_forces:
+        forces = torch.tensor(atoms.get_forces(), dtype=torch.float64)
+        grad_block = TensorBlock(
+            values=-forces.reshape(n_atoms, 3, 1),
+            samples=Labels(
+                ["sample", "atom"],
+                torch.tensor([[0, i] for i in range(n_atoms)], dtype=torch.int32),
+            ),
+            components=[
+                Labels(["xyz"], torch.tensor([[0], [1], [2]], dtype=torch.int32))
+            ],
+            properties=properties,
+        )
+        block.add_gradient("positions", grad_block)
+
     return TensorMap(keys=Labels.single(), blocks=[block])
 
 
@@ -269,10 +288,6 @@ def load_dataset(path: Path, stride: int = 6) -> tuple[list, list]:
 
         if "quaternions" not in frame.arrays:
             raise KeyError("ASE frame is missing frame.arrays['quaternions']")
-        for name in ["c_diameter[1]", "c_diameter[2]", "c_diameter[3]"]:
-            if name not in frame.arrays:
-                print(frame.arrays)
-                raise KeyError(f"ASE frame is missing frame.arrays[{name!r}]")
 
         q = np.asarray(frame.arrays["quaternions"], dtype=np.float64)
         if q.ndim != 2 or q.shape[1] != 4:
@@ -282,14 +297,7 @@ def load_dataset(path: Path, stride: int = 6) -> tuple[list, list]:
             raise ValueError("found zero-norm quaternion")
         q = q / q_norm
 
-        diameters = np.stack(
-            [
-                np.asarray(frame.arrays["c_diameter[1]"], dtype=np.float64),
-                np.asarray(frame.arrays["c_diameter[2]"], dtype=np.float64),
-                np.asarray(frame.arrays["c_diameter[3]"], dtype=np.float64),
-            ],
-            axis=1,
-        )
+        diameters = get_c_diameters(frame)
 
         system.add_data(
             ANISOAP_QUATERNIONS,
@@ -299,19 +307,69 @@ def load_dataset(path: Path, stride: int = 6) -> tuple[list, list]:
             ANISOAP_C_DIAMETERS,
             per_atom_tensormap(diameters, property_name="axis", dtype=torch.float64),
         )
+        system.add_data(
+            "anisoap::ellipsoid_lengths",
+            per_atom_tensormap(
+                diameters / 2.0, property_name="axis", dtype=torch.float64
+            ),
+        )
+
+        system.add_data(
+            "anisoap::quaternions_plain",
+            per_atom_tensormap(q, property_name="q", dtype=torch.float64),
+        )
+        system.add_data(
+            "anisoap::c_diameter_1",
+            per_atom_tensormap(diameters[:, 0], property_name="c", dtype=torch.float64),
+        )
+        system.add_data(
+            "anisoap::c_diameter_2",
+            per_atom_tensormap(diameters[:, 1], property_name="c", dtype=torch.float64),
+        )
+        system.add_data(
+            "anisoap::c_diameter_3",
+            per_atom_tensormap(diameters[:, 2], property_name="c", dtype=torch.float64),
+        )
 
     return frames, systems
 
 
-def build_dataset(frames: list, systems: list) -> Dataset:
+def build_dataset(frames: list, systems: list, add_forces: bool = True) -> Dataset:
     """Build a metatrain Dataset from systems and energy/force/torque targets."""
     return Dataset.from_dict(
         {
             "system": systems,
-            ENERGY_TARGET: [energy_target(atoms, i) for i, atoms in enumerate(frames)],
+            ENERGY_TARGET: [
+                energy_target(atoms, i, add_forces=add_forces)
+                for i, atoms in enumerate(frames)
+            ],
             "torques": [torque_target(atoms, i) for i, atoms in enumerate(frames)],
         }
     )
+
+
+def check_pair_orientation_swap_sensitivity(model: BPNN, sample_a, sample_b) -> None:
+    """Same positions from sample_a, quaternions from sample_b."""
+    print("\n=== pair orientation swap sensitivity ===")
+
+    system_a = with_neighbor_lists(model, [copy.deepcopy(sample_a["system"])])[0]
+    e_a = predict_energy_torch(model, system_a).detach().item()
+
+    system_b = with_neighbor_lists(model, [copy.deepcopy(sample_b["system"])])[0]
+    e_b = predict_energy_torch(model, system_b).detach().item()
+
+    mixed = copy.deepcopy(sample_a["system"])
+    q_b = sample_b["system"].get_data(ANISOAP_QUATERNIONS).block(0).values.clone()
+    mixed = replace_system_quaternions(mixed, q_b)
+    mixed = with_neighbor_lists(model, [mixed])[0]
+    e_mixed = predict_energy_torch(model, mixed).detach().item()
+
+    print("true E sample_a:", true_energy(sample_a))
+    print("true E sample_b:", true_energy(sample_b))
+    print("pred E sample_a:", e_a)
+    print("pred E sample_b:", e_b)
+    print("pred E sample_a positions + sample_b quaternions:", e_mixed)
+    print("pred mixed - pred a:", e_mixed - e_a)
 
 
 def build_trainer(
@@ -399,8 +457,18 @@ def true_energy(sample) -> float:
     return sample[ENERGY_TARGET].block(0).values.item()
 
 
+def target_has_position_gradients(sample) -> bool:
+    """Return whether the energy target contains position gradients."""
+    return "positions" in sample[ENERGY_TARGET].block(0).gradients_list()
+
+
 def true_forces(sample) -> torch.Tensor:
     """Return physical forces. Stored target gradient is dE/dr = -force."""
+    if not target_has_position_gradients(sample):
+        raise RuntimeError(
+            "energy target has no positions gradient; rerun with --force-weight > 0 "
+            "or skip force diagnostics/parity"
+        )
     return -sample[ENERGY_TARGET].block(0).gradient("positions").values.squeeze(-1)
 
 
@@ -419,6 +487,178 @@ def predict_energy_exported(exported, system) -> torch.Tensor:
     """Predict total energy with the exported model."""
     pred = exported([system], exported_energy_options(), check_consistency=False)
     return pred[ENERGY_TARGET].block(0).values.sum()
+
+
+def feature_model_outputs(sample_kind: str = "atom") -> dict[str, ModelOutput]:
+    """Outputs dictionary for requesting model internal features."""
+    return {
+        "feature": ModelOutput(
+            quantity="",
+            unit="",
+            sample_kind=sample_kind,
+        )
+    }
+
+
+def predict_features_torch(
+    model: BPNN,
+    system,
+    *,
+    sample_kind: str = "system",
+) -> torch.Tensor:
+    """Return flattened internal features for one system."""
+    pred = model([system], feature_model_outputs(sample_kind=sample_kind))
+    values = pred["feature"].block(0).values.detach()
+    return values.reshape(-1)
+
+
+def save_feature_matrix(
+    model: BPNN,
+    dataset,
+    output_dir: Path,
+    label: str,
+    *,
+    sample_kind: str = "system",
+) -> None:
+    """Save model internal features and energies for a dataset split."""
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    features = []
+    energies = []
+    samples = list(dataset)
+    print(f"feature export [{label}]: starting {len(samples)} systems", flush=True)
+
+    was_training = model.training
+    model.eval()
+    try:
+        for i, sample in enumerate(samples):
+            system = with_neighbor_lists(model, [copy.deepcopy(sample["system"])])[0]
+            features.append(
+                predict_features_torch(
+                    model,
+                    system,
+                    sample_kind=sample_kind,
+                )
+                .cpu()
+                .numpy()
+            )
+            energies.append(true_energy(sample))
+            if i == 0:
+                print(
+                    f"feature export [{label}]: feature length {features[-1].shape[0]}",
+                    flush=True,
+                )
+    finally:
+        if was_training:
+            model.train()
+
+    feature_matrix = np.vstack(features)
+    energy_vector = np.asarray(energies, dtype=np.float64)
+
+    np.save(output_dir / f"features_{label}.npy", feature_matrix)
+    np.save(output_dir / f"energies_{label}.npy", energy_vector)
+    np.savetxt(output_dir / f"features_{label}.csv", feature_matrix, delimiter=",")
+    np.savetxt(output_dir / f"energies_{label}.csv", energy_vector, delimiter=",")
+
+    print(
+        f"feature export [{label}]: wrote "
+        f"{output_dir / f'features_{label}.npy'} and "
+        f"{output_dir / f'energies_{label}.npy'}",
+        flush=True,
+    )
+
+
+def ridge_regression_feature_diagnostic(
+    model: BPNN,
+    train_dataset,
+    eval_dataset,
+    output_dir: Path,
+    *,
+    sample_kind: str = "system",
+    ridge_alpha: float = 1e-10,
+) -> None:
+    """Fit ridge regression on model internal features as an expressivity diagnostic."""
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    def matrix_and_targets(dataset):
+        x_rows = []
+        y_vals = []
+        was_training = model.training
+        model.eval()
+        try:
+            for sample in list(dataset):
+                system = with_neighbor_lists(model, [copy.deepcopy(sample["system"])])[
+                    0
+                ]
+                x_rows.append(
+                    predict_features_torch(
+                        model,
+                        system,
+                        sample_kind=sample_kind,
+                    )
+                    .cpu()
+                    .numpy()
+                )
+                y_vals.append(true_energy(sample))
+        finally:
+            if was_training:
+                model.train()
+        return np.vstack(x_rows), np.asarray(y_vals, dtype=np.float64)
+
+    x_train, y_train = matrix_and_targets(train_dataset)
+    x_eval, y_eval = matrix_and_targets(eval_dataset)
+
+    x_mean = x_train.mean(axis=0, keepdims=True)
+    x_scale = x_train.std(axis=0, keepdims=True)
+    x_scale[x_scale < 1e-12] = 1.0
+
+    x_train_s = (x_train - x_mean) / x_scale
+    x_eval_s = (x_eval - x_mean) / x_scale
+
+    # Include an intercept without regularizing it.
+    ones_train = np.ones((x_train_s.shape[0], 1))
+    ones_eval = np.ones((x_eval_s.shape[0], 1))
+    a_train = np.hstack([ones_train, x_train_s])
+    a_eval = np.hstack([ones_eval, x_eval_s])
+
+    reg = ridge_alpha * np.eye(a_train.shape[1])
+    reg[0, 0] = 0.0
+    weights = np.linalg.solve(a_train.T @ a_train + reg, a_train.T @ y_train)
+
+    yhat_train = a_train @ weights
+    yhat_eval = a_eval @ weights
+
+    train_rmse, train_mae = rmse_mae(y_train, yhat_train)
+    eval_rmse, eval_mae = rmse_mae(y_eval, yhat_eval)
+
+    print("\n=== ridge-on-internal-features diagnostic ===")
+    print("feature sample kind:", sample_kind)
+    print("ridge alpha:", ridge_alpha)
+    print("train feature matrix:", x_train.shape)
+    print("eval feature matrix:", x_eval.shape)
+    print("train RMSE/MAE eV:", train_rmse, train_mae)
+    print("eval RMSE/MAE eV:", eval_rmse, eval_mae)
+
+    np.save(output_dir / "ridge_feature_weights.npy", weights)
+    np.save(output_dir / "ridge_feature_train_pred.npy", yhat_train)
+    np.save(output_dir / "ridge_feature_eval_pred.npy", yhat_eval)
+
+    plot_parity(
+        y_train,
+        yhat_train,
+        xlabel="True energy / eV",
+        ylabel="Ridge prediction / eV",
+        title="Ridge on internal features, train",
+        output_path=output_dir / "ridge_feature_train_parity.png",
+    )
+    plot_parity(
+        y_eval,
+        yhat_eval,
+        xlabel="True energy / eV",
+        ylabel="Ridge prediction / eV",
+        title="Ridge on internal features, eval",
+        output_path=output_dir / "ridge_feature_eval_parity.png",
+    )
 
 
 def flattened_parameters(model: BPNN) -> torch.Tensor:
@@ -504,6 +744,24 @@ def plot_parity(
 # -----------------------------------------------------------------------------
 # Diagnostics
 # -----------------------------------------------------------------------------
+
+
+def get_c_diameters(frame):
+    keys = []
+    for i in range(1, 4):
+        key = f"c_diameter[{i}]"
+        if key not in frame.arrays:
+            key = f"c_diameter{i}"
+            if key not in frame.arrays:
+                print(frame.arrays)
+                raise KeyError(f"ASE frame is missing frame.arrays[{key!r}]")
+        keys.append(key)
+
+    diameters = np.stack(
+        [np.asarray(frame.arrays[k], dtype=np.float64) for k in keys],
+        axis=1,
+    )
+    return diameters
 
 
 def print_ase_frame_diagnostics(frames: list, max_frames: int = 3) -> None:
@@ -601,6 +859,41 @@ def check_single_rotation_sensitivity(model: BPNN, sample, delta: float = 1e-3) 
     print("e1:", e1.item())
     print("dE:", (e1 - e0).item())
     print("dE/dtheta approx:", ((e1 - e0) / delta).item())
+
+
+def check_orientation_sweep_prediction_sensitivity(
+    model: BPNN,
+    dataset,
+    max_samples: int = 12,
+) -> None:
+    """Check whether predictions vary across existing orientations."""
+    print("\n=== orientation sweep prediction sensitivity ===")
+
+    y_true = []
+    y_pred = []
+
+    for i, sample in enumerate(list(dataset)[:max_samples]):
+        system = with_neighbor_lists(model, [copy.deepcopy(sample["system"])])[0]
+        pred = predict_energy_torch(model, system).detach().item()
+        true = true_energy(sample)
+        y_true.append(true)
+        y_pred.append(pred)
+        q = sample["system"].get_data(ANISOAP_QUATERNIONS).block(0).values
+        print(
+            i,
+            "true",
+            true,
+            "pred",
+            pred,
+            "q0",
+            q[0].tolist(),
+            "q1",
+            q[1].tolist(),
+            flush=True,
+        )
+
+    print("true range:", max(y_true) - min(y_true))
+    print("pred range:", max(y_pred) - min(y_pred))
 
 
 def torch_fd_force_component(
@@ -1031,18 +1324,25 @@ def evaluate_split(
         exported_energy_parity_with_model(
             exported, model, dataset, split_dir, progress_interval
         )
+    has_forces = len(dataset) > 0 and target_has_position_gradients(dataset[0])
     if not skip_autograd:
-        autograd_force_parity(model, dataset, split_dir, progress_interval)
+        if has_forces:
+            autograd_force_parity(model, dataset, split_dir, progress_interval)
+        else:
+            print("autograd force parity: skipped; target has no positions gradient")
     if not skip_fd:
-        finite_difference_force_parity(
-            exported,
-            model,
-            dataset,
-            split_dir,
-            fd_delta,
-            fd_max_systems,
-            progress_interval,
-        )
+        if has_forces:
+            finite_difference_force_parity(
+                exported,
+                model,
+                dataset,
+                split_dir,
+                fd_delta,
+                fd_max_systems,
+                progress_interval,
+            )
+        else:
+            print("finite-difference forces: skipped; target has no positions gradient")
     if not skip_torque:
         finite_difference_torque_parity(
             model, dataset, split_dir, fd_delta, fd_max_systems, progress_interval
@@ -1090,6 +1390,65 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--force-weight", type=float, default=10.0)
     parser.add_argument(
+        "--hidden-layers",
+        type=int,
+        default=2,
+        help="Number of hidden layers in the BPNN trunk. Use 0 for a linear feature path.",
+    )
+    parser.add_argument(
+        "--hidden-neurons",
+        type=int,
+        default=32,
+        help="Number of neurons per hidden layer in the BPNN trunk.",
+    )
+    parser.add_argument(
+        "--head",
+        choices=["mlp", "linear"],
+        default="mlp",
+        help="Output head type for scalar targets.",
+    )
+    layernorm_group = parser.add_mutually_exclusive_group()
+    layernorm_group.add_argument(
+        "--layernorm",
+        dest="layernorm",
+        action="store_true",
+        default=True,
+        help="Enable LayerNorm on SOAP features.",
+    )
+    layernorm_group.add_argument(
+        "--no-layernorm",
+        dest="layernorm",
+        action="store_false",
+        help="Disable LayerNorm on SOAP features.",
+    )
+    parser.add_argument(
+        "--add-lambda-basis",
+        action="store_true",
+        help="Enable the optional lambda basis in tensor targets.",
+    )
+    parser.add_argument(
+        "--save-features",
+        action="store_true",
+        help="Save internal feature matrices and energy vectors for requested splits.",
+    )
+    parser.add_argument(
+        "--feature-sample-kind",
+        choices=["system", "atom"],
+        default="system",
+        help="Sample kind used when exporting internal features.",
+    )
+    parser.add_argument(
+        "--ridge-feature-diagnostic",
+        action="store_true",
+        help="Fit ridge regression on the model internal features for train and eval splits.",
+    )
+    parser.add_argument(
+        "--ridge-alpha",
+        type=float,
+        default=1e-10,
+        help="Ridge regularization strength for --ridge-feature-diagnostic.",
+    )
+    parser.add_argument(
         "--progress-interval",
         type=int,
         default=50,
@@ -1115,23 +1474,50 @@ def main() -> None:
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
 
-    dataset_info = build_dataset_info()
-    hypers = build_hypers(lmax=args.lmax, nmax=args.nmax, cutoff=args.cutoff)
+    dataset_info = build_dataset_info(add_forces=args.force_weight > 0)
+    hypers = build_hypers(
+        lmax=args.lmax,
+        nmax=args.nmax,
+        cutoff=args.cutoff,
+        hidden_layers=args.hidden_layers,
+        hidden_neurons=args.hidden_neurons,
+        layernorm=args.layernorm,
+        head=args.head,
+        add_lambda_basis=args.add_lambda_basis,
+    )
     model = BPNN(hypers=hypers, dataset_info=dataset_info).to(dtype=torch.float64)
 
     print("target info:", dataset_info.targets[ENERGY_TARGET])
     print("reading:", args.xyz)
     print(
-        "basis/cutoff:", {"lmax": args.lmax, "nmax": args.nmax, "cutoff": args.cutoff}
+        "basis/cutoff:",
+        {
+            "lmax": args.lmax,
+            "nmax": args.nmax,
+            "cutoff": args.cutoff,
+            "hidden_layers": args.hidden_layers,
+            "hidden_neurons": args.hidden_neurons,
+            "head": args.head,
+            "layernorm": args.layernorm,
+            "add_lambda_basis": args.add_lambda_basis,
+        },
     )
 
     frames, systems = load_dataset(args.xyz, stride=args.stride)
     print_ase_frame_diagnostics(frames)
 
-    dataset = build_dataset(frames, systems)
+    dataset = build_dataset(frames, systems, add_forces=args.force_weight > 0)
 
     if args.overfit_n > 0:
-        dataset = torch.utils.data.Subset(dataset, list(range(args.overfit_n)))
+        if args.overfit_n > len(dataset):
+            raise ValueError(
+                f"--overfit-n={args.overfit_n} is larger than dataset size {len(dataset)}"
+            )
+        indices = np.random.choice(
+            np.arange(len(dataset)), args.overfit_n, replace=False
+        ).tolist()
+        print("overfit indices:", indices, flush=True)
+        dataset = torch.utils.data.Subset(dataset, indices)
         train_dataset = dataset
         val_dataset = dataset
         test_dataset = dataset
@@ -1155,13 +1541,21 @@ def main() -> None:
 
     sample = dataset[0]
     print("target gradients:", sample[ENERGY_TARGET].block(0).gradients_list())
-    print("force target norm:", true_forces(sample).norm().item())
+    if target_has_position_gradients(sample):
+        print("force target norm:", true_forces(sample).norm().item())
+    else:
+        print("force target norm: skipped; energy target has no positions gradient")
     print("torque target norm:", true_torques(sample).norm().item())
 
     print_model_diagnostics(model)
     check_single_displacement_sensitivity(model, sample, delta=1e-3)
     check_single_rotation_sensitivity(model, sample, delta=1e-3)
-    check_single_component_force_consistency(model, sample, delta=args.fd_delta)
+    check_orientation_sweep_prediction_sensitivity(model, dataset, max_samples=12)
+    if target_has_position_gradients(sample):
+        check_single_component_force_consistency(model, sample, delta=args.fd_delta)
+    else:
+        print("\n=== single-component force consistency ===")
+        print("skipped; energy target has no positions gradient")
 
     if args.diagnostics_only:
         print("diagnostics-only requested; stopping before training")
@@ -1178,10 +1572,19 @@ def main() -> None:
             learning_rate=args.learning_rate,
             force_weight=args.force_weight,
         )
+
         print("\n=== post-training model diagnostics ===")
         print_model_diagnostics(model)
-        check_single_component_force_consistency(model, sample, delta=args.fd_delta)
+        check_single_rotation_sensitivity(model, sample, delta=1e-3)
+        check_orientation_sweep_prediction_sensitivity(model, dataset, max_samples=12)
+        if target_has_position_gradients(sample):
+            check_single_component_force_consistency(model, sample, delta=args.fd_delta)
+        else:
+            print("\n=== single-component force consistency ===")
+            print("skipped; energy target has no positions gradient")
 
+    if len(dataset) >= 3:
+        check_pair_orientation_swap_sensitivity(model, dataset[0], dataset[2])
     exported = copy.deepcopy(model).export()
     max_systems = None if args.fd_max_systems < 0 else args.fd_max_systems
 
@@ -1194,6 +1597,27 @@ def main() -> None:
     requested_splits = (
         ["train", "val", "test"] if "all" in args.eval_splits else args.eval_splits
     )
+
+    if args.save_features:
+        for split_name in requested_splits:
+            save_feature_matrix(
+                model,
+                split_lookup[split_name],
+                args.output_dir,
+                split_name,
+                sample_kind=args.feature_sample_kind,
+            )
+
+    if args.ridge_feature_diagnostic:
+        for split_name in requested_splits:
+            ridge_regression_feature_diagnostic(
+                model,
+                train_dataset,
+                split_lookup[split_name],
+                args.output_dir / split_name,
+                sample_kind=args.feature_sample_kind,
+                ridge_alpha=args.ridge_alpha,
+            )
 
     for split_name in requested_splits:
         evaluate_split(
