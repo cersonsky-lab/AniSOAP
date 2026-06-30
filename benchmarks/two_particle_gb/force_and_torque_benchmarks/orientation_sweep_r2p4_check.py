@@ -47,12 +47,44 @@ def hypers(num_sparse_points, degree, lmax, nmax, regularizer):
     }
 
 
-def training_hypers(regularizer):
-    return {
+def gap_training_hypers(
+    regularizer,
+    *,
+    energy_weight=1.0,
+    force_weight=1.0,
+    torque_weight=1.0,
+    normalize_targets=False,
+    enable_force_torque_training=False,
+):
+    """Build Trainer hyperparameters for AniSOAP-GAP training.
+
+    By default this returns the original energy-only Trainer settings used by
+    this orientation sweep script. Set ``enable_force_torque_training=True``
+    for the extended energy/force/torque diagnostic workflow.
+    """
+    training = {
         "regularizer": float(regularizer),
         "regularizer_forces": float(regularizer),
         "atomic_baseline": {},
     }
+
+    if enable_force_torque_training:
+        training["force_torque_training"] = {
+            "enabled": True,
+            "method": "linear_system",
+            "fit": False,
+            "energy_weight": float(energy_weight),
+            "force_weight": float(force_weight),
+            "torque_weight": float(torque_weight),
+            "normalize_targets": bool(normalize_targets),
+        }
+
+    return training
+
+
+def training_hypers(regularizer):
+    """Backward-compatible name used by older orientation sweep code."""
+    return gap_training_hypers(regularizer)
 
 
 def dataset_info(atomic_types):
