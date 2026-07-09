@@ -334,18 +334,21 @@ def load_dataset(path: Path, stride: int = 6) -> tuple[list, list]:
     return frames, systems
 
 
-def build_dataset(frames: list, systems: list, add_forces: bool = True) -> Dataset:
+def build_dataset(
+    frames: list, systems: list, add_forces: bool = True, add_torques: bool = True
+) -> Dataset:
     """Build a metatrain Dataset from systems and energy/force/torque targets."""
-    return Dataset.from_dict(
-        {
-            "system": systems,
-            ENERGY_TARGET: [
-                energy_target(atoms, i, add_forces=add_forces)
-                for i, atoms in enumerate(frames)
-            ],
-            "torques": [torque_target(atoms, i) for i, atoms in enumerate(frames)],
-        }
-    )
+    d = {
+        "system": systems,
+        ENERGY_TARGET: [
+            energy_target(atoms, i, add_forces=add_forces)
+            for i, atoms in enumerate(frames)
+        ],
+    }
+    if add_torques:
+        d["torques"] = ([torque_target(atoms, i) for i, atoms in enumerate(frames)],)
+
+    return Dataset.from_dict(d)
 
 
 def check_pair_orientation_swap_sensitivity(model: BPNN, sample_a, sample_b) -> None:
