@@ -27,8 +27,8 @@ L = 20
 ry = 0
 rz = 0
 ENERGY_THRESHOLD = 0.01
-FORCE_THRESHOLD = 20
-DISTANCE_THRESHOLD = 5.0
+FORCE_THRESHOLD = 10
+DISTANCE_THRESHOLD = 4.5
 
 # Small functions for rotating matrices
 def rot_y(A, angle):
@@ -507,3 +507,6 @@ chemiscope.write_input("gay_berne_all_frames.chemiscope.json",
                         )
 
 verbose_write("all_frames.xyz", all_frames)
+
+plt.hist([f.info['energy'] for f in all_frames])
+plt.show()

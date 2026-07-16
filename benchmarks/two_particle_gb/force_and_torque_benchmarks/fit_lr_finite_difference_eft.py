@@ -34,6 +34,24 @@ def parse_arguments() -> argparse.Namespace:
         default=Path("random_rotations_gb.xyz"),
     )
     parser.add_argument(
+        "--train-input",
+        type=Path,
+        default=None,
+        help="Explicit training trajectory for publication split mode.",
+    )
+    parser.add_argument(
+        "--validation-input",
+        type=Path,
+        default=None,
+        help="Explicit validation trajectory used only for alpha selection.",
+    )
+    parser.add_argument(
+        "--test-input",
+        type=Path,
+        default=None,
+        help="Explicit untouched test trajectory used only for final metrics.",
+    )
+    parser.add_argument(
         "--output",
         type=Path,
         default=Path("gb_lr_finite_difference"),
@@ -531,8 +549,405 @@ def save_parity(
     plt.close(figure)
 
 
+
+def run_explicit_split_mode(args: argparse.Namespace) -> None:
+    args.output.mkdir(parents=True, exist_ok=True)
+
+    split_paths = (
+        args.train_input,
+        args.validation_input,
+        args.test_input,
+    )
+
+    if not all(path is not None for path in split_paths):
+        raise ValueError(
+            "Explicit split mode requires --train-input, "
+            "--validation-input, and --test-input together."
+        )
+
+    if args.max_frames is not None:
+        raise ValueError(
+            "--max-frames is not supported with explicit publication splits"
+        )
+
+    train_frames = read(args.train_input, ":")
+    validation_frames = read(args.validation_input, ":")
+    test_frames = read(args.test_input, ":")
+
+    for label, frames, path in (
+        ("training", train_frames, args.train_input),
+        ("validation", validation_frames, args.validation_input),
+        ("test", test_frames, args.test_input),
+    ):
+        if not frames:
+            raise RuntimeError(f"No {label} frames read from {path}")
+        if any(len(frame) != 2 for frame in frames):
+            raise RuntimeError(
+                f"{label.capitalize()} split contains a non-dimer frame"
+            )
+        if any("torques" not in frame.arrays for frame in frames):
+            raise RuntimeError(
+                f"{label.capitalize()} split contains a frame without torques"
+            )
+
+    train_energy = np.asarray(
+        [frame.get_potential_energy() for frame in train_frames],
+        dtype=float,
+    )
+    validation_energy = np.asarray(
+        [frame.get_potential_energy() for frame in validation_frames],
+        dtype=float,
+    )
+    test_energy = np.asarray(
+        [frame.get_potential_energy() for frame in test_frames],
+        dtype=float,
+    )
+    test_force = np.asarray(
+        [frame.get_forces() for frame in test_frames],
+        dtype=float,
+    )
+    test_torque_stored = np.asarray(
+        [frame.arrays["torques"] for frame in test_frames],
+        dtype=float,
+    )
+
+    calculator = EllipsoidalDensityProjection(
+        max_angular=args.max_angular,
+        max_radial=args.max_radial,
+        radial_basis_name="gto",
+        rotation_type="quaternion",
+        rotation_key="quaternions",
+        cutoff_radius=args.cutoff,
+        radial_gaussian_width=args.radial_width,
+        basis_rcond=args.basis_rcond,
+        basis_tol=args.basis_tol,
+        subtract_center_contribution=False,
+        dtype=torch.float64,
+    )
+
+    def raw_features(frames: list[Atoms]) -> np.ndarray:
+        return np.asarray(
+            calculator.power_spectrum(
+                frames=frames,
+                mean_over_samples=True,
+                normalize=True,
+                show_progress=False,
+            ),
+            dtype=float,
+        )
+
+    print(
+        "explicit split sizes: "
+        f"train={len(train_frames)}, "
+        f"validation={len(validation_frames)}, "
+        f"test={len(test_frames)}"
+    )
+
+    print("computing normalized training power spectrum ...")
+    train_raw = raw_features(train_frames)
+
+    # Feature selection is based on training data only.
+    finite_mask = np.isfinite(train_raw).all(axis=0)
+    variance_mask = (
+        np.var(train_raw, axis=0)
+        >= args.variance_threshold
+    )
+    feature_mask = finite_mask & variance_mask
+
+    if not np.any(feature_mask):
+        raise RuntimeError("No usable training features remain")
+
+    print("computing normalized validation power spectrum ...")
+    validation_raw = raw_features(validation_frames)
+
+    train_selected = train_raw[:, feature_mask]
+    validation_selected = validation_raw[:, feature_mask]
+
+    if not np.isfinite(validation_selected).all():
+        raise RuntimeError(
+            "Validation features contain non-finite retained values"
+        )
+
+    # Both scalers are fitted exclusively on training data.
+    x_scaler = StandardFlexibleScaler(
+        column_wise=False
+    ).fit(train_selected)
+    y_scaler = StandardFlexibleScaler(
+        column_wise=True
+    ).fit(train_energy.reshape(-1, 1))
+
+    train_x = x_scaler.transform(train_selected)
+    validation_x = x_scaler.transform(validation_selected)
+    train_y = y_scaler.transform(
+        train_energy.reshape(-1, 1)
+    ).reshape(-1)
+
+    if args.alpha is None:
+        alpha_values = np.logspace(
+            np.log10(args.alpha_min),
+            np.log10(args.alpha_max),
+            args.alpha_count,
+        )
+    else:
+        alpha_values = np.asarray([args.alpha], dtype=float)
+
+    alpha_scan = []
+    best_alpha = None
+    best_score = np.inf
+
+    for alpha in alpha_values:
+        candidate = Ridge(
+            alpha=float(alpha),
+            fit_intercept=False,
+        )
+        candidate.fit(train_x, train_y)
+
+        validation_scaled_prediction = np.asarray(
+            candidate.predict(validation_x),
+            dtype=float,
+        ).reshape(-1, 1)
+        validation_prediction = y_scaler.inverse_transform(
+            validation_scaled_prediction
+        ).reshape(-1)
+
+        validation_mse = float(
+            np.mean(
+                (validation_prediction - validation_energy) ** 2
+            )
+        )
+        validation_r2 = float(
+            r2_score(
+                validation_energy,
+                validation_prediction,
+            )
+        )
+
+        alpha_scan.append(
+            {
+                "alpha": float(alpha),
+                "validation_energy_mse": validation_mse,
+                "validation_energy_r2": validation_r2,
+            }
+        )
+
+        print(
+            f"alpha={alpha:.3e} "
+            f"validation_E_MSE={validation_mse:.6g} "
+            f"validation_E_R2={validation_r2:.6f}"
+        )
+
+        if validation_mse < best_score:
+            best_score = validation_mse
+            best_alpha = float(alpha)
+
+    if best_alpha is None:
+        raise RuntimeError("Alpha scan produced no result")
+
+    print(f"selected alpha: {best_alpha:.12g}")
+
+    # Refit on train + validation after alpha selection. Scaling remains
+    # defined by the training split only.
+    fit_frames = train_frames + validation_frames
+    fit_energy = np.concatenate(
+        [train_energy, validation_energy],
+        axis=0,
+    )
+    fit_raw = np.concatenate(
+        [train_raw, validation_raw],
+        axis=0,
+    )
+    fit_x = x_scaler.transform(
+        fit_raw[:, feature_mask]
+    )
+    fit_y = y_scaler.transform(
+        fit_energy.reshape(-1, 1)
+    ).reshape(-1)
+
+    ridge = Ridge(
+        alpha=best_alpha,
+        fit_intercept=False,
+    )
+    ridge.fit(fit_x, fit_y)
+
+    model = RidgeEnergyModel(
+        calculator=calculator,
+        feature_mask=feature_mask,
+        x_scaler=x_scaler,
+        y_scaler=y_scaler,
+        ridge=ridge,
+        fd_batch_size=args.fd_batch_size,
+    )
+
+    # The test split is first touched after model and alpha selection.
+    print("predicting untouched test energies ...")
+    test_energy_prediction = model.predict(test_frames)
+
+    print("computing untouched test finite-difference forces ...")
+    test_force_prediction = finite_difference_forces(
+        model,
+        test_frames,
+        args.position_step,
+    )
+
+    print("computing untouched test finite-difference torques ...")
+    test_torque_space_prediction = finite_difference_torques_space(
+        model,
+        test_frames,
+        args.rotation_step,
+        quaternion_order=args.quaternion_order,
+        quaternion_matrix_direction=(
+            args.quaternion_matrix_direction
+        ),
+    )
+
+    test_torque_body_prediction = space_vectors_to_body(
+        test_torque_space_prediction,
+        test_frames,
+        quaternion_order=args.quaternion_order,
+        quaternion_matrix_direction=(
+            args.quaternion_matrix_direction
+        ),
+    )
+
+    if args.torque_target_frame == "body":
+        test_torque_body = test_torque_stored
+        test_torque_space = body_vectors_to_space(
+            test_torque_body,
+            test_frames,
+            quaternion_order=args.quaternion_order,
+            quaternion_matrix_direction=(
+                args.quaternion_matrix_direction
+            ),
+        )
+    else:
+        test_torque_space = test_torque_stored
+        test_torque_body = space_vectors_to_body(
+            test_torque_space,
+            test_frames,
+            quaternion_order=args.quaternion_order,
+            quaternion_matrix_direction=(
+                args.quaternion_matrix_direction
+            ),
+        )
+
+    results = {
+        "configuration": {
+            "train_input": str(args.train_input),
+            "validation_input": str(args.validation_input),
+            "test_input": str(args.test_input),
+            "n_train": len(train_frames),
+            "n_validation": len(validation_frames),
+            "n_test": len(test_frames),
+            "raw_feature_count": int(train_raw.shape[1]),
+            "retained_feature_count": int(np.sum(feature_mask)),
+            "coefficient_count": int(np.asarray(ridge.coef_).size),
+            "max_angular": args.max_angular,
+            "max_radial": args.max_radial,
+            "cutoff": args.cutoff,
+            "radial_width": args.radial_width,
+            "basis_rcond": args.basis_rcond,
+            "basis_tol": args.basis_tol,
+            "normalize": True,
+            "subtract_center_contribution": False,
+            "selected_alpha": best_alpha,
+            "position_step": args.position_step,
+            "rotation_step": args.rotation_step,
+            "quaternion_order": args.quaternion_order,
+            "quaternion_matrix_direction": (
+                args.quaternion_matrix_direction
+            ),
+            "torque_target_frame": args.torque_target_frame,
+        },
+        "test": {
+            "energy": metric_dictionary(
+                test_energy,
+                test_energy_prediction,
+            ),
+            "force_components": metric_dictionary(
+                test_force,
+                test_force_prediction,
+            ),
+            "torque_components_body": metric_dictionary(
+                test_torque_body,
+                test_torque_body_prediction,
+            ),
+            "torque_components_space": metric_dictionary(
+                test_torque_space,
+                test_torque_space_prediction,
+            ),
+        },
+        "alpha_scan": alpha_scan,
+    }
+
+    np.savez(
+        args.output / "test_predictions.npz",
+        energy_target=test_energy,
+        energy_prediction=test_energy_prediction,
+        force_target=test_force,
+        force_prediction=test_force_prediction,
+        torque_target_body=test_torque_body,
+        torque_prediction_body=test_torque_body_prediction,
+        torque_target_space=test_torque_space,
+        torque_prediction_space=test_torque_space_prediction,
+        feature_mask=feature_mask,
+        ridge_coefficients=np.asarray(ridge.coef_),
+    )
+
+    with open(args.output / "metrics.json", "w") as handle:
+        json.dump(results, handle, indent=2)
+
+    save_parity(
+        test_energy,
+        test_energy_prediction,
+        "Test: energy-only linear fit",
+        "Reference energy",
+        "Predicted energy",
+        args.output / "test_parity_energy.png",
+    )
+    save_parity(
+        test_force,
+        test_force_prediction,
+        "Test: finite-difference forces",
+        "Reference force component",
+        "Predicted force component",
+        args.output / "test_parity_forces.png",
+    )
+    save_parity(
+        test_torque_body,
+        test_torque_body_prediction,
+        "Test: finite-difference body torque",
+        "Reference torque component",
+        "Predicted torque component",
+        args.output / "test_parity_torques_body.png",
+    )
+    save_parity(
+        test_torque_space,
+        test_torque_space_prediction,
+        "Test: finite-difference space torque",
+        "Reference torque component",
+        "Predicted torque component",
+        args.output / "test_parity_torques_space.png",
+    )
+
+    print(json.dumps(results["test"], indent=2))
+    print(f"Artifacts written to {args.output.resolve()}")
+
+
+
 def main() -> None:
     args = parse_arguments()
+
+    explicit_split_requested = any(
+        path is not None
+        for path in (
+            args.train_input,
+            args.validation_input,
+            args.test_input,
+        )
+    )
+    if explicit_split_requested:
+        run_explicit_split_mode(args)
+        return
 
     if args.position_step <= 0.0:
         raise ValueError("--position-step must be positive")
