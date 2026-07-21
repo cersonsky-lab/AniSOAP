@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -eu
 
-python fit_lr_energy_force_torque.py \
+python -u fit_lr_energy_force_torque.py \
   --train-input publication_splits/random_train.xyz \
   --validation-input publication_splits/random_valid.xyz \
   --test-input publication_splits/random_test.xyz \

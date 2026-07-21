@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -eu
 
-python fit_lr_finite_difference_eft.py \
+python -u fit_lr_finite_difference_eft.py \
   --train-input publication_splits/random_train.xyz \
   --validation-input publication_splits/random_valid.xyz \
   --test-input publication_splits/random_test.xyz \
@@ -20,5 +20,5 @@ python fit_lr_finite_difference_eft.py \
   --quaternion-order wxyz \
   --quaternion-matrix-direction space_to_body \
   --torque-target-frame body \
-  --output publication_linear_runs/01_energy_only_finite_difference \
-  2>&1 | tee publication_linear_runs/logs/01_energy_only_finite_difference.log
+  --output publication_linear_runs/01_energy_only_finite_difference \ \
+  | tee publication_linear_runs/logs/01_energy_only_finite_difference.log

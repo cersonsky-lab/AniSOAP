@@ -28,6 +28,26 @@ def parse_args() -> argparse.Namespace:
     )
 
     parser.add_argument("--input", type=Path, default=Path("random_rotations_gb.xyz"))
+    parser.add_argument(
+        "--cache-output",
+        type=Path,
+        default=None,
+        help=(
+            "Precompute scaled AniSOAP features and finite-difference "
+            "feature gradients for explicit train/validation/test splits, "
+            "write them to this .npz file, and exit."
+        ),
+    )
+    parser.add_argument(
+        "--cache-input",
+        type=Path,
+        default=None,
+        help=(
+            "Load precomputed scaled AniSOAP features and feature gradients "
+            "from this .npz file, then run the Ridge fit/alpha scan without "
+            "recomputing descriptors."
+        ),
+    )
 
     parser.add_argument(
         "--train-input",
@@ -1155,8 +1175,729 @@ def run_explicit_split_mode(args: argparse.Namespace) -> None:
 
 
 
+
+def _cache_read_frames(path: Path, label: str) -> list[Atoms]:
+    frames = read(path, ":")
+
+    if not frames:
+        raise RuntimeError(f"No {label} frames read from {path}")
+
+    return frames
+
+
+def _cache_validate_frame_groups(
+    frame_groups: dict[str, list[Atoms]],
+) -> int:
+    first_group = next(iter(frame_groups.values()))
+    n_particles = len(first_group[0])
+
+    # In ASE extended XYZ files, forces may be loaded as calculator
+    # results rather than as frame.arrays["forces"].  The fitter uses
+    # frame.get_forces(), so do not require a literal "forces" array here.
+    required_arrays = {
+        "quaternions",
+        "torques",
+        "c_diameter[1]",
+        "c_diameter[2]",
+        "c_diameter[3]",
+    }
+
+    for label, frames in frame_groups.items():
+        for frame_index, frame in enumerate(frames):
+            if len(frame) != n_particles:
+                raise RuntimeError(
+                    f"{label} frame {frame_index} has {len(frame)} "
+                    f"particles; expected {n_particles}"
+                )
+
+            missing = required_arrays - set(frame.arrays)
+            if missing:
+                raise RuntimeError(
+                    f"{label} frame {frame_index} missing arrays "
+                    f"{sorted(missing)}"
+                )
+
+            try:
+                forces = frame.get_forces()
+            except Exception as exc:
+                raise RuntimeError(
+                    f"{label} frame {frame_index} does not provide forces "
+                    "through frame.get_forces()"
+                ) from exc
+
+            forces = np.asarray(forces, dtype=float)
+            if forces.shape != (n_particles, 3):
+                raise RuntimeError(
+                    f"{label} frame {frame_index} has force shape "
+                    f"{forces.shape}; expected {(n_particles, 3)}"
+                )
+
+    return n_particles
+
+
+def _cache_extract_targets(
+    frames: list[Atoms],
+    *,
+    quaternion_order: str,
+    quaternion_matrix_direction: str,
+    torque_target_frame: str,
+) -> dict[str, np.ndarray]:
+    energy = np.asarray(
+        [frame.get_potential_energy() for frame in frames],
+        dtype=float,
+    )
+    force = np.asarray(
+        [frame.get_forces() for frame in frames],
+        dtype=float,
+    )
+    torque_stored = np.asarray(
+        [frame.arrays["torques"] for frame in frames],
+        dtype=float,
+    )
+
+    if torque_target_frame == "body":
+        torque_body = torque_stored
+        torque_space = body_to_space_vectors(
+            torque_body,
+            frames,
+            quaternion_order=quaternion_order,
+            quaternion_matrix_direction=quaternion_matrix_direction,
+        )
+    elif torque_target_frame == "space":
+        torque_space = torque_stored
+        torque_body = space_to_body_vectors(
+            torque_space,
+            frames,
+            quaternion_order=quaternion_order,
+            quaternion_matrix_direction=quaternion_matrix_direction,
+        )
+    else:
+        raise ValueError(torque_target_frame)
+
+    matrices_space_to_body = np.asarray(
+        [
+            stored_to_space_to_body(
+                np.asarray(frame.arrays["quaternions"], dtype=float),
+                order=quaternion_order,
+                matrix_direction=quaternion_matrix_direction,
+            )
+            for frame in frames
+        ],
+        dtype=float,
+    )
+
+    return {
+        "energy": energy,
+        "force": force,
+        "torque_body": torque_body,
+        "torque_space": torque_space,
+        "matrices_space_to_body": matrices_space_to_body,
+    }
+
+
+def run_cache_build_mode(args: argparse.Namespace) -> None:
+    if args.cache_output is None:
+        raise ValueError("--cache-output is required for cache build mode")
+
+    if not (
+        args.train_input is not None
+        and args.validation_input is not None
+        and args.test_input is not None
+    ):
+        raise ValueError(
+            "Cache build mode requires --train-input, "
+            "--validation-input, and --test-input"
+        )
+
+    if args.max_frames is not None:
+        raise ValueError("--max-frames is not supported in cache build mode")
+
+    args.cache_output.parent.mkdir(parents=True, exist_ok=True)
+
+    frame_groups = {
+        "train": _cache_read_frames(args.train_input, "training"),
+        "validation": _cache_read_frames(
+            args.validation_input,
+            "validation",
+        ),
+        "test": _cache_read_frames(args.test_input, "test"),
+    }
+
+    n_particles = _cache_validate_frame_groups(frame_groups)
+
+    target_groups = {
+        name: _cache_extract_targets(
+            frames,
+            quaternion_order=args.quaternion_order,
+            quaternion_matrix_direction=args.quaternion_matrix_direction,
+            torque_target_frame=args.torque_target_frame,
+        )
+        for name, frames in frame_groups.items()
+    }
+
+    calculator = EllipsoidalDensityProjection(
+        max_angular=args.max_angular,
+        max_radial=args.max_radial,
+        radial_basis_name="gto",
+        rotation_type="quaternion",
+        rotation_key="quaternions",
+        cutoff_radius=args.cutoff,
+        radial_gaussian_width=args.radial_width,
+        basis_rcond=args.basis_rcond,
+        basis_tol=args.basis_tol,
+        subtract_center_contribution=False,
+        dtype=torch.float64,
+    )
+
+    feature_computer = FeatureComputer(
+        calculator,
+        args.feature_batch_size,
+    )
+
+    print(
+        "cache split sizes: "
+        f"train={len(frame_groups['train'])}, "
+        f"validation={len(frame_groups['validation'])}, "
+        f"test={len(frame_groups['test'])}",
+        flush=True,
+    )
+
+    raw_features = {}
+    for split in ("train", "validation", "test"):
+        print(
+            f"computing normalized {split} AniSOAP features ...",
+            flush=True,
+        )
+        raw_features[split] = feature_computer.raw(frame_groups[split])
+
+    # Feature selection is fitted on training data only.
+    finite_mask = np.isfinite(raw_features["train"]).all(axis=0)
+    variance_mask = (
+        np.var(raw_features["train"], axis=0)
+        >= args.variance_threshold
+    )
+    feature_mask = finite_mask & variance_mask
+
+    if not np.any(feature_mask):
+        raise RuntimeError("No usable training features remain")
+
+    print("raw feature shape:", raw_features["train"].shape, flush=True)
+    print("retained feature count:", int(np.sum(feature_mask)), flush=True)
+
+    selected_features = {
+        split: raw_features[split][:, feature_mask]
+        for split in ("train", "validation", "test")
+    }
+
+    for split in ("validation", "test"):
+        if not np.isfinite(selected_features[split]).all():
+            raise RuntimeError(
+                f"{split} features contain non-finite values in retained "
+                "columns"
+            )
+
+    x_scaler = StandardFlexibleScaler(
+        column_wise=False
+    ).fit(selected_features["train"])
+
+    x = {
+        split: x_scaler.transform(selected_features[split])
+        for split in ("train", "validation", "test")
+    }
+
+    energy_mean = float(np.mean(target_groups["train"]["energy"]))
+    energy_scale = max(
+        float(np.std(target_groups["train"]["energy"] - energy_mean)),
+        1.0e-15,
+    )
+    force_scale = max(
+        float(np.std(target_groups["train"]["force"])),
+        1.0e-15,
+    )
+    torque_scale = max(
+        float(np.std(target_groups["train"]["torque_space"])),
+        1.0e-15,
+    )
+
+    dfeatures_dr = {}
+    dfeatures_dtheta = {}
+
+    for split in ("train", "validation", "test"):
+        print(f"computing {split} feature derivatives ...", flush=True)
+        dr, dtheta = finite_difference_feature_derivatives(
+            feature_computer,
+            frame_groups[split],
+            feature_mask,
+            x_scaler,
+            position_step=args.position_step,
+            rotation_step=args.rotation_step,
+            quaternion_order=args.quaternion_order,
+            quaternion_matrix_direction=args.quaternion_matrix_direction,
+        )
+        dfeatures_dr[split] = dr
+        dfeatures_dtheta[split] = dtheta
+
+    metadata = {
+        "train_input": str(args.train_input),
+        "validation_input": str(args.validation_input),
+        "test_input": str(args.test_input),
+        "n_train": len(frame_groups["train"]),
+        "n_validation": len(frame_groups["validation"]),
+        "n_test": len(frame_groups["test"]),
+        "n_particles": n_particles,
+        "raw_feature_count": int(raw_features["train"].shape[1]),
+        "retained_feature_count": int(np.sum(feature_mask)),
+        "normalize": True,
+        "subtract_center_contribution": False,
+        "max_angular": args.max_angular,
+        "max_radial": args.max_radial,
+        "cutoff": args.cutoff,
+        "radial_width": args.radial_width,
+        "basis_rcond": args.basis_rcond,
+        "basis_tol": args.basis_tol,
+        "variance_threshold": args.variance_threshold,
+        "position_step": args.position_step,
+        "rotation_step": args.rotation_step,
+        "quaternion_order": args.quaternion_order,
+        "quaternion_matrix_direction": (
+            args.quaternion_matrix_direction
+        ),
+        "torque_target_frame": args.torque_target_frame,
+        "energy_mean_from_train": energy_mean,
+        "energy_scale_from_train": energy_scale,
+        "force_scale_from_train": force_scale,
+        "torque_scale_from_train": torque_scale,
+    }
+
+    arrays = {
+        "metadata_json": np.array(json.dumps(metadata)),
+        "feature_mask": feature_mask,
+        "energy_mean": np.array(energy_mean),
+        "energy_scale": np.array(energy_scale),
+        "force_scale": np.array(force_scale),
+        "torque_scale": np.array(torque_scale),
+    }
+
+    for split in ("train", "validation", "test"):
+        arrays[f"{split}_x"] = x[split]
+        arrays[f"{split}_dfeatures_dr"] = dfeatures_dr[split]
+        arrays[f"{split}_dfeatures_dtheta"] = dfeatures_dtheta[split]
+        arrays[f"{split}_energy"] = target_groups[split]["energy"]
+        arrays[f"{split}_force"] = target_groups[split]["force"]
+        arrays[f"{split}_torque_body"] = target_groups[split][
+            "torque_body"
+        ]
+        arrays[f"{split}_torque_space"] = target_groups[split][
+            "torque_space"
+        ]
+        arrays[f"{split}_matrices_space_to_body"] = target_groups[split][
+            "matrices_space_to_body"
+        ]
+
+    np.savez(args.cache_output, **arrays)
+
+    manifest_path = args.cache_output.with_suffix(".json")
+    with manifest_path.open("w") as handle:
+        json.dump(metadata, handle, indent=2)
+
+    print(f"Cache written to {args.cache_output.resolve()}", flush=True)
+    print(f"Manifest written to {manifest_path.resolve()}", flush=True)
+
+
+def _cache_body_from_space(
+    torque_space: np.ndarray,
+    matrices_space_to_body: np.ndarray,
+) -> np.ndarray:
+    return np.einsum(
+        "npij,npj->npi",
+        matrices_space_to_body,
+        torque_space,
+    )
+
+
+def _cache_predict_split(
+    coefficients: np.ndarray,
+    cache: dict[str, np.ndarray],
+    split: str,
+    *,
+    energy_mean: float,
+    torque_derivative_sign: float,
+) -> dict[str, np.ndarray]:
+    energy_centered, force, torque_space = predictions_from_coefficients(
+        coefficients,
+        cache[f"{split}_x"],
+        cache[f"{split}_dfeatures_dr"],
+        cache[f"{split}_dfeatures_dtheta"],
+        torque_derivative_sign=torque_derivative_sign,
+    )
+
+    energy = energy_centered + energy_mean
+    torque_body = _cache_body_from_space(
+        torque_space,
+        cache[f"{split}_matrices_space_to_body"],
+    )
+
+    return {
+        "energy": energy,
+        "force": force,
+        "torque_space": torque_space,
+        "torque_body": torque_body,
+    }
+
+
+def _cache_make_system(
+    cache: dict[str, np.ndarray],
+    split: str,
+    *,
+    energy_mean: float,
+    energy_scale: float,
+    force_scale: float,
+    torque_scale: float,
+    energy_weight: float,
+    force_weight: float,
+    torque_weight: float,
+    torque_derivative_sign: float,
+) -> tuple[np.ndarray, np.ndarray]:
+    indices = np.arange(cache[f"{split}_x"].shape[0])
+    energy_centered = cache[f"{split}_energy"] - energy_mean
+
+    return make_augmented_system(
+        indices,
+        cache[f"{split}_x"],
+        energy_centered,
+        cache[f"{split}_force"],
+        cache[f"{split}_torque_space"],
+        cache[f"{split}_dfeatures_dr"],
+        cache[f"{split}_dfeatures_dtheta"],
+        energy_scale=energy_scale,
+        force_scale=force_scale,
+        torque_scale=torque_scale,
+        energy_weight=energy_weight,
+        force_weight=force_weight,
+        torque_weight=torque_weight,
+        torque_derivative_sign=torque_derivative_sign,
+    )
+
+
+def run_cache_fit_mode(args: argparse.Namespace) -> None:
+    if args.cache_input is None:
+        raise ValueError("--cache-input is required for cache fit mode")
+
+    if (
+        args.energy_weight <= 0.0
+        and args.force_weight <= 0.0
+        and args.torque_weight <= 0.0
+    ):
+        raise ValueError("At least one E/F/T weight must be positive")
+
+    args.output.mkdir(parents=True, exist_ok=True)
+
+    data = np.load(args.cache_input, allow_pickle=False)
+    cache = {
+        key: data[key]
+        for key in data.files
+        if key != "metadata_json"
+    }
+    metadata = json.loads(str(data["metadata_json"].item()))
+
+    energy_mean = float(cache["energy_mean"].item())
+    energy_scale = float(cache["energy_scale"].item())
+    force_scale = float(cache["force_scale"].item())
+    torque_scale = float(cache["torque_scale"].item())
+
+    train_matrix, train_target = _cache_make_system(
+        cache,
+        "train",
+        energy_mean=energy_mean,
+        energy_scale=energy_scale,
+        force_scale=force_scale,
+        torque_scale=torque_scale,
+        energy_weight=args.energy_weight,
+        force_weight=args.force_weight,
+        torque_weight=args.torque_weight,
+        torque_derivative_sign=args.torque_derivative_sign,
+    )
+
+    print("training design matrix:", train_matrix.shape, flush=True)
+
+    if args.alpha is None:
+        alpha_values = np.logspace(
+            np.log10(args.alpha_min),
+            np.log10(args.alpha_max),
+            args.alpha_count,
+        )
+    else:
+        alpha_values = np.asarray([args.alpha], dtype=float)
+
+    validation_indices = np.arange(cache["validation_x"].shape[0])
+
+    best_score = np.inf
+    best_alpha = None
+    scan_rows = []
+
+    for alpha in alpha_values:
+        model = Ridge(
+            alpha=float(alpha),
+            fit_intercept=False,
+            solver="lsqr",
+            tol=1.0e-10,
+            max_iter=10000,
+        )
+        model.fit(train_matrix, train_target)
+
+        coefficients = np.asarray(model.coef_, dtype=float)
+
+        validation_prediction = _cache_predict_split(
+            coefficients,
+            cache,
+            "validation",
+            energy_mean=energy_mean,
+            torque_derivative_sign=args.torque_derivative_sign,
+        )
+
+        score = normalized_validation_score(
+            cache["validation_energy"],
+            validation_prediction["energy"],
+            cache["validation_force"],
+            validation_prediction["force"],
+            cache["validation_torque_space"],
+            validation_prediction["torque_space"],
+            validation_indices,
+            energy_scale=energy_scale,
+            force_scale=force_scale,
+            torque_scale=torque_scale,
+            energy_weight=args.energy_weight,
+            force_weight=args.force_weight,
+            torque_weight=args.torque_weight,
+        )
+
+        row = {
+            "alpha": float(alpha),
+            "validation_score": float(score),
+            "validation_energy_r2": float(
+                r2_score(
+                    cache["validation_energy"],
+                    validation_prediction["energy"],
+                )
+            ),
+            "validation_force_r2": float(
+                r2_score(
+                    cache["validation_force"].reshape(-1),
+                    validation_prediction["force"].reshape(-1),
+                )
+            ),
+            "validation_torque_space_r2": float(
+                r2_score(
+                    cache["validation_torque_space"].reshape(-1),
+                    validation_prediction["torque_space"].reshape(-1),
+                )
+            ),
+            "validation_torque_body_r2": float(
+                r2_score(
+                    cache["validation_torque_body"].reshape(-1),
+                    validation_prediction["torque_body"].reshape(-1),
+                )
+            ),
+        }
+        scan_rows.append(row)
+
+        print(
+            f"alpha={alpha:.3e} "
+            f"score={score:.6g} "
+            f"E_R2={row['validation_energy_r2']:.5f} "
+            f"F_R2={row['validation_force_r2']:.5f} "
+            f"T_R2={row['validation_torque_space_r2']:.5f}",
+            flush=True,
+        )
+
+        if score < best_score:
+            best_score = score
+            best_alpha = float(alpha)
+
+    if best_alpha is None:
+        raise RuntimeError("Alpha scan produced no selected alpha")
+
+    print(f"selected alpha: {best_alpha:.12g}", flush=True)
+
+    # Refit on train + validation, while keeping the cache's training-only
+    # feature mask, feature scaler, target mean, and target scales.
+    fit_cache = {
+        "fit_x": np.concatenate(
+            [cache["train_x"], cache["validation_x"]],
+            axis=0,
+        ),
+        "fit_dfeatures_dr": np.concatenate(
+            [
+                cache["train_dfeatures_dr"],
+                cache["validation_dfeatures_dr"],
+            ],
+            axis=0,
+        ),
+        "fit_dfeatures_dtheta": np.concatenate(
+            [
+                cache["train_dfeatures_dtheta"],
+                cache["validation_dfeatures_dtheta"],
+            ],
+            axis=0,
+        ),
+        "fit_energy": np.concatenate(
+            [cache["train_energy"], cache["validation_energy"]],
+            axis=0,
+        ),
+        "fit_force": np.concatenate(
+            [cache["train_force"], cache["validation_force"]],
+            axis=0,
+        ),
+        "fit_torque_space": np.concatenate(
+            [
+                cache["train_torque_space"],
+                cache["validation_torque_space"],
+            ],
+            axis=0,
+        ),
+    }
+
+    fit_indices = np.arange(fit_cache["fit_x"].shape[0])
+    fit_matrix, fit_target = make_augmented_system(
+        fit_indices,
+        fit_cache["fit_x"],
+        fit_cache["fit_energy"] - energy_mean,
+        fit_cache["fit_force"],
+        fit_cache["fit_torque_space"],
+        fit_cache["fit_dfeatures_dr"],
+        fit_cache["fit_dfeatures_dtheta"],
+        energy_scale=energy_scale,
+        force_scale=force_scale,
+        torque_scale=torque_scale,
+        energy_weight=args.energy_weight,
+        force_weight=args.force_weight,
+        torque_weight=args.torque_weight,
+        torque_derivative_sign=args.torque_derivative_sign,
+    )
+
+    final_model = Ridge(
+        alpha=best_alpha,
+        fit_intercept=False,
+        solver="lsqr",
+        tol=1.0e-10,
+        max_iter=10000,
+    )
+    final_model.fit(fit_matrix, fit_target)
+
+    coefficients = np.asarray(final_model.coef_, dtype=float)
+
+    test_prediction = _cache_predict_split(
+        coefficients,
+        cache,
+        "test",
+        energy_mean=energy_mean,
+        torque_derivative_sign=args.torque_derivative_sign,
+    )
+
+    results = {
+        "configuration": {
+            "cache_input": str(args.cache_input),
+            "output": str(args.output),
+            "energy_weight": args.energy_weight,
+            "force_weight": args.force_weight,
+            "torque_weight": args.torque_weight,
+            "torque_derivative_sign": args.torque_derivative_sign,
+            "selected_alpha": best_alpha,
+            "coefficient_count": int(coefficients.size),
+            **metadata,
+        },
+        "test": {
+            "energy": metrics(
+                cache["test_energy"],
+                test_prediction["energy"],
+            ),
+            "force_components": metrics(
+                cache["test_force"],
+                test_prediction["force"],
+            ),
+            "torque_components_space": metrics(
+                cache["test_torque_space"],
+                test_prediction["torque_space"],
+            ),
+            "torque_components_body": metrics(
+                cache["test_torque_body"],
+                test_prediction["torque_body"],
+            ),
+        },
+        "alpha_scan": scan_rows,
+    }
+
+    np.savez(
+        args.output / "test_predictions.npz",
+        energy_target=cache["test_energy"],
+        energy_prediction=test_prediction["energy"],
+        force_target=cache["test_force"],
+        force_prediction=test_prediction["force"],
+        torque_target_space=cache["test_torque_space"],
+        torque_prediction_space=test_prediction["torque_space"],
+        torque_target_body=cache["test_torque_body"],
+        torque_prediction_body=test_prediction["torque_body"],
+        coefficients=coefficients,
+        feature_mask=cache["feature_mask"],
+    )
+
+    with open(args.output / "metrics.json", "w") as handle:
+        json.dump(results, handle, indent=2)
+
+    with open(args.output / "alpha_scan.json", "w") as handle:
+        json.dump(scan_rows, handle, indent=2)
+
+    save_parity(
+        cache["test_energy"],
+        test_prediction["energy"],
+        "Cached conservative linear fit — test energy",
+        "Reference energy",
+        "Predicted energy",
+        args.output / "test_parity_energy.png",
+    )
+    save_parity(
+        cache["test_force"],
+        test_prediction["force"],
+        "Cached conservative linear fit — test forces",
+        "Reference force component",
+        "Predicted force component",
+        args.output / "test_parity_forces.png",
+    )
+    save_parity(
+        cache["test_torque_body"],
+        test_prediction["torque_body"],
+        "Cached conservative linear fit — test body torque",
+        "Reference torque component",
+        "Predicted torque component",
+        args.output / "test_parity_torques_body.png",
+    )
+    save_parity(
+        cache["test_torque_space"],
+        test_prediction["torque_space"],
+        "Cached conservative linear fit — test space torque",
+        "Reference torque component",
+        "Predicted torque component",
+        args.output / "test_parity_torques_space.png",
+    )
+
+    print(json.dumps(results["test"], indent=2), flush=True)
+    print(f"Artifacts written to {args.output.resolve()}", flush=True)
+
+
+
 def main() -> None:
     args = parse_args()
+
+    if args.cache_output is not None and args.cache_input is not None:
+        raise ValueError("Use only one of --cache-output or --cache-input")
+
+    if args.cache_output is not None:
+        run_cache_build_mode(args)
+        return
+
+    if args.cache_input is not None:
+        run_cache_fit_mode(args)
+        return
 
     explicit_split_requested = any(
         path is not None
