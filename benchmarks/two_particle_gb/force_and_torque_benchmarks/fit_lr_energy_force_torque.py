@@ -19,6 +19,35 @@ from skmatter.preprocessing import StandardFlexibleScaler
 from anisoap.representations import EllipsoidalDensityProjection
 
 
+def apply_isotropic_geometry(
+    frames: list[Atoms],
+    mode: str,
+) -> list[Atoms]:
+    """Override stored ellipsoid geometry with spherical geometry at runtime."""
+    if mode == "none":
+        return frames
+
+    if mode != "volume_equivalent":
+        raise ValueError(f"Unknown isotropic geometry mode: {mode}")
+
+    for frame in frames:
+        d1 = np.asarray(frame.arrays["c_diameter[1]"], dtype=float)
+        d2 = np.asarray(frame.arrays["c_diameter[2]"], dtype=float)
+        d3 = np.asarray(frame.arrays["c_diameter[3]"], dtype=float)
+
+        d_iso = np.cbrt(d1 * d2 * d3)
+
+        frame.arrays["c_diameter[1]"] = d_iso.copy()
+        frame.arrays["c_diameter[2]"] = d_iso.copy()
+        frame.arrays["c_diameter[3]"] = d_iso.copy()
+
+        q = np.zeros((len(frame), 4), dtype=float)
+        q[:, 0] = 1.0
+        frame.arrays["quaternions"] = q
+
+    return frames
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
@@ -28,6 +57,15 @@ def parse_args() -> argparse.Namespace:
     )
 
     parser.add_argument("--input", type=Path, default=Path("random_rotations_gb.xyz"))
+    parser.add_argument(
+        "--isotropic-geometry",
+        choices=("none", "volume_equivalent"),
+        default="none",
+        help=(
+            "Override stored ellipsoid geometry at runtime. "
+            "Use volume_equivalent for the isotropic baseline."
+        ),
+    )
     parser.add_argument(
         "--cache-output",
         type=Path,
@@ -329,10 +367,7 @@ def save_parity(
     axis.set_aspect("equal", adjustable="box")
     axis.set_xlabel(x_label)
     axis.set_ylabel(y_label)
-    axis.set_title(
-        f"{title}\n"
-        f"R²={values['r2']:.4f}, RMSE={values['rmse']:.4g}"
-    )
+    axis.set_title(f"{title}\n" f"R²={values['r2']:.4f}, RMSE={values['rmse']:.4g}")
     axis.grid(alpha=0.25)
 
     figure.tight_layout()
@@ -441,14 +476,12 @@ def finite_difference_feature_derivatives(
         n_features,
     )
 
-    dfeatures_dr = (
-        position_pairs[:, :, :, 0, :]
-        - position_pairs[:, :, :, 1, :]
-    ) / (2.0 * position_step)
+    dfeatures_dr = (position_pairs[:, :, :, 0, :] - position_pairs[:, :, :, 1, :]) / (
+        2.0 * position_step
+    )
 
     dfeatures_dtheta = (
-        rotation_pairs[:, :, :, 0, :]
-        - rotation_pairs[:, :, :, 1, :]
+        rotation_pairs[:, :, :, 0, :] - rotation_pairs[:, :, :, 1, :]
     ) / (2.0 * rotation_step)
 
     return dfeatures_dr, dfeatures_dtheta
@@ -475,16 +508,8 @@ def make_augmented_system(
     targets = []
 
     if energy_weight > 0.0:
-        matrices.append(
-            np.sqrt(energy_weight)
-            * x[frame_indices]
-            / energy_scale
-        )
-        targets.append(
-            np.sqrt(energy_weight)
-            * energy[frame_indices]
-            / energy_scale
-        )
+        matrices.append(np.sqrt(energy_weight) * x[frame_indices] / energy_scale)
+        targets.append(np.sqrt(energy_weight) * energy[frame_indices] / energy_scale)
 
     if force_weight > 0.0:
         force_design = -dfeatures_dr[frame_indices].reshape(
@@ -493,37 +518,20 @@ def make_augmented_system(
         )
         force_target = force[frame_indices].reshape(-1)
 
-        matrices.append(
-            np.sqrt(force_weight)
-            * force_design
-            / force_scale
-        )
-        targets.append(
-            np.sqrt(force_weight)
-            * force_target
-            / force_scale
-        )
+        matrices.append(np.sqrt(force_weight) * force_design / force_scale)
+        targets.append(np.sqrt(force_weight) * force_target / force_scale)
 
     if torque_weight > 0.0:
-        torque_design = (
-            torque_derivative_sign
-            * dfeatures_dtheta[frame_indices].reshape(
-                -1,
-                x.shape[1],
-            )
+        torque_design = torque_derivative_sign * dfeatures_dtheta[
+            frame_indices
+        ].reshape(
+            -1,
+            x.shape[1],
         )
         torque_target = torque_space[frame_indices].reshape(-1)
 
-        matrices.append(
-            np.sqrt(torque_weight)
-            * torque_design
-            / torque_scale
-        )
-        targets.append(
-            np.sqrt(torque_weight)
-            * torque_target
-            / torque_scale
-        )
+        matrices.append(np.sqrt(torque_weight) * torque_design / torque_scale)
+        targets.append(np.sqrt(torque_weight) * torque_target / torque_scale)
 
     if not matrices:
         raise ValueError("At least one E/F/T weight must be positive")
@@ -576,35 +584,27 @@ def normalized_validation_score(
     total_weight = 0.0
 
     if energy_weight > 0.0:
-        error = (
-            energy_prediction[indices]
-            - energy_target[indices]
-        ) / energy_scale
+        error = (energy_prediction[indices] - energy_target[indices]) / energy_scale
         score += energy_weight * float(np.mean(error**2))
         total_weight += energy_weight
 
     if force_weight > 0.0:
-        error = (
-            force_prediction[indices]
-            - force_target[indices]
-        ) / force_scale
+        error = (force_prediction[indices] - force_target[indices]) / force_scale
         score += force_weight * float(np.mean(error**2))
         total_weight += force_weight
 
     if torque_weight > 0.0:
-        error = (
-            torque_prediction[indices]
-            - torque_target[indices]
-        ) / torque_scale
+        error = (torque_prediction[indices] - torque_target[indices]) / torque_scale
         score += torque_weight * float(np.mean(error**2))
         total_weight += torque_weight
 
     return score / total_weight
 
 
-
-def _read_required_frames(path: Path, label: str) -> list[Atoms]:
-    frames = read(path, ":")
+def _read_required_frames(
+    path: Path, label: str, args: argparse.Namespace
+) -> list[Atoms]:
+    frames = apply_isotropic_geometry(read(path, ":"), args.isotropic_geometry)
 
     if not frames:
         raise RuntimeError(f"No {label} frames found in {path}")
@@ -699,14 +699,17 @@ def run_explicit_split_mode(args: argparse.Namespace) -> None:
     train_frames = _read_required_frames(
         args.train_input,
         "training",
+        args,
     )
     validation_frames = _read_required_frames(
         args.validation_input,
         "validation",
+        args,
     )
     test_frames = _read_required_frames(
         args.test_input,
         "test",
+        args,
     )
 
     if args.max_frames is not None:
@@ -779,10 +782,7 @@ def run_explicit_split_mode(args: argparse.Namespace) -> None:
 
     # Feature selection is based only on training data.
     finite_mask = np.isfinite(train_raw).all(axis=0)
-    variance_mask = (
-        np.var(train_raw, axis=0)
-        >= args.variance_threshold
-    )
+    variance_mask = np.var(train_raw, axis=0) >= args.variance_threshold
     feature_mask = finite_mask & variance_mask
 
     if not np.any(feature_mask):
@@ -808,9 +808,7 @@ def run_explicit_split_mode(args: argparse.Namespace) -> None:
         )
 
     # The scaler is fitted only on training features.
-    x_scaler = StandardFlexibleScaler(
-        column_wise=False
-    ).fit(train_selected)
+    x_scaler = StandardFlexibleScaler(column_wise=False).fit(train_selected)
 
     train_x = x_scaler.transform(train_selected)
     validation_x = x_scaler.transform(validation_selected)
@@ -831,12 +829,8 @@ def run_explicit_split_mode(args: argparse.Namespace) -> None:
         1.0e-15,
     )
 
-    train_energy_centered = (
-        train_targets["energy"] - energy_mean
-    )
-    validation_energy_centered = (
-        validation_targets["energy"] - energy_mean
-    )
+    train_energy_centered = train_targets["energy"] - energy_mean
+    validation_energy_centered = validation_targets["energy"] - energy_mean
 
     print("computing training feature derivatives ...")
     train_dr, train_dtheta = finite_difference_feature_derivatives(
@@ -851,19 +845,15 @@ def run_explicit_split_mode(args: argparse.Namespace) -> None:
     )
 
     print("computing validation feature derivatives ...")
-    validation_dr, validation_dtheta = (
-        finite_difference_feature_derivatives(
-            feature_computer,
-            validation_frames,
-            feature_mask,
-            x_scaler,
-            position_step=args.position_step,
-            rotation_step=args.rotation_step,
-            quaternion_order=args.quaternion_order,
-            quaternion_matrix_direction=(
-                args.quaternion_matrix_direction
-            ),
-        )
+    validation_dr, validation_dtheta = finite_difference_feature_derivatives(
+        feature_computer,
+        validation_frames,
+        feature_mask,
+        x_scaler,
+        position_step=args.position_step,
+        rotation_step=args.rotation_step,
+        quaternion_order=args.quaternion_order,
+        quaternion_matrix_direction=(args.quaternion_matrix_direction),
     )
 
     train_indices = np.arange(len(train_frames))
@@ -911,15 +901,13 @@ def run_explicit_split_mode(args: argparse.Namespace) -> None:
 
         coefficients = np.asarray(model.coef_, dtype=float)
 
-        validation_energy, validation_force, validation_torque_space = (
-            _predict_split(
-                coefficients,
-                validation_x,
-                validation_dr,
-                validation_dtheta,
-                energy_mean=energy_mean,
-                torque_derivative_sign=args.torque_derivative_sign,
-            )
+        validation_energy, validation_force, validation_torque_space = _predict_split(
+            coefficients,
+            validation_x,
+            validation_dr,
+            validation_dtheta,
+            energy_mean=energy_mean,
+            torque_derivative_sign=args.torque_derivative_sign,
         )
 
         score = normalized_validation_score(
@@ -1174,10 +1162,8 @@ def run_explicit_split_mode(args: argparse.Namespace) -> None:
     print(f"Artifacts written to {args.output.resolve()}")
 
 
-
-
-def _cache_read_frames(path: Path, label: str) -> list[Atoms]:
-    frames = read(path, ":")
+def _cache_read_frames(path: Path, label: str, args: argparse.Namespace) -> list[Atoms]:
+    frames = apply_isotropic_geometry(read(path, ":"), args.isotropic_geometry)
 
     if not frames:
         raise RuntimeError(f"No {label} frames read from {path}")
@@ -1213,8 +1199,7 @@ def _cache_validate_frame_groups(
             missing = required_arrays - set(frame.arrays)
             if missing:
                 raise RuntimeError(
-                    f"{label} frame {frame_index} missing arrays "
-                    f"{sorted(missing)}"
+                    f"{label} frame {frame_index} missing arrays " f"{sorted(missing)}"
                 )
 
             try:
@@ -1315,12 +1300,9 @@ def run_cache_build_mode(args: argparse.Namespace) -> None:
     args.cache_output.parent.mkdir(parents=True, exist_ok=True)
 
     frame_groups = {
-        "train": _cache_read_frames(args.train_input, "training"),
-        "validation": _cache_read_frames(
-            args.validation_input,
-            "validation",
-        ),
-        "test": _cache_read_frames(args.test_input, "test"),
+        "train": _cache_read_frames(args.train_input, "training", args),
+        "validation": _cache_read_frames(args.validation_input, "validation", args),
+        "test": _cache_read_frames(args.test_input, "test", args),
     }
 
     n_particles = _cache_validate_frame_groups(frame_groups)
@@ -1372,10 +1354,7 @@ def run_cache_build_mode(args: argparse.Namespace) -> None:
 
     # Feature selection is fitted on training data only.
     finite_mask = np.isfinite(raw_features["train"]).all(axis=0)
-    variance_mask = (
-        np.var(raw_features["train"], axis=0)
-        >= args.variance_threshold
-    )
+    variance_mask = np.var(raw_features["train"], axis=0) >= args.variance_threshold
     feature_mask = finite_mask & variance_mask
 
     if not np.any(feature_mask):
@@ -1392,13 +1371,10 @@ def run_cache_build_mode(args: argparse.Namespace) -> None:
     for split in ("validation", "test"):
         if not np.isfinite(selected_features[split]).all():
             raise RuntimeError(
-                f"{split} features contain non-finite values in retained "
-                "columns"
+                f"{split} features contain non-finite values in retained " "columns"
             )
 
-    x_scaler = StandardFlexibleScaler(
-        column_wise=False
-    ).fit(selected_features["train"])
+    x_scaler = StandardFlexibleScaler(column_wise=False).fit(selected_features["train"])
 
     x = {
         split: x_scaler.transform(selected_features[split])
@@ -1459,9 +1435,7 @@ def run_cache_build_mode(args: argparse.Namespace) -> None:
         "position_step": args.position_step,
         "rotation_step": args.rotation_step,
         "quaternion_order": args.quaternion_order,
-        "quaternion_matrix_direction": (
-            args.quaternion_matrix_direction
-        ),
+        "quaternion_matrix_direction": (args.quaternion_matrix_direction),
         "torque_target_frame": args.torque_target_frame,
         "energy_mean_from_train": energy_mean,
         "energy_scale_from_train": energy_scale,
@@ -1484,12 +1458,8 @@ def run_cache_build_mode(args: argparse.Namespace) -> None:
         arrays[f"{split}_dfeatures_dtheta"] = dfeatures_dtheta[split]
         arrays[f"{split}_energy"] = target_groups[split]["energy"]
         arrays[f"{split}_force"] = target_groups[split]["force"]
-        arrays[f"{split}_torque_body"] = target_groups[split][
-            "torque_body"
-        ]
-        arrays[f"{split}_torque_space"] = target_groups[split][
-            "torque_space"
-        ]
+        arrays[f"{split}_torque_body"] = target_groups[split]["torque_body"]
+        arrays[f"{split}_torque_space"] = target_groups[split]["torque_space"]
         arrays[f"{split}_matrices_space_to_body"] = target_groups[split][
             "matrices_space_to_body"
         ]
@@ -1593,11 +1563,7 @@ def run_cache_fit_mode(args: argparse.Namespace) -> None:
     args.output.mkdir(parents=True, exist_ok=True)
 
     data = np.load(args.cache_input, allow_pickle=False)
-    cache = {
-        key: data[key]
-        for key in data.files
-        if key != "metadata_json"
-    }
+    cache = {key: data[key] for key in data.files if key != "metadata_json"}
     metadata = json.loads(str(data["metadata_json"].item()))
 
     energy_mean = float(cache["energy_mean"].item())
@@ -1884,7 +1850,6 @@ def run_cache_fit_mode(args: argparse.Namespace) -> None:
     print(f"Artifacts written to {args.output.resolve()}", flush=True)
 
 
-
 def main() -> None:
     args = parse_args()
 
@@ -1920,7 +1885,7 @@ def main() -> None:
 
     args.output.mkdir(parents=True, exist_ok=True)
 
-    frames = read(args.input, ":")
+    frames = apply_isotropic_geometry(read(args.input, ":"), args.isotropic_geometry)
     if args.max_frames is not None:
         frames = frames[: args.max_frames]
 
@@ -1965,7 +1930,7 @@ def main() -> None:
             quaternion_matrix_direction=args.quaternion_matrix_direction,
         )
 
-    print('here')
+    print("here")
 
     calculator = EllipsoidalDensityProjection(
         max_angular=args.max_angular,
@@ -1991,10 +1956,7 @@ def main() -> None:
     raw_features = feature_computer.raw(frames)
 
     finite_mask = np.isfinite(raw_features).all(axis=0)
-    variance_mask = (
-        np.var(raw_features, axis=0)
-        >= args.variance_threshold
-    )
+    variance_mask = np.var(raw_features, axis=0) >= args.variance_threshold
     feature_mask = finite_mask & variance_mask
     selected_features = raw_features[:, feature_mask]
 
@@ -2004,9 +1966,7 @@ def main() -> None:
     if selected_features.shape[1] == 0:
         raise RuntimeError("No usable features remain")
 
-    x_scaler = StandardFlexibleScaler(
-        column_wise=False
-    ).fit(selected_features)
+    x_scaler = StandardFlexibleScaler(column_wise=False).fit(selected_features)
     x = x_scaler.transform(selected_features)
 
     # Center energy explicitly so that fit_intercept=False remains valid.
@@ -2288,16 +2248,18 @@ def main() -> None:
         args.output / "parity_torques_space.png",
     )
 
-    print(json.dumps(
-        {
-            "selected_alpha": best_alpha,
-            "energy": results["energy"],
-            "force_components": results["force_components"],
-            "torque_components_body": results["torque_components_body"],
-            "torque_components_space": results["torque_components_space"],
-        },
-        indent=2,
-    ))
+    print(
+        json.dumps(
+            {
+                "selected_alpha": best_alpha,
+                "energy": results["energy"],
+                "force_components": results["force_components"],
+                "torque_components_body": results["torque_components_body"],
+                "torque_components_space": results["torque_components_space"],
+            },
+            indent=2,
+        )
+    )
     print(f"Artifacts written to {args.output.resolve()}")
 
 
