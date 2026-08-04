@@ -82,3 +82,25 @@ venv.bak/
 venv/
 wheels/
 deprecated
+
+# Local notebooks
+Untitled.ipynb
+**/Untitled.ipynb
+
+# Formamide generated data and benchmark artifacts
+benchmarks/formamide/formamide.xyz
+benchmarks/formamide/formamide_cg.xyz
+benchmarks/formamide/formamide_clusters.traj
+benchmarks/formamide/publication_splits/
+benchmarks/formamide/publication_linear_cache/
+benchmarks/formamide/publication_linear_runs/
+benchmarks/formamide/isotropic_linear_cache/
+benchmarks/formamide/isotropic_linear_runs/
+
+# Gay-Berne generated benchmark artifacts
+benchmarks/two_particle_gb/force_and_torque_benchmarks/isotropic_linear_cache/
+benchmarks/two_particle_gb/force_and_torque_benchmarks/isotropic_linear_runs/
+
+# Python cache
+__pycache__/
+*.pyc
