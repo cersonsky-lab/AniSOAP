@@ -73,6 +73,146 @@ def apply_diameter_scale(frames, diameter_scale):
     return frames
 
 
+def _frame_n_molecules(frame: Atoms, frame_index: int) -> int:
+    if "n_molecules" not in frame.info:
+        raise KeyError(
+            f"Frame {frame_index} is missing frame.info['n_molecules']; "
+            "formamide targets require n_molecules"
+        )
+
+    n_molecules = int(float(frame.info["n_molecules"]))
+    if n_molecules <= 0:
+        raise ValueError(f"Frame {frame_index} has invalid n_molecules={n_molecules}")
+
+    return n_molecules
+
+
+def _frame_interaction_energy_per_molecule(frame: Atoms, frame_index: int) -> float:
+    if "interaction_energy" not in frame.info:
+        raise KeyError(
+            f"Frame {frame_index} is missing frame.info['interaction_energy']; "
+            "formamide targets require interaction_energy"
+        )
+
+    return float(frame.info["interaction_energy"]) / float(
+        _frame_n_molecules(frame, frame_index)
+    )
+
+
+def _as_target_array(value, *, name: str, frame_index: int, n_particles: int) -> np.ndarray:
+    array = np.asarray(value, dtype=float)
+
+    if array.shape != (n_particles, 3):
+        raise ValueError(
+            f"Frame {frame_index} target {name!r} has shape {array.shape}; "
+            f"expected {(n_particles, 3)}"
+        )
+
+    return array
+
+
+def _frame_molecular_force_report(frame: Atoms, frame_index: int) -> np.ndarray:
+    n_particles = len(frame)
+
+    if "molecular_force" in frame.info:
+        return _as_target_array(
+            frame.info["molecular_force"],
+            name="molecular_force",
+            frame_index=frame_index,
+            n_particles=n_particles,
+        )
+
+    try:
+        force = frame.get_forces()
+    except Exception as exc:
+        raise KeyError(
+            f"Frame {frame_index} is missing molecular force targets. "
+            "Expected frame.info['molecular_force'] or ASE calculator forces."
+        ) from exc
+
+    return _as_target_array(
+        force,
+        name="forces",
+        frame_index=frame_index,
+        n_particles=n_particles,
+    )
+
+
+def _frame_molecular_torque_report(frame: Atoms, frame_index: int) -> np.ndarray:
+    n_particles = len(frame)
+
+    if "molecular_torque" in frame.info:
+        return _as_target_array(
+            frame.info["molecular_torque"],
+            name="molecular_torque",
+            frame_index=frame_index,
+            n_particles=n_particles,
+        )
+
+    if "torques" not in frame.arrays:
+        raise KeyError(
+            f"Frame {frame_index} is missing molecular torque targets. "
+            "Expected frame.info['molecular_torque'] or frame.arrays['torques']."
+        )
+
+    return _as_target_array(
+        frame.arrays["torques"],
+        name="torques",
+        frame_index=frame_index,
+        n_particles=n_particles,
+    )
+
+
+def _formamide_target_arrays(frames: list[Atoms]) -> dict[str, np.ndarray]:
+    n_molecules = np.asarray(
+        [_frame_n_molecules(frame, i) for i, frame in enumerate(frames)],
+        dtype=float,
+    )
+
+    energy = np.asarray(
+        [
+            _frame_interaction_energy_per_molecule(frame, i)
+            for i, frame in enumerate(frames)
+        ],
+        dtype=float,
+    )
+
+    force_report = np.asarray(
+        [
+            _frame_molecular_force_report(frame, i)
+            for i, frame in enumerate(frames)
+        ],
+        dtype=float,
+    )
+
+    torque_report = np.asarray(
+        [
+            _frame_molecular_torque_report(frame, i)
+            for i, frame in enumerate(frames)
+        ],
+        dtype=float,
+    )
+
+    scale = n_molecules.reshape(-1, 1, 1)
+
+    return {
+        "n_molecules": n_molecules,
+        "energy": energy,
+        "force": force_report / scale,
+        "force_report": force_report,
+        "torque_stored": torque_report / scale,
+        "torque_stored_report": torque_report,
+    }
+
+
+def _report_vector_prediction(
+    prediction_internal: np.ndarray,
+    n_molecules: np.ndarray,
+) -> np.ndarray:
+    return np.asarray(prediction_internal, dtype=float) * np.asarray(
+        n_molecules, dtype=float
+    ).reshape(-1, 1, 1)
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
@@ -647,6 +787,7 @@ def _read_required_frames(
     return frames
 
 
+
 def _extract_targets(
     frames: list[Atoms],
     *,
@@ -654,27 +795,23 @@ def _extract_targets(
     quaternion_matrix_direction: str,
     torque_target_frame: str,
 ) -> dict[str, np.ndarray]:
-    energy = np.asarray(
-        [frame.get_potential_energy() for frame in frames],
-        dtype=float,
-    )
-    force = np.asarray(
-        [frame.get_forces() for frame in frames],
-        dtype=float,
-    )
+    base = _formamide_target_arrays(frames)
 
-    if any("torques" not in frame.arrays for frame in frames):
-        raise RuntimeError("Every frame must contain a 'torques' array")
-
-    torque_stored = np.asarray(
-        [frame.arrays["torques"] for frame in frames],
-        dtype=float,
-    )
+    torque_stored = base["torque_stored"]
+    torque_stored_report = base["torque_stored_report"]
 
     if torque_target_frame == "body":
         torque_body = torque_stored
         torque_space = body_to_space_vectors(
             torque_body,
+            frames,
+            quaternion_order=quaternion_order,
+            quaternion_matrix_direction=quaternion_matrix_direction,
+        )
+
+        torque_body_report = torque_stored_report
+        torque_space_report = body_to_space_vectors(
+            torque_body_report,
             frames,
             quaternion_order=quaternion_order,
             quaternion_matrix_direction=quaternion_matrix_direction,
@@ -688,13 +825,24 @@ def _extract_targets(
             quaternion_matrix_direction=quaternion_matrix_direction,
         )
 
+        torque_space_report = torque_stored_report
+        torque_body_report = space_to_body_vectors(
+            torque_space_report,
+            frames,
+            quaternion_order=quaternion_order,
+            quaternion_matrix_direction=quaternion_matrix_direction,
+        )
+
     return {
-        "energy": energy,
-        "force": force,
+        "n_molecules": base["n_molecules"],
+        "energy": base["energy"],
+        "force": base["force"],
+        "force_report": base["force_report"],
         "torque_body": torque_body,
         "torque_space": torque_space,
+        "torque_body_report": torque_body_report,
+        "torque_space_report": torque_space_report,
     }
-
 
 def _predict_split(
     coefficients: np.ndarray,
@@ -1091,6 +1239,19 @@ def run_explicit_split_mode(args: argparse.Namespace) -> None:
         quaternion_matrix_direction=args.quaternion_matrix_direction,
     )
 
+    test_force_report = _report_vector_prediction(
+        test_force,
+        test_targets["n_molecules"],
+    )
+    test_torque_space_report = _report_vector_prediction(
+        test_torque_space,
+        test_targets["n_molecules"],
+    )
+    test_torque_body_report = _report_vector_prediction(
+        test_torque_body,
+        test_targets["n_molecules"],
+    )
+
     results = {
         "configuration": {
             "train_input": str(args.train_input),
@@ -1105,6 +1266,11 @@ def run_explicit_split_mode(args: argparse.Namespace) -> None:
             "coefficient_count": int(coefficients.size),
             "normalize": True,
             "subtract_center_contribution": False,
+            "target_convention": (
+                "energy=interaction_energy/n_molecules; "
+                "force=molecular_force/n_molecules internally, reported as molecular_force; "
+                "torque=molecular_torque/n_molecules internally, reported as molecular_torque"
+            ),
             "max_angular": args.max_angular,
             "max_radial": args.max_radial,
             "cutoff": args.cutoff,
@@ -1130,16 +1296,16 @@ def run_explicit_split_mode(args: argparse.Namespace) -> None:
                 test_energy,
             ),
             "force_components": metrics(
-                test_targets["force"],
-                test_force,
+                test_targets["force_report"],
+                test_force_report,
             ),
             "torque_components_space": metrics(
-                test_targets["torque_space"],
-                test_torque_space,
+                test_targets["torque_space_report"],
+                test_torque_space_report,
             ),
             "torque_components_body": metrics(
-                test_targets["torque_body"],
-                test_torque_body,
+                test_targets["torque_body_report"],
+                test_torque_body_report,
             ),
         },
         "alpha_scan": scan_rows,
@@ -1149,12 +1315,19 @@ def run_explicit_split_mode(args: argparse.Namespace) -> None:
         args.output / "test_predictions.npz",
         energy_target=test_targets["energy"],
         energy_prediction=test_energy,
-        force_target=test_targets["force"],
-        force_prediction=test_force,
-        torque_target_space=test_targets["torque_space"],
-        torque_prediction_space=test_torque_space,
-        torque_target_body=test_targets["torque_body"],
-        torque_prediction_body=test_torque_body,
+        force_target=test_targets["force_report"],
+        force_prediction=test_force_report,
+        force_target_internal=test_targets["force"],
+        force_prediction_internal=test_force,
+        torque_target_space=test_targets["torque_space_report"],
+        torque_prediction_space=test_torque_space_report,
+        torque_target_body=test_targets["torque_body_report"],
+        torque_prediction_body=test_torque_body_report,
+        torque_target_space_internal=test_targets["torque_space"],
+        torque_prediction_space_internal=test_torque_space,
+        torque_target_body_internal=test_targets["torque_body"],
+        torque_prediction_body_internal=test_torque_body,
+        n_molecules=test_targets["n_molecules"],
         coefficients=coefficients,
         feature_mask=feature_mask,
     )
@@ -1171,24 +1344,24 @@ def run_explicit_split_mode(args: argparse.Namespace) -> None:
         args.output / "test_parity_energy.png",
     )
     save_parity(
-        test_targets["force"],
-        test_force,
+        test_targets["force_report"],
+        test_force_report,
         "Test: conservative linear fit — forces",
         "Reference force component",
         "Predicted force component",
         args.output / "test_parity_forces.png",
     )
     save_parity(
-        test_targets["torque_body"],
-        test_torque_body,
+        test_targets["torque_body_report"],
+        test_torque_body_report,
         "Test: conservative linear fit — body torque",
         "Reference torque component",
         "Predicted torque component",
         args.output / "test_parity_torques_body.png",
     )
     save_parity(
-        test_targets["torque_space"],
-        test_torque_space,
+        test_targets["torque_space_report"],
+        test_torque_space_report,
         "Test: conservative linear fit — space torque",
         "Reference torque component",
         "Predicted torque component",
@@ -1258,6 +1431,7 @@ def _cache_validate_frame_groups(
     return n_particles
 
 
+
 def _cache_extract_targets(
     frames: list[Atoms],
     *,
@@ -1265,18 +1439,10 @@ def _cache_extract_targets(
     quaternion_matrix_direction: str,
     torque_target_frame: str,
 ) -> dict[str, np.ndarray]:
-    energy = np.asarray(
-        [frame.get_potential_energy() for frame in frames],
-        dtype=float,
-    )
-    force = np.asarray(
-        [frame.get_forces() for frame in frames],
-        dtype=float,
-    )
-    torque_stored = np.asarray(
-        [frame.arrays["torques"] for frame in frames],
-        dtype=float,
-    )
+    base = _formamide_target_arrays(frames)
+
+    torque_stored = base["torque_stored"]
+    torque_stored_report = base["torque_stored_report"]
 
     if torque_target_frame == "body":
         torque_body = torque_stored
@@ -1286,10 +1452,26 @@ def _cache_extract_targets(
             quaternion_order=quaternion_order,
             quaternion_matrix_direction=quaternion_matrix_direction,
         )
+
+        torque_body_report = torque_stored_report
+        torque_space_report = body_to_space_vectors(
+            torque_body_report,
+            frames,
+            quaternion_order=quaternion_order,
+            quaternion_matrix_direction=quaternion_matrix_direction,
+        )
     elif torque_target_frame == "space":
         torque_space = torque_stored
         torque_body = space_to_body_vectors(
             torque_space,
+            frames,
+            quaternion_order=quaternion_order,
+            quaternion_matrix_direction=quaternion_matrix_direction,
+        )
+
+        torque_space_report = torque_stored_report
+        torque_body_report = space_to_body_vectors(
+            torque_space_report,
             frames,
             quaternion_order=quaternion_order,
             quaternion_matrix_direction=quaternion_matrix_direction,
@@ -1310,13 +1492,16 @@ def _cache_extract_targets(
     )
 
     return {
-        "energy": energy,
-        "force": force,
+        "n_molecules": base["n_molecules"],
+        "energy": base["energy"],
+        "force": base["force"],
+        "force_report": base["force_report"],
         "torque_body": torque_body,
         "torque_space": torque_space,
+        "torque_body_report": torque_body_report,
+        "torque_space_report": torque_space_report,
         "matrices_space_to_body": matrices_space_to_body,
     }
-
 
 def run_cache_build_mode(args: argparse.Namespace) -> None:
     if args.cache_output is None:
@@ -1495,10 +1680,14 @@ def run_cache_build_mode(args: argparse.Namespace) -> None:
         arrays[f"{split}_x"] = x[split]
         arrays[f"{split}_dfeatures_dr"] = dfeatures_dr[split]
         arrays[f"{split}_dfeatures_dtheta"] = dfeatures_dtheta[split]
+        arrays[f"{split}_n_molecules"] = target_groups[split]["n_molecules"]
         arrays[f"{split}_energy"] = target_groups[split]["energy"]
         arrays[f"{split}_force"] = target_groups[split]["force"]
+        arrays[f"{split}_force_report"] = target_groups[split]["force_report"]
         arrays[f"{split}_torque_body"] = target_groups[split]["torque_body"]
         arrays[f"{split}_torque_space"] = target_groups[split]["torque_space"]
+        arrays[f"{split}_torque_body_report"] = target_groups[split]["torque_body_report"]
+        arrays[f"{split}_torque_space_report"] = target_groups[split]["torque_space_report"]
         arrays[f"{split}_matrices_space_to_body"] = target_groups[split][
             "matrices_space_to_body"
         ]
@@ -1524,6 +1713,7 @@ def _cache_body_from_space(
     )
 
 
+
 def _cache_predict_split(
     coefficients: np.ndarray,
     cache: dict[str, np.ndarray],
@@ -1546,13 +1736,25 @@ def _cache_predict_split(
         cache[f"{split}_matrices_space_to_body"],
     )
 
+    force_report = _report_vector_prediction(force, cache[f"{split}_n_molecules"])
+    torque_space_report = _report_vector_prediction(
+        torque_space,
+        cache[f"{split}_n_molecules"],
+    )
+    torque_body_report = _report_vector_prediction(
+        torque_body,
+        cache[f"{split}_n_molecules"],
+    )
+
     return {
         "energy": energy,
         "force": force,
         "torque_space": torque_space,
         "torque_body": torque_body,
+        "force_report": force_report,
+        "torque_space_report": torque_space_report,
+        "torque_body_report": torque_body_report,
     }
-
 
 def _cache_make_system(
     cache: dict[str, np.ndarray],
@@ -1817,16 +2019,16 @@ def run_cache_fit_mode(args: argparse.Namespace) -> None:
                 test_prediction["energy"],
             ),
             "force_components": metrics(
-                cache["test_force"],
-                test_prediction["force"],
+                cache["test_force_report"],
+                test_prediction["force_report"],
             ),
             "torque_components_space": metrics(
-                cache["test_torque_space"],
-                test_prediction["torque_space"],
+                cache["test_torque_space_report"],
+                test_prediction["torque_space_report"],
             ),
             "torque_components_body": metrics(
-                cache["test_torque_body"],
-                test_prediction["torque_body"],
+                cache["test_torque_body_report"],
+                test_prediction["torque_body_report"],
             ),
         },
         "alpha_scan": scan_rows,
@@ -1836,12 +2038,19 @@ def run_cache_fit_mode(args: argparse.Namespace) -> None:
         args.output / "test_predictions.npz",
         energy_target=cache["test_energy"],
         energy_prediction=test_prediction["energy"],
-        force_target=cache["test_force"],
-        force_prediction=test_prediction["force"],
-        torque_target_space=cache["test_torque_space"],
-        torque_prediction_space=test_prediction["torque_space"],
-        torque_target_body=cache["test_torque_body"],
-        torque_prediction_body=test_prediction["torque_body"],
+        force_target=cache["test_force_report"],
+        force_prediction=test_prediction["force_report"],
+        force_target_internal=cache["test_force"],
+        force_prediction_internal=test_prediction["force"],
+        torque_target_space=cache["test_torque_space_report"],
+        torque_prediction_space=test_prediction["torque_space_report"],
+        torque_target_body=cache["test_torque_body_report"],
+        torque_prediction_body=test_prediction["torque_body_report"],
+        torque_target_space_internal=cache["test_torque_space"],
+        torque_prediction_space_internal=test_prediction["torque_space"],
+        torque_target_body_internal=cache["test_torque_body"],
+        torque_prediction_body_internal=test_prediction["torque_body"],
+        n_molecules=cache["test_n_molecules"],
         coefficients=coefficients,
         feature_mask=cache["feature_mask"],
     )
@@ -1861,24 +2070,24 @@ def run_cache_fit_mode(args: argparse.Namespace) -> None:
         args.output / "test_parity_energy.png",
     )
     save_parity(
-        cache["test_force"],
-        test_prediction["force"],
+        cache["test_force_report"],
+        test_prediction["force_report"],
         "Cached conservative linear fit — test forces",
         "Reference force component",
         "Predicted force component",
         args.output / "test_parity_forces.png",
     )
     save_parity(
-        cache["test_torque_body"],
-        test_prediction["torque_body"],
+        cache["test_torque_body_report"],
+        test_prediction["torque_body_report"],
         "Cached conservative linear fit — test body torque",
         "Reference torque component",
         "Predicted torque component",
         args.output / "test_parity_torques_body.png",
     )
     save_parity(
-        cache["test_torque_space"],
-        test_prediction["torque_space"],
+        cache["test_torque_space_report"],
+        test_prediction["torque_space_report"],
         "Cached conservative linear fit — test space torque",
         "Reference torque component",
         "Predicted torque component",

@@ -39,6 +39,146 @@ def apply_diameter_scale(frames, diameter_scale):
     return frames
 
 
+def _frame_n_molecules(frame: Atoms, frame_index: int) -> int:
+    if "n_molecules" not in frame.info:
+        raise KeyError(
+            f"Frame {frame_index} is missing frame.info['n_molecules']; "
+            "formamide targets require n_molecules"
+        )
+
+    n_molecules = int(float(frame.info["n_molecules"]))
+    if n_molecules <= 0:
+        raise ValueError(f"Frame {frame_index} has invalid n_molecules={n_molecules}")
+
+    return n_molecules
+
+
+def _frame_interaction_energy_per_molecule(frame: Atoms, frame_index: int) -> float:
+    if "interaction_energy" not in frame.info:
+        raise KeyError(
+            f"Frame {frame_index} is missing frame.info['interaction_energy']; "
+            "formamide targets require interaction_energy"
+        )
+
+    return float(frame.info["interaction_energy"]) / float(
+        _frame_n_molecules(frame, frame_index)
+    )
+
+
+def _as_target_array(value, *, name: str, frame_index: int, n_particles: int) -> np.ndarray:
+    array = np.asarray(value, dtype=float)
+
+    if array.shape != (n_particles, 3):
+        raise ValueError(
+            f"Frame {frame_index} target {name!r} has shape {array.shape}; "
+            f"expected {(n_particles, 3)}"
+        )
+
+    return array
+
+
+def _frame_molecular_force_report(frame: Atoms, frame_index: int) -> np.ndarray:
+    n_particles = len(frame)
+
+    if "molecular_force" in frame.info:
+        return _as_target_array(
+            frame.info["molecular_force"],
+            name="molecular_force",
+            frame_index=frame_index,
+            n_particles=n_particles,
+        )
+
+    try:
+        force = frame.get_forces()
+    except Exception as exc:
+        raise KeyError(
+            f"Frame {frame_index} is missing molecular force targets. "
+            "Expected frame.info['molecular_force'] or ASE calculator forces."
+        ) from exc
+
+    return _as_target_array(
+        force,
+        name="forces",
+        frame_index=frame_index,
+        n_particles=n_particles,
+    )
+
+
+def _frame_molecular_torque_report(frame: Atoms, frame_index: int) -> np.ndarray:
+    n_particles = len(frame)
+
+    if "molecular_torque" in frame.info:
+        return _as_target_array(
+            frame.info["molecular_torque"],
+            name="molecular_torque",
+            frame_index=frame_index,
+            n_particles=n_particles,
+        )
+
+    if "torques" not in frame.arrays:
+        raise KeyError(
+            f"Frame {frame_index} is missing molecular torque targets. "
+            "Expected frame.info['molecular_torque'] or frame.arrays['torques']."
+        )
+
+    return _as_target_array(
+        frame.arrays["torques"],
+        name="torques",
+        frame_index=frame_index,
+        n_particles=n_particles,
+    )
+
+
+def _formamide_target_arrays(frames: list[Atoms]) -> dict[str, np.ndarray]:
+    n_molecules = np.asarray(
+        [_frame_n_molecules(frame, i) for i, frame in enumerate(frames)],
+        dtype=float,
+    )
+
+    energy = np.asarray(
+        [
+            _frame_interaction_energy_per_molecule(frame, i)
+            for i, frame in enumerate(frames)
+        ],
+        dtype=float,
+    )
+
+    force_report = np.asarray(
+        [
+            _frame_molecular_force_report(frame, i)
+            for i, frame in enumerate(frames)
+        ],
+        dtype=float,
+    )
+
+    torque_report = np.asarray(
+        [
+            _frame_molecular_torque_report(frame, i)
+            for i, frame in enumerate(frames)
+        ],
+        dtype=float,
+    )
+
+    scale = n_molecules.reshape(-1, 1, 1)
+
+    return {
+        "n_molecules": n_molecules,
+        "energy": energy,
+        "force": force_report / scale,
+        "force_report": force_report,
+        "torque_stored": torque_report / scale,
+        "torque_stored_report": torque_report,
+    }
+
+
+def _report_vector_prediction(
+    prediction_internal: np.ndarray,
+    n_molecules: np.ndarray,
+) -> np.ndarray:
+    return np.asarray(prediction_internal, dtype=float) * np.asarray(
+        n_molecules, dtype=float
+    ).reshape(-1, 1, 1)
+
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
@@ -624,26 +764,17 @@ def run_explicit_split_mode(args: argparse.Namespace) -> None:
                 f"{label.capitalize()} split contains a frame without torques"
             )
 
-    train_energy = np.asarray(
-        [frame.get_potential_energy() for frame in train_frames],
-        dtype=float,
-    )
-    validation_energy = np.asarray(
-        [frame.get_potential_energy() for frame in validation_frames],
-        dtype=float,
-    )
-    test_energy = np.asarray(
-        [frame.get_potential_energy() for frame in test_frames],
-        dtype=float,
-    )
-    test_force = np.asarray(
-        [frame.get_forces() for frame in test_frames],
-        dtype=float,
-    )
-    test_torque_stored = np.asarray(
-        [frame.arrays["torques"] for frame in test_frames],
-        dtype=float,
-    )
+    train_targets = _formamide_target_arrays(train_frames)
+    validation_targets = _formamide_target_arrays(validation_frames)
+    test_targets = _formamide_target_arrays(test_frames)
+
+    train_energy = train_targets["energy"]
+    validation_energy = validation_targets["energy"]
+    test_energy = test_targets["energy"]
+    test_force = test_targets["force"]
+    test_force_report = test_targets["force_report"]
+    test_torque_stored = test_targets["torque_stored"]
+    test_torque_stored_report = test_targets["torque_stored_report"]
 
     calculator = EllipsoidalDensityProjection(
         max_angular=args.max_angular,
@@ -853,6 +984,16 @@ def run_explicit_split_mode(args: argparse.Namespace) -> None:
                 args.quaternion_matrix_direction
             ),
         )
+
+        test_torque_body_report = test_torque_stored_report
+        test_torque_space_report = body_vectors_to_space(
+            test_torque_body_report,
+            test_frames,
+            quaternion_order=args.quaternion_order,
+            quaternion_matrix_direction=(
+                args.quaternion_matrix_direction
+            ),
+        )
     else:
         test_torque_space = test_torque_stored
         test_torque_body = space_vectors_to_body(
@@ -863,6 +1004,29 @@ def run_explicit_split_mode(args: argparse.Namespace) -> None:
                 args.quaternion_matrix_direction
             ),
         )
+
+        test_torque_space_report = test_torque_stored_report
+        test_torque_body_report = space_vectors_to_body(
+            test_torque_space_report,
+            test_frames,
+            quaternion_order=args.quaternion_order,
+            quaternion_matrix_direction=(
+                args.quaternion_matrix_direction
+            ),
+        )
+
+    test_force_prediction_report = _report_vector_prediction(
+        test_force_prediction,
+        test_targets["n_molecules"],
+    )
+    test_torque_space_prediction_report = _report_vector_prediction(
+        test_torque_space_prediction,
+        test_targets["n_molecules"],
+    )
+    test_torque_body_prediction_report = _report_vector_prediction(
+        test_torque_body_prediction,
+        test_targets["n_molecules"],
+    )
 
     results = {
         "configuration": {
@@ -884,6 +1048,11 @@ def run_explicit_split_mode(args: argparse.Namespace) -> None:
             "basis_tol": args.basis_tol,
             "normalize": True,
             "subtract_center_contribution": False,
+            "target_convention": (
+                "energy=interaction_energy/n_molecules; "
+                "force=molecular_force/n_molecules internally, reported as molecular_force; "
+                "torque=molecular_torque/n_molecules internally, reported as molecular_torque"
+            ),
             "selected_alpha": best_alpha,
             "position_step": args.position_step,
             "rotation_step": args.rotation_step,
@@ -899,16 +1068,16 @@ def run_explicit_split_mode(args: argparse.Namespace) -> None:
                 test_energy_prediction,
             ),
             "force_components": metric_dictionary(
-                test_force,
-                test_force_prediction,
+                test_force_report,
+                test_force_prediction_report,
             ),
             "torque_components_body": metric_dictionary(
-                test_torque_body,
-                test_torque_body_prediction,
+                test_torque_body_report,
+                test_torque_body_prediction_report,
             ),
             "torque_components_space": metric_dictionary(
-                test_torque_space,
-                test_torque_space_prediction,
+                test_torque_space_report,
+                test_torque_space_prediction_report,
             ),
         },
         "alpha_scan": alpha_scan,
@@ -918,12 +1087,19 @@ def run_explicit_split_mode(args: argparse.Namespace) -> None:
         args.output / "test_predictions.npz",
         energy_target=test_energy,
         energy_prediction=test_energy_prediction,
-        force_target=test_force,
-        force_prediction=test_force_prediction,
-        torque_target_body=test_torque_body,
-        torque_prediction_body=test_torque_body_prediction,
-        torque_target_space=test_torque_space,
-        torque_prediction_space=test_torque_space_prediction,
+        force_target=test_force_report,
+        force_prediction=test_force_prediction_report,
+        force_target_internal=test_force,
+        force_prediction_internal=test_force_prediction,
+        torque_target_body=test_torque_body_report,
+        torque_prediction_body=test_torque_body_prediction_report,
+        torque_target_space=test_torque_space_report,
+        torque_prediction_space=test_torque_space_prediction_report,
+        torque_target_body_internal=test_torque_body,
+        torque_prediction_body_internal=test_torque_body_prediction,
+        torque_target_space_internal=test_torque_space,
+        torque_prediction_space_internal=test_torque_space_prediction,
+        n_molecules=test_targets["n_molecules"],
         feature_mask=feature_mask,
         ridge_coefficients=np.asarray(ridge.coef_),
     )
@@ -940,24 +1116,24 @@ def run_explicit_split_mode(args: argparse.Namespace) -> None:
         args.output / "test_parity_energy.png",
     )
     save_parity(
-        test_force,
-        test_force_prediction,
+        test_force_report,
+        test_force_prediction_report,
         "Test: finite-difference forces",
         "Reference force component",
         "Predicted force component",
         args.output / "test_parity_forces.png",
     )
     save_parity(
-        test_torque_body,
-        test_torque_body_prediction,
+        test_torque_body_report,
+        test_torque_body_prediction_report,
         "Test: finite-difference body torque",
         "Reference torque component",
         "Predicted torque component",
         args.output / "test_parity_torques_body.png",
     )
     save_parity(
-        test_torque_space,
-        test_torque_space_prediction,
+        test_torque_space_report,
+        test_torque_space_prediction_report,
         "Test: finite-difference space torque",
         "Reference torque component",
         "Predicted torque component",
@@ -1005,24 +1181,12 @@ def main() -> None:
     if any(len(frame) != 2 for frame in frames):
         raise RuntimeError("This script expects two-particle configurations")
 
-    energy_target = np.asarray(
-        [frame.get_potential_energy() for frame in frames],
-        dtype=float,
-    )
-    force_target = np.asarray(
-        [frame.get_forces() for frame in frames],
-        dtype=float,
-    )
-
-    if any("torques" not in frame.arrays for frame in frames):
-        raise RuntimeError(
-            "At least one frame has no per-atom 'torques' array"
-        )
-
-    torque_target_stored = np.asarray(
-        [frame.arrays["torques"] for frame in frames],
-        dtype=float,
-    )
+    targets = _formamide_target_arrays(frames)
+    energy_target = targets["energy"]
+    force_target = targets["force"]
+    force_target_report = targets["force_report"]
+    torque_target_stored = targets["torque_stored"]
+    torque_target_stored_report = targets["torque_stored_report"]
 
     calculator = EllipsoidalDensityProjection(
         max_angular=args.max_angular,
